@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Webpack App</title>
+    </head>
+    <body>
+		<h2 class="with-margin">OpenLayers Map</h2>
+		<div id="olMap with-margin" class="map"></div>
+    </body>
+    
+</html>
