@@ -20,6 +20,13 @@ namespace MvtServer
         {
 
             services.AddControllers();
+            services.AddCors((options) =>
+            {
+                options.AddPolicy("all", (policy) =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -30,9 +37,9 @@ namespace MvtServer
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
-
             app.UseRouting();
+
+            app.UseCors("all");
 
             app.UseAuthorization();
 
