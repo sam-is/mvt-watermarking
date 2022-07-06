@@ -20,6 +20,7 @@ namespace MvtServer.Controllers
             command.Parameters.AddWithValue("$y", (1<<z)-y-1);
 
             var tile = (byte[])command.ExecuteScalar();
+            if (tile == null) return NoContent();
             Response.Headers.Add("Content-Encoding", "gzip");
             return File(tile, "application/vnd.mapbox-vector-tile");
         }
