@@ -26,6 +26,13 @@ namespace mvt_Server
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddCors((options) =>
+            {
+                options.AddPolicy("all", (policy) =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -36,11 +43,9 @@ namespace mvt_Server
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
-
             app.UseRouting();
 
-            //app.UseAuthorization();
+            app.UseCors("all");
 
             app.UseEndpoints(endpoints =>
             {

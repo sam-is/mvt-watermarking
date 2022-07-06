@@ -24,7 +24,7 @@ namespace mvt_Server.Controllers
             sqlCommandGet.Parameters.AddWithValue("$x", x);
             sqlCommandGet.Parameters.AddWithValue("$y", (1 << z) - y - 1);
             var tile = (byte[])sqlCommandGet.ExecuteScalar();
-
+            if (tile == null) return NoContent();
             Response.Headers.Add("Content-Encoding", "gzip");
             return File(tile, "application/vnd.mapbox-vector-tile");
         }
