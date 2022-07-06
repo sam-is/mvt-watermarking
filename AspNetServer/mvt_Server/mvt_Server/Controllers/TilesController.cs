@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +14,16 @@ namespace mvt_Server.Controllers
     [ApiController]
     public class TilesController : ControllerBase
     {
+        private string _connectionString;
+        public TilesController(IConfiguration configuration)
+        {
+            _connectionString = configuration.GetConnectionString("mvtConnectionString");
+        }
+
         [HttpGet("{z}/{x}/{y}")]
         public ActionResult GetTile(int z, int x, int y)
         {
-            using var sqliteConnection = new SqliteConnection("Data Source = D:\\maximum_mbtiles.mbtiles");
+            using var sqliteConnection = new SqliteConnection(_connectionString);
             sqliteConnection.Open();
 
             using var sqlCommandGet = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
