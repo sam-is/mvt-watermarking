@@ -12,8 +12,6 @@ import { OSM, Vector as VectorSource, VectorTile as VectorTileSource } from 'ol/
 import { Tile as TileLayer, Vector as VectorLayer, VectorTile as VectorTileLayer } from 'ol/layer';
 import { transform } from 'ol/proj'
 
-
-
 window.change = () => {
     document.getElementById('testDiv').innerHTML = '<button>sdfsdfs</button>';
 };
@@ -22,7 +20,7 @@ const vectorTileLayer = new VectorTileLayer({
 	declutter: true,
 	source: new VectorTileSource({
 		format: new MVT(),
-		url: 'http://localhost:5000/api/tiles/{z}/{x}/{y}'
+		url: 'https://functions.yandexcloud.net/d4esngj8sq9q03pu1f39/?x={x}&y={y}&z={z}'
 	}),
 	style: new Style({
         stroke: new Stroke({
