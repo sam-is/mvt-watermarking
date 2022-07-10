@@ -49,7 +49,6 @@ namespace Function
             var x = Convert.ToInt32(request.QueryStringParameters.X);
             var y = Convert.ToInt32(request.QueryStringParameters.Y);
             var z = Convert.ToInt32(request.QueryStringParameters.Z);
-            y = (1 << z) - y - 1;
 
             string url = $"https://storage.yandexcloud.net/bucket-for-tiles/tiles/{z}/{x}/{y}.pbf";
 
