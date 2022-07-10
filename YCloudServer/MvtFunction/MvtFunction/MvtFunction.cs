@@ -40,10 +40,6 @@ namespace Function
 
         [JsonPropertyName("headers")]
         public Dictionary<string, string> Headers { get; set; }
-
-        [JsonPropertyName("isBase64Encoded")]
-        public bool IsBase64Encoded { get; set; }
-
     }
 
     public class Handler
@@ -68,11 +64,11 @@ namespace Function
                 return new Response { StatusCode = 204 };
             }
 
-            var tmp = new Dictionary<string, string>();
-            tmp.Add("Content-Type", "application/vnd.mapbox-vector-tile");
-            tmp.Add("Content-Encoding", "base64");
+            var headers = new Dictionary<string, string>();
+            headers.Add("Content-Type", "application/vnd.mapbox-vector-tile");
+            headers.Add("Content-Encoding", "gzip");
 
-            return new Response { StatusCode = 200, Body = data, Headers = tmp, IsBase64Encoded = true };
+            return new Response { StatusCode = 200, Body = data, Headers = headers };
         }
     }
 }
