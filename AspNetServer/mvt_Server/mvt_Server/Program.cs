@@ -28,7 +28,7 @@ builder.Host.UseSerilog((_, _, configuration) =>
     configuration.WriteTo.Logger(lc =>
             lc.Filter.ByExcluding(Matching.FromSource("mvt"))
                 .WriteTo.File(new JsonFormatter(),
-                    @"D:\mvt-watermarking\AspNetServer\mvt_Server\mvt_Server\log.json")) // прописать в настройках
+                    @"D:\mvt-watermarking\AspNetServer\mvt_Server\mvt_Server\log.json")) 
         .WriteTo.Logger(lc =>
             lc.Filter.ByIncludingOnly(Matching.FromSource("mvt"))
                 .WriteTo.File(@"D:\mvt-watermarking\AspNetServer\mvt_Server\mvt_Server\mvt.json"));
@@ -53,7 +53,6 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/", (HttpContext httpContext, ILoggerFactory loggerFactory) =>
 {
-    Console.WriteLine("Begin of method");
     var remoteAddress = httpContext.Connection.RemoteIpAddress;
     if (remoteAddress != null)
     {
@@ -66,12 +65,25 @@ app.MapGet("/", (HttpContext httpContext, ILoggerFactory loggerFactory) =>
 
     var log = loggerFactory.CreateLogger("mvt");
     log.LogCritical("IP:" + remoteAddress);
-    Console.WriteLine("End of method");
-    return Results.Ok("!!!");
+    return Results.Ok("Тут ничего нет");
 });
 
 app.MapGet("api/tiles/{z}/{x}/{y}/", (int z, int x, int y, HttpContext httpContext, ILoggerFactory loggerFactory) =>
 {
+    var remoteAddress = httpContext.Connection.RemoteIpAddress;
+    if (remoteAddress != null)
+    {
+        if (remoteAddress.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            remoteAddress = System.Net.Dns.GetHostEntry(remoteAddress).AddressList
+                .First(x => x.AddressFamily == AddressFamily.InterNetwork);
+        }
+    }
+
+    var log = loggerFactory.CreateLogger("mvt");
+    log.LogCritical("IP:" + remoteAddress);
+    log.LogCritical($"tiles: (z: {z}, x: {x}, y: {y})");
+
     var connectionStringBuilder = new SqliteConnectionStringBuilder() { DataSource = "D:\\maximum_mbtiles.mbtiles" };
     using var sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
     sqliteConnection.Open();
