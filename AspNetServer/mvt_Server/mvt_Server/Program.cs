@@ -70,7 +70,7 @@ app.MapGet("/", (HttpContext httpContext, ILoggerFactory loggerFactory) =>
     return Results.Ok("!!!");
 });
 
-app.MapGet("/{z}/{x}/{y}/", (int z, int x, int y, HttpContext httpContext, ILoggerFactory loggerFactory) =>
+app.MapGet("api/tiles/{z}/{x}/{y}/", (int z, int x, int y, HttpContext httpContext, ILoggerFactory loggerFactory) =>
 {
     var connectionStringBuilder = new SqliteConnectionStringBuilder() { DataSource = "D:\\maximum_mbtiles.mbtiles" };
     using var sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
