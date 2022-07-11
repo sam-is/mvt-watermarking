@@ -28,10 +28,10 @@ builder.Host.UseSerilog((_, _, configuration) =>
     configuration.WriteTo.Logger(lc =>
             lc.Filter.ByExcluding(Matching.FromSource("mvt"))
                 .WriteTo.File(new JsonFormatter(),
-                    @"D:\mvt-watermarking\AspNetServer\mvt_Server\mvt_Server\log.json")) 
+                    builder.Configuration["Logging:LogFiles:log"])) 
         .WriteTo.Logger(lc =>
             lc.Filter.ByIncludingOnly(Matching.FromSource("mvt"))
-                .WriteTo.File(@"D:\mvt-watermarking\AspNetServer\mvt_Server\mvt_Server\mvt.json"));
+                .WriteTo.File(builder.Configuration["Logging:LogFiles:mvt"]));
 });
 
 var app = builder.Build();
