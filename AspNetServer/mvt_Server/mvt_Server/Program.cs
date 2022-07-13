@@ -10,9 +10,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using Microsoft.Data.Sqlite;
-using System;
-
-//namespace mvt_Server;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors((options) =>
@@ -51,7 +48,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
                        ForwardedHeaders.XForwardedProto
 });
 
-app.MapGet("/", (HttpContext httpContext, ILoggerFactory loggerFactory) =>
+app.MapGet("api/tiles/{z}/{x}/{y}/", (int Z, int X, int Y, HttpContext httpContext, ILoggerFactory loggerFactory) =>
 {
     var remoteAddress = httpContext.Connection.RemoteIpAddress;
     if (remoteAddress != null)
@@ -65,33 +62,16 @@ app.MapGet("/", (HttpContext httpContext, ILoggerFactory loggerFactory) =>
 
     var log = loggerFactory.CreateLogger("mvt");
     log.LogCritical("IP:" + remoteAddress);
-    return Results.Ok("Тут ничего нет");
-});
+    log.LogCritical($"tiles: (z: {Z}, x: {X}, y: {Y})");
 
-app.MapGet("api/tiles/{z}/{x}/{y}/", (int z, int x, int y, HttpContext httpContext, ILoggerFactory loggerFactory) =>
-{
-    var remoteAddress = httpContext.Connection.RemoteIpAddress;
-    if (remoteAddress != null)
-    {
-        if (remoteAddress.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            remoteAddress = System.Net.Dns.GetHostEntry(remoteAddress).AddressList
-                .First(x => x.AddressFamily == AddressFamily.InterNetwork);
-        }
-    }
-
-    var log = loggerFactory.CreateLogger("mvt");
-    log.LogCritical("IP:" + remoteAddress);
-    log.LogCritical($"tiles: (z: {z}, x: {x}, y: {y})");
-
-    var connectionStringBuilder = new SqliteConnectionStringBuilder() { DataSource = "D:\\maximum_mbtiles.mbtiles" };
+    var connectionStringBuilder = new SqliteConnectionStringBuilder { DataSource = builder.Configuration["ConnectionStrings:mvtConnectionString"] };
     using var sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
     sqliteConnection.Open();
 
     using var sqlCommandGet = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
-    sqlCommandGet.Parameters.AddWithValue("$z", z);
-    sqlCommandGet.Parameters.AddWithValue("$x", x);
-    sqlCommandGet.Parameters.AddWithValue("$y", (1 << z) - y - 1);
+    sqlCommandGet.Parameters.AddWithValue("$z", Z);
+    sqlCommandGet.Parameters.AddWithValue("$x", X);
+    sqlCommandGet.Parameters.AddWithValue("$y", (1 << Z) - Y - 1);
     var tile = (byte[])sqlCommandGet.ExecuteScalar();
     if (tile == null) return Results.NoContent();
     httpContext.Response.Headers.Add("Content-Encoding", "gzip");
