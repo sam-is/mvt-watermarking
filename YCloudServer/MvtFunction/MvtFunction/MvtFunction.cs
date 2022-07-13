@@ -20,12 +20,6 @@ namespace Function
 
     public class Request
     {
-        [JsonPropertyName("httpMethod")]
-        public string HttpMethod { get; set; }
-
-        [JsonPropertyName("body")]
-        public string Body { get; set; }
-
         [JsonPropertyName("queryStringParameters")]
         public Tile QueryStringParameters { get; set; }
     }
@@ -53,10 +47,10 @@ namespace Function
             var y = Convert.ToInt32(request.QueryStringParameters.Y);
             var z = Convert.ToInt32(request.QueryStringParameters.Z);
 
-            string url = $"https://storage.yandexcloud.net/bucket-for-tiles/tiles/{z}/{x}/{y}.pbf";
+            var url = $"https://storage.yandexcloud.net/bucket-for-tiles/tiles/{z}/{x}/{y}.pbf";
 
             WebClient client = new WebClient();
-            byte[] data = null;
+            byte[] data;
             try
             {
                 data = client.DownloadData(url);
@@ -66,9 +60,11 @@ namespace Function
                 return new Response { StatusCode = 204 };
             }
 
-            var headers = new Dictionary<string, string>();
-            headers.Add("Content-Type", "application/vnd.mapbox-vector-tile");
-            headers.Add("Content-Encoding", "gzip");
+            var headers = new Dictionary<string, string>
+            {
+                {"Content-Type", "application/vnd.mapbox-vector-tile"},
+                {"Content-Encoding", "gzip"}
+            };
 
             return new Response { StatusCode = 200, Body = data, Headers = headers, IsBase64Encoded = true };
         }
