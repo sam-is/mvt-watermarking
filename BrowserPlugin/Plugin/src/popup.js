@@ -1,3 +1,5 @@
+document.getElementById("button").addEventListener("click", setUrl);
+
 const requests = chrome.storage.local.get(['requestsLog'],
     result => {
         const requests = result.requestsLog;
@@ -6,3 +8,9 @@ const requests = chrome.storage.local.get(['requestsLog'],
             elem.innerHTML += `<div>${requests[i]}</div>`;
         }
     });
+
+function setUrl() {
+    const url = [];
+    url.push(document.getElementById('url').value);
+    chrome.storage.local.set({ 'url': url });
+}
