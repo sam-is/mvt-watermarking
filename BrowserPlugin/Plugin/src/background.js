@@ -23,17 +23,24 @@ chrome.webRequest.onCompleted.addListener(
                         url.includes(includedUrl)) {
                         requestedUrls.push(url);
 
+                        let isNoContent = false;
                         fetch(url)
-                            .then(response => response.arrayBuffer())
+                            .then(response => {
+                                if (response.status == 204)
+                                    isNoContent = true;
+                                return response.arrayBuffer();
+                            })
                             .then(data => {
-                                const pbf = new Protobuf(data);
-                                const tile = new VectorTile(pbf);
-                                let params = (new URL(url)).searchParams;
-                                const x = params.get('x');
-                                const y = params.get('y');
-                                const z = params.get('z');
-                                requests.push(`${requests.length + 1}) z=${z} x=${x} y=${y} </br> Number of objects: ${Object.values(tile.layers)[0].length}`);
-                                chrome.storage.local.set({ 'requestsLog': requests });
+                                if (!isNoContent) {
+                                    const pbf = new Protobuf(data);
+                                    const tile = new VectorTile(pbf);
+                                    let params = (new URL(url)).searchParams;
+                                    const x = params.get('x');
+                                    const y = params.get('y');
+                                    const z = params.get('z');
+                                    requests.push(`${requests.length + 1}) z=${z} x=${x} y=${y} </br> Number of objects: ${Object.values(tile.layers)[0].length}`);
+                                    chrome.storage.local.set({ 'requestsLog': requests });
+                                }
                             });
                     }
                 }
