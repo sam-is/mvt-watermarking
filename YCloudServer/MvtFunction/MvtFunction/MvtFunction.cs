@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json.Serialization;
 
-namespace Function
+namespace MvtFunction
 {
-
     public class Tile
     {
         [JsonPropertyName("x")]
