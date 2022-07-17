@@ -1,0 +1,16 @@
+div {
+    width: 200px;
+    font-family:Ebrima;
+    font-size: 14px;
+}
+
+#header{
+    font-size: 20px;
+    text-align: center;
+}
+
+#tiles{
+    border-style: solid;
+    border-width: 1px;
+    padding: 5px;
+}
