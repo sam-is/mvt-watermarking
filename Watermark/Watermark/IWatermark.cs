@@ -1,11 +1,11 @@
 ﻿using NetTopologySuite.IO.VectorTiles;
-using System.Collections.Generic;
+using System.Collections;
 
 namespace Watermark
 {
     public interface IWatermark
     {
-        VectorTile Embed(VectorTile tile, byte[] message, int key, List<double> parameters);
-        byte[] Extract(VectorTile tile, int key, List<double> parameters);
+        VectorTile Embed(VectorTile tile, BitArray message);
+        BitArray Extract(VectorTile tile);
     }
 }
