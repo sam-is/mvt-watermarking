@@ -5,7 +5,7 @@ namespace Watermark
 {
     public interface IWatermark
     {
-        VectorTile Embed(VectorTile tile, BitArray message);
-        BitArray Extract(VectorTile tile);
+        VectorTile Embed(VectorTile tile, int key, BitArray message);
+        BitArray Extract(VectorTile tile, int key);
     }
 }
