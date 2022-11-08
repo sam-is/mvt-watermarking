@@ -335,6 +335,7 @@ namespace MvtWatermark.QimMvtWatermark
         {
             var t = new Tile(id);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
+            envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
             var a = envelopeTile.Height / _options.M;
             var extentDist = envelopeTile.Height / _options.Extent;
 
@@ -393,6 +394,7 @@ namespace MvtWatermark.QimMvtWatermark
         {
             var t = new Tile(id);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
+            envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
 
             var a = envelopeTile.Height / _options.M;
             var extentDist = envelopeTile.Height / _options.Extent;
