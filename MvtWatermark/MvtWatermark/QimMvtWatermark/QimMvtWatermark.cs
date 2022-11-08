@@ -330,7 +330,8 @@ namespace MvtWatermark.QimMvtWatermark
                 }
             }
         }
-        private VectorTile Embed(VectorTile tile, ulong id, int key, BitArray message)
+
+        public VectorTile Embed(VectorTile tile, ulong id, int key, BitArray message)
         {
             var t = new Tile(id);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
@@ -388,7 +389,7 @@ namespace MvtWatermark.QimMvtWatermark
             return tile;
         }
 
-        private BitArray Extract(VectorTile tile, ulong id, int key)
+        public BitArray Extract(VectorTile tile, ulong id, int key)
         {
             var t = new Tile(id);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
