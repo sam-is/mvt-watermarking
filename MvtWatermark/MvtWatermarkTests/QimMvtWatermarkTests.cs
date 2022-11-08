@@ -15,7 +15,7 @@ namespace MvtWatermarkTests
         public void OneTileOneBit()
         {
             var path = Path.Combine(Directory.GetCurrentDirectory(), "stp.mbtiles");
-            var x = 657;
+            var x = 658;
             var y = 334;
             var z = 10;
             using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
@@ -42,7 +42,7 @@ namespace MvtWatermarkTests
             var tileWatermarked = watermark.Embed(tile, tile.TileId, 0, message);
             var m = watermark.Extract(tileWatermarked, tileWatermarked.TileId, 0);
 
-            Assert.True(m.Equals(message));
+            Assert.True(m[0] == message[0]);
         }
     }
 }
