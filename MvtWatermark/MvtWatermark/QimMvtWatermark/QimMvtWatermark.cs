@@ -48,25 +48,25 @@ namespace MvtWatermark.QimMvtWatermark
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
             var a = envelopeTile.Height / _options.M;
 
-            var winx = GenerateWinx(key);
+            var winx = GenerateWinx(key, message.Length);
             for (var i = 0; i < _options.M; i++)
                 for (var j = 0; j < _options.M; j++)
                 {
 
-                    var index = _winx[i, j];
+                    var index = winx[i, j];
                     if (index == -1)
                         continue;
-                    var value = Convert.ToInt32(bites[index]);
+                    var value = Convert.ToInt32(message[index]);
 
                     var polygon = new Polygon(
                         new LinearRing(
                             new Coordinate[]
                             {
-                                    new(envelopeTile.MinX + _a * i, envelopeTile.MinY + _a * j),
-                                    new(envelopeTile.MinX + _a * i, envelopeTile.MinY + _a * (j + 1)),
-                                    new(envelopeTile.MinX + _a * (i + 1), envelopeTile.MinY + _a * (j + 1)),
-                                    new(envelopeTile.MinX + _a * (i + 1), envelopeTile.MinY + _a * j),
-                                    new(envelopeTile.MinX + _a * i, envelopeTile.MinY + _a * j)
+                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j),
+                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * (j + 1)),
+                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * (j + 1)),
+                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * j),
+                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j)
                             }
                     )
                     );
