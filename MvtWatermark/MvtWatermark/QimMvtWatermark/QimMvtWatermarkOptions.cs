@@ -10,15 +10,17 @@ namespace MvtWatermark.QimMvtWatermark
         public int CountPoints { get; set; }
         public int Distance { get; set; }
         public int M { get; set; }
+        public int R { get; set; }
 
-        public QimMvtWatermarkOptions(double delta2, double t2, int extent, int countPoints, int distance, int m)
+        public QimMvtWatermarkOptions(double k, double t2, int extent, int countPoints, int distance, int m, int r)
         {
-            Delta2 = delta2;
+            Delta2 = k * t2;
             T2 = t2;
             Extent = extent;
             CountPoints = countPoints;
             Distance = distance;
             M = m;
+            R = r;
         }
     }
 }
