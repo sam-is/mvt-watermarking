@@ -14,13 +14,12 @@ namespace MvtWatermark.QimMvtWatermark
 
         private int[,] GenerateWinx(int key)
         {
-            //var r = (int)Math.Floor((double)_options.M * _options.M / sizeMessage);
             var sizeMessage = (int)Math.Floor((double)_options.M * _options.M / _options.R);
             var random = new Random(key);
             var winx = new int[_options.M, _options.M];
 
-            for (int i = 0; i < _options.M; i++)
-                for (int j = 0; j < _options.M; j++)
+            for (var i = 0; i < _options.M; i++)
+                for (var j = 0; j < _options.M; j++)
                     winx[i, j] = -1;
 
 
@@ -56,23 +55,16 @@ namespace MvtWatermark.QimMvtWatermark
 
         private bool[,] ChangeMap(bool[,] map)
         {
-            var count = 0;
             for (var i = 0; i < _options.Extent; i++)
                 for (var j = 0; j < _options.Extent; j++)
                     if (!CheckMapPoint(map, i, j))
-                    {
-                        ++count;
-                        if (Convert.ToInt32(map[i, j]) == 0)
-                            map[i, j] = Convert.ToBoolean(1);
-                        else
-                            map[i, j] = Convert.ToBoolean(0);
-                    }
+                        map[i, j] = !map[i, j];
             return map;
         }
 
         private bool CheckMapPoint(bool[,] map, int x, int y)
         {
-            var value = Convert.ToInt32(map[x, y]);
+            var value = map[x, y];
 
             if (CheckNearestPoints(map, x, y, value))
                 return true;
@@ -93,31 +85,31 @@ namespace MvtWatermark.QimMvtWatermark
             return false;
         }
 
-        private bool CheckNearestPoints(bool[,] map, int x, int y, int value)
+        private bool CheckNearestPoints(bool[,] map, int x, int y, bool value)
         {
             if (x < 0 || x >= _options.Extent || y < 0 || y >= _options.Extent)
                 return false;
 
             if (x + 1 < _options.Extent)
-                if (Convert.ToInt32(map[x + 1, y]) != value)
+                if (map[x + 1, y] != value)
                     return true;
 
             if (x - 1 >= 0)
-                if (Convert.ToInt32(map[x - 1, y]) != value)
+                if (map[x - 1, y] != value)
                     return true;
 
             if (y + 1 < _options.Extent)
-                if (Convert.ToInt32(map[x, y + 1]) != value)
+                if (map[x, y + 1] != value)
                     return true;
 
             if (y - 1 >= 0)
-                if (Convert.ToInt32(map[x, y - 1]) != value)
+                if (map[x, y - 1] != value)
                     return true;
 
             return false;
         }
 
-        private double Statistics(VectorTile tile, Polygon polygon, bool[,] map, Envelope envelopeTile, double extentDist, out int s0, out int s1)
+        private double Statistics(VectorTile tile, Geometry geometry, bool[,] map, Envelope tileEnvelope, double extentDist, out int s0, out int s1)
         {
             s0 = 0;
             s1 = 0;
@@ -125,15 +117,15 @@ namespace MvtWatermark.QimMvtWatermark
             foreach (var layer in tile.Layers)
                 foreach (var feature in layer.Features)
                 {
-                    var geometry = feature.Geometry;
-                    var coordinates = geometry.Coordinates;
+                    var featureGeometry = feature.Geometry;
+                    var coordinates = featureGeometry.Coordinates;
                     foreach (var coordinate in coordinates)
                     {
                         var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinate);
-                        if (polygon.Contains(new Point(coordinateMeters)))
+                        if (geometry.Contains(new Point(coordinateMeters)))
                         {
-                            var x = Convert.ToInt32((coordinateMeters.X - envelopeTile.MinX) / extentDist);
-                            var y = Convert.ToInt32((coordinateMeters.Y - envelopeTile.MinY) / extentDist);
+                            var x = Convert.ToInt32((coordinateMeters.X - tileEnvelope.MinX) / extentDist);
+                            var y = Convert.ToInt32((coordinateMeters.Y - tileEnvelope.MinY) / extentDist);
                             if (x == _options.Extent || y == _options.Extent)
                                 continue;
                             var mapValue = Convert.ToInt32(map[x, y]);
@@ -142,7 +134,6 @@ namespace MvtWatermark.QimMvtWatermark
                                 s1++;
                             else
                                 s0++;
-
                         }
                     }
                 }
@@ -155,52 +146,35 @@ namespace MvtWatermark.QimMvtWatermark
 
         private struct IntPoint
         {
-            public int x;
-            public int y;
-            public IntPoint(int x, int y) { this.x = x; this.y = y; }
+            public readonly int X;
+            public readonly int Y;
+            public IntPoint(int x, int y) {X = x; Y = y; }
         }
 
-        private List<IntPoint> GetOppositePoint(bool[,] map, int x, int y, int value)
+        private IEnumerable<IntPoint> GetOppositePoint(bool[,] map, int x, int y, bool value)
         {
-            int xRes;
-            int yRes;
-
             var listPoints = new List<IntPoint>();
 
             if (x + 1 < _options.Extent)
-                if (Convert.ToInt32(map[x + 1, y]) != value)
-                {
-                    xRes = x + 1;
-                    yRes = y;
-                    listPoints.Add(new IntPoint(xRes, yRes));
-                }
+                if (map[x + 1, y] != value)
+                    listPoints.Add(new IntPoint(x + 1, y));
 
             if (x - 1 >= 0)
-                if (Convert.ToInt32(map[x - 1, y]) != value)
-                {
-                    xRes = x - 1;
-                    yRes = y;
-                    listPoints.Add(new IntPoint(xRes, yRes));
-                }
+                if (map[x - 1, y] != value)
+                    listPoints.Add(new IntPoint(x - 1, y));
 
             if (y + 1 < _options.Extent)
-                if (Convert.ToInt32(map[x, y + 1]) != value)
-                {
-                    xRes = x;
-                    yRes = y + 1;
-                    listPoints.Add(new IntPoint(xRes, yRes));
-                }
+                if (map[x, y + 1] != value)
+                    listPoints.Add(new IntPoint(x, y + 1));
 
             if (y - 1 >= 0)
-                if (Convert.ToInt32(map[x, y - 1]) != value)
-                {
-                    xRes = x;
-                    yRes = y - 1;
-                    listPoints.Add(new IntPoint(xRes, yRes));
-                }
+                if (map[x, y - 1] != value)
+                    listPoints.Add(new IntPoint(x, y - 1));
+
             return listPoints;
         }
-        private List<IntPoint> FindOppositeIndexes(bool[,] map, int value, int x, int y)
+
+        private List<IntPoint> FindOppositeIndexes(bool[,] map, bool value, int x, int y)
         {
             var listPoints = new List<IntPoint>();
 
@@ -240,7 +214,7 @@ namespace MvtWatermark.QimMvtWatermark
             return listPoints;
         }
 
-        private void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope envelopeTile, double extentDist, bool[,] map, int value, int countToChange, int count)
+        private void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope envelopeTile, double extentDist, bool[,] map, bool value, int countToChange, int count)
         {
             var step = (int)Math.Floor((double)count / countToChange);
             var countChanged = 0;
@@ -267,7 +241,7 @@ namespace MvtWatermark.QimMvtWatermark
                             if (x == _options.Extent || y == _options.Extent)
                                 continue;
 
-                            var mapValue = Convert.ToInt32(map[x, y]);
+                            var mapValue = map[x, y];
                             if (mapValue == value)
                                 continue;
 
@@ -280,15 +254,15 @@ namespace MvtWatermark.QimMvtWatermark
                                 foreach (var point in listPoints)
                                 {
                                     var geometryCopy = geometry.Copy();
-                                    double xMeteres = envelopeTile.MinX + point.x * extentDist;
-                                    double yMeteres = envelopeTile.MinY + point.y * extentDist;
-                                    var coor = CoordinateConverter.MetersToDegrees(new Coordinate(xMeteres, yMeteres));
-                                    var tmp = 0;
-                                    if (x != point.x)
-                                        geometryCopy.Coordinates[j].X = coor.X;
-                                    if (y != point.y)
-                                        geometryCopy.Coordinates[j].Y = coor.Y;
-                                    tmp++;
+                                    var xMeters = envelopeTile.MinX + point.X * extentDist;
+                                    var yMeters = envelopeTile.MinY + point.Y * extentDist;
+                                    var coord = CoordinateConverter.MetersToDegrees(new Coordinate(xMeters, yMeters));
+                                    var countChangedForPoint = 0;
+                                    if (x != point.X)
+                                        geometryCopy.Coordinates[j].X = coord.X;
+                                    if (y != point.Y)
+                                        geometryCopy.Coordinates[j].Y = coord.Y;
+                                    countChangedForPoint++;
 
                                     if (!geometryCopy.IsValid)
                                     {
@@ -304,20 +278,20 @@ namespace MvtWatermark.QimMvtWatermark
                                     for (var k = j + 1; k < geometryCopy.Coordinates.Length; k++)
                                     {
                                         var coordinate = CoordinateConverter.DegreesToMeters(geometryCopy.Coordinates[k]);
-                                        if (coordinate.X == coordinateMeters.X && coordinate.Y == coordinateMeters.Y)
+                                        if (Math.Abs(coordinate.X - coordinateMeters.X) < extentDist * 0.0001 && Math.Abs(coordinate.Y - coordinateMeters.Y) < extentDist * 0.0001)
                                         {
-                                            if (x != point.x)
-                                                geometryCopy.Coordinates[k].X = coor.X;
-                                            if (y != point.y)
-                                                geometryCopy.Coordinates[k].Y = coor.Y;
-                                            tmp++;
+                                            if (x != point.X)
+                                                geometryCopy.Coordinates[k].X = coord.X;
+                                            if (y != point.Y)
+                                                geometryCopy.Coordinates[k].Y = coord.Y;
+                                            countChangedForPoint++;
                                         }
                                     }
 
                                     if (!geometryCopy.IsValid)
                                         continue;
 
-                                    countChanged += tmp;
+                                    countChanged += countChangedForPoint;
                                     geometry = geometryCopy;
                                     if (!feature.Geometry.IsValid)
                                         continue;
@@ -331,9 +305,10 @@ namespace MvtWatermark.QimMvtWatermark
             }
         }
 
-        public VectorTile Embed(VectorTile tile, ulong id, int key, BitArray message)
+        public VectorTile Embed(VectorTile tile, int key, BitArray message, out bool embeded)
         {
-            var t = new Tile(id);
+            embeded = false;
+            var t = new Tile(tile.TileId);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
             envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
             var a = envelopeTile.Height / _options.M;
@@ -346,7 +321,7 @@ namespace MvtWatermark.QimMvtWatermark
                 for (var j = 0; j < _options.M; j++)
                 {
                     var index = winx[i, j];
-                    if (index == -1)
+                    if (index == -1 || index >= message.Count)
                         continue;
                     var value = Convert.ToInt32(message[index]);
 
@@ -362,10 +337,11 @@ namespace MvtWatermark.QimMvtWatermark
                             }
                     ));
 
-                    var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out int s0, out int s1);
-                    if (stat == -1)
+                    var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
+                    if (Math.Abs(stat + 1) < 0.00001)
                         continue;
 
+                    embeded = true;
                     if (stat >= _options.T2 + _options.Delta2)
                     {
                         if (s1 - s0 > 0 && value == 1)
@@ -378,21 +354,22 @@ namespace MvtWatermark.QimMvtWatermark
                     if (value == 1)
                     {
                         var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s0 - s1) / 2);
-                        ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, 1, countAdded, s0);
+                        ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, true, countAdded, s0);
                     }
 
                     if (value == 0)
                     {
                         var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s1 - s0) / 2);
-                        ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, 0, countAdded, s1);
+                        ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
                     }
                 }
             return tile;
         }
 
-        public BitArray Extract(VectorTile tile, ulong id, int key)
+        public BitArray Extract(VectorTile tile, int key, out bool embeded)
         {
-            var t = new Tile(id);
+            embeded = false;
+            var t = new Tile(tile.TileId);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
             envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
 
@@ -430,10 +407,11 @@ namespace MvtWatermark.QimMvtWatermark
                             }
                     ));
 
-                    var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out int s0, out int s1);
-                    if (stat == -1)
+                    var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
+                    if (Math.Abs(stat + 1) < 0.00001)
                         continue;
 
+                    embeded = true;
                     if (stat >= _options.T2)
                     {
                         if (s0 > s1)
@@ -464,20 +442,26 @@ namespace MvtWatermark.QimMvtWatermark
             var countTiles = tiles.Count();
 
             var countBit = (int)Math.Floor((double)_options.M * _options.M / _options.R);
-            if (countBit > (int)Math.Floor((double)message.Count / countTiles))
-                throw new ArgumentOutOfRangeException();
+            if (countBit * countTiles < message.Count )
+                throw new ArgumentOutOfRangeException(nameof(message), "message size too large");
 
-            int current = 0;
+            var current = 0;
             foreach (var tileId in tiles)
             {
-                if (tiles.TryGet(tileId, out VectorTile tile))
+                if (tiles.TryGet(tileId, out var tile))
                 {
+                    if (current >= message.Count)
+                        break;
                     var bits = new BitArray(countBit);
-                    for (var i = 0; i < countBit; i++)
+                    for (var i = 0; i < countBit && i < message.Count; i++)
                         bits[i] = message[i + current];
-                    current += countBit;
 
-                    tiles[tileId] = Embed(tile, tileId, key, bits);
+                    tile = Embed(tile, key, bits, out var embeded);
+                    if (!embeded)
+                        continue;
+
+                    tiles[tileId] = tile;
+                    current += countBit;
                 }
             }
             return tiles;
@@ -491,11 +475,14 @@ namespace MvtWatermark.QimMvtWatermark
             var index = 0;
             foreach (var tileId in tiles)
             {
-                if (tiles.TryGet(tileId, out VectorTile tile))
+                if (tiles.TryGet(tileId, out var tile))
                 {
-                    var bits = Extract(tile, tileId, key);
-                    bits.CopyTo(message, index);
-                    index += bits.Count;
+                    var bits = Extract(tile, key, out var embeded);
+                    if (embeded)
+                    {
+                        bits.CopyTo(message, index);
+                        index += bits.Count;
+                    }
                 }
             }
             return new BitArray(message);
