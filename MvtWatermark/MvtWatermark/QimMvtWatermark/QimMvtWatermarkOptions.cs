@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MvtWatermark.QimMvtWatermark
+﻿namespace MvtWatermark.QimMvtWatermark
 {
     public class QimMvtWatermarkOptions
     {
