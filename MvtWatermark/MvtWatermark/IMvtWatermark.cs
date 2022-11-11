@@ -1,11 +1,10 @@
 ﻿using NetTopologySuite.IO.VectorTiles;
 using System.Collections;
 
-namespace MvtWatermark
+namespace MvtWatermark;
+
+public interface IMvtWatermark
 {
-    public interface IMvtWatermark
-    {
-        VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message);
-        BitArray Extract(VectorTileTree tiles, int key);
-    }
+    VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message);
+    BitArray Extract(VectorTileTree tiles, int key);
 }
