@@ -171,7 +171,7 @@ public class QimMvtWatermark : IMvtWatermark
                 }
             }
 
-        if ((s0 == 0 && s1 == 0) || s0 + s1 < _options.CountPoints)
+        if ((s0 == 0 && s1 == 0) || s0 + s1 < _options.T1)
             return -1;
 
         return (double)Math.Abs(s0 - s1) / (s1 + s0);
