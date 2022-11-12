@@ -16,7 +16,7 @@ public class QimMvtWatermark : IMvtWatermark
     /// Generates a matrix with embedded message indexes
     /// </summary>
     /// <param name="key">Secret key</param>
-    /// <returns>matrix with embedded message indexes</returns>
+    /// <returns>Matrix with embedded message indexes</returns>
     private int[,] GenerateWinx(int key)
     {
         var random = new Random(key);
@@ -106,7 +106,7 @@ public class QimMvtWatermark : IMvtWatermark
     /// <param name="x">X coordinate point in re-quantization matrix</param>
     /// <param name="y">Y coordinate point in re-quantization matrix</param>
     /// <param name="value">Point value in re-quantization matrix</param>
-    /// <returns></returns>
+    /// <returns>True if found opposite value, false otherwise</returns>
     private bool CheckNearestPoints(bool[,] map, int x, int y, bool value)
     {
         if (x < 0 || x >= _options.Extent || y < 0 || y >= _options.Extent)
@@ -254,7 +254,7 @@ public class QimMvtWatermark : IMvtWatermark
     /// Changes coordinates of geometry points in a certain area
     /// </summary>
     /// <param name="tile">Vector tile with geometry where needed to change coordinates</param>
-    /// <param name="polygon">The polygon where the coordinates will change</param>
+    /// <param name="polygon">The polygon inside which should be points whose coordinates need to be changed</param>
     /// <param name="tileEnvelope">Envelope that bounding tile</param>
     /// <param name="extentDist">Distances in meters for difference i and i+1 for extent</param>
     /// <param name="map">Matrix re-quantization</param>
@@ -361,7 +361,7 @@ public class QimMvtWatermark : IMvtWatermark
     /// <returns>Vector tile with an embedded message</returns>
     public VectorTile Embed(VectorTile tile, int key, BitArray message)
     {
-        var embeded = false;
+        var embedded = false;
         var t = new Tile(tile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
@@ -395,7 +395,7 @@ public class QimMvtWatermark : IMvtWatermark
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 
-                embeded = true;
+                embedded = true;
                 if (stat >= _options.T2 + _options.Delta2)
                 {
                     if (s1 - s0 > 0 && value == 1)
@@ -417,7 +417,7 @@ public class QimMvtWatermark : IMvtWatermark
                     ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
                 }
             }
-        if (!embeded)
+        if (!embedded)
             return null!;
         return tile;
     }
@@ -430,7 +430,7 @@ public class QimMvtWatermark : IMvtWatermark
     /// <returns>Extracted message</returns>
     public BitArray Extract(VectorTile tile, int key)
     {
-        var embeded = false;
+        var embedded = false;
         var t = new Tile(tile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
@@ -478,7 +478,7 @@ public class QimMvtWatermark : IMvtWatermark
 
                 dictGeneralExtractionMethod[index] = new(dictGeneralExtractionMethod[index].Item1 + s0, dictGeneralExtractionMethod[index].Item2 + s1);
 
-                embeded = true;
+                embedded = true;
                 if (stat >= _options.T2)
                 {
                     if (s0 > s1)
@@ -515,7 +515,7 @@ public class QimMvtWatermark : IMvtWatermark
             }
         }
 
-        if (!embeded)
+        if (!embedded)
             return null!;
 
         return bits;
