@@ -5,21 +5,25 @@ namespace MvtWatermark.QimMvtWatermark;
 public class QimMvtWatermarkOptions
 {
     /// <summary>
-    /// Inaccuracy value for relative number of required points
-    /// </summary>
-    public double Delta2 { get; set; }
-    /// <summary>
     /// The value for the relative number of required points
     /// </summary>
     public double T2 { get; set; }
     /// <summary>
-    /// Describes the width and height of the tile in integer coordinates
+    /// Inaccuracy value for relative number of required points
     /// </summary>
-    public int Extent { get; set; }
+    public double Delta2 { get; set; }
     /// <summary>
     /// The number of points in the each square from MxM, that is necessary for successful embedding
     /// </summary>
-    public int CountPoints { get; set; }
+    public int T1 { get; set; }
+    /// <summary>
+    /// Inaccuracy value for number of required points
+    /// </summary>
+    public int Delta1 { get; set; }
+    /// <summary>
+    /// Describes the width and height of the tile in integer coordinates
+    /// </summary>
+    public int Extent { get; set; }
     /// <summary>
     /// The maximum four-connected distance for the opposite value in the re-quantization matrix
     /// </summary>
@@ -41,12 +45,13 @@ public class QimMvtWatermarkOptions
     /// </summary>
     public bool IsGeneralExtractionMethod { get; set; }
 
-    public QimMvtWatermarkOptions(double k, double t2, int extent, int countPoints, int distance,int nb, int r, bool isGeneralExtractionMethod = false)
+    public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance,int nb, int r, bool isGeneralExtractionMethod = false)
     {
-        Delta2 = k * t2;
         T2 = t2;
+        Delta2 = k * T2;
+        T1 = t1;
+        Delta1 = (int)Math.Round(k * T1);
         Extent = extent;
-        CountPoints = countPoints;
         Distance = distance;
         R = r;
         Nb = nb;
@@ -56,10 +61,11 @@ public class QimMvtWatermarkOptions
 
     public QimMvtWatermarkOptions()
     {
-        Delta2 = 0.5 * 0.7;
         T2 = 0.7;
+        Delta2 = 0.5 * T2;
+        T1 = 15;
+        Delta1 = (int)Math.Round(0.5 * T1);
         Extent = 4096;
-        CountPoints = 15;
         Distance = 2;
         M = 10;
         R = 10;
