@@ -45,7 +45,7 @@ public class QimMvtWatermarkOptions
     /// </summary>
     public bool IsGeneralExtractionMethod { get; set; }
 
-    public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance,int nb, int r, bool isGeneralExtractionMethod = false)
+    public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance, int nb, int r, bool isGeneralExtractionMethod = false)
     {
         T2 = t2;
         Delta2 = k * T2;
@@ -59,17 +59,5 @@ public class QimMvtWatermarkOptions
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
     }
 
-    public QimMvtWatermarkOptions()
-    {
-        T2 = 0.7;
-        Delta2 = 0.5 * T2;
-        T1 = 15;
-        Delta1 = (int)Math.Round(0.5 * T1);
-        Extent = 4096;
-        Distance = 2;
-        M = 10;
-        R = 10;
-        Nb = 5;
-        IsGeneralExtractionMethod = false;
-    }
+    public QimMvtWatermarkOptions() : this(0.5, 0.7, 15, 4096, 2, 5, 10) { }
 }
