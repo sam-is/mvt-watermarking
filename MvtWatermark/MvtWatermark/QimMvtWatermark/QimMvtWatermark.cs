@@ -323,26 +323,8 @@ public class QimMvtWatermark : IMvtWatermark
                                         continue;
                                 }
 
-                                for (var k = j + 1; k < geometryCopy.Coordinates.Length; k++)
-                                {
-                                    var coordinate = CoordinateConverter.DegreesToMeters(geometryCopy.Coordinates[k]);
-                                    if (Math.Abs(coordinate.X - coordinateMeters.X) < extentDist * 0.0001 && Math.Abs(coordinate.Y - coordinateMeters.Y) < extentDist * 0.0001)
-                                    {
-                                        if (x != point.X)
-                                            geometryCopy.Coordinates[k].X = coord.X;
-                                        if (y != point.Y)
-                                            geometryCopy.Coordinates[k].Y = coord.Y;
-                                        countChangedForPoint++;
-                                    }
-                                }
-
-                                if (!geometryCopy.IsValid)
-                                    continue;
-
                                 countChanged += countChangedForPoint;
                                 geometry = geometryCopy;
-                                if (!feature.Geometry.IsValid)
-                                    continue;
                                 break;
                             }
                         }
