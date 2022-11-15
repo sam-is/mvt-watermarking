@@ -169,7 +169,7 @@ public class QimMvtWatermarkTests
         var tile = new VectorTile { TileId = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(0, 0, 0).Id };
         tile.Layers.Add(new Layer { Name = "test" });
 
-        var message = new BitArray(new[] {true});
+        var message = new BitArray(new[] { true });
 
         var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 5);
 

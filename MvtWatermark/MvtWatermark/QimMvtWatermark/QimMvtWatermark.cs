@@ -545,7 +545,7 @@ public class QimMvtWatermark : IMvtWatermark
                 for (var i = 0; i < _options.Nb && i < message.Count; i++)
                     bits[i] = message[i + current];
 
-                tile = Embed(tile, key+(int)tileId, bits);
+                tile = Embed(tile, key + (int)tileId, bits);
                 if (tile == null)
                     continue;
 
