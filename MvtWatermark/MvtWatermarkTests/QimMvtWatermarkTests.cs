@@ -56,7 +56,7 @@ public class QimMvtWatermarkTests
 
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, r);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, r, null);
 
         var watermark = new QimMvtWatermark(options);
         var tileWatermarked = watermark.Embed(tile, 0, message);
@@ -105,7 +105,7 @@ public class QimMvtWatermarkTests
             [tile.TileId] = tile
         };
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 15);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 15, null);
 
         var watermark = new QimMvtWatermark(options);
         var tileWatermarked = watermark.Embed(vt, 0, message);
@@ -153,7 +153,7 @@ public class QimMvtWatermarkTests
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, (int)Math.Floor((double)message.Count / tileTree.Count()), 20);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, (int)Math.Floor((double)message.Count / tileTree.Count()), 20, null);
 
         var watermark = new QimMvtWatermark(options);
         var tileWatermarked = watermark.Embed(tileTree, 0, message);
@@ -171,7 +171,7 @@ public class QimMvtWatermarkTests
 
         var message = new BitArray(new[] { true });
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 5);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 5, null);
 
         var watermark = new QimMvtWatermark(options);
         var tileWatermarked = watermark.Embed(tile, 0, message);
