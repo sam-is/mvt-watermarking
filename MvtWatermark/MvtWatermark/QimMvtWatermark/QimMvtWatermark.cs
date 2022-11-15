@@ -100,7 +100,7 @@ public class QimMvtWatermark : IMvtWatermark
     }
 
     /// <summary>
-    /// Сhecks the nearest points for the opposite value
+    /// Checks the nearest points for the opposite value
     /// </summary>
     /// <param name="map">Re-quantization matrix</param>
     /// <param name="x">X coordinate point in re-quantization matrix</param>
@@ -245,7 +245,7 @@ public class QimMvtWatermark : IMvtWatermark
             {
                 var l = GetOppositePoint(map, x, y - 1, value);
                 listPoints.AddRange(l);
-            };
+            }
         }
         return listPoints;
     }
@@ -355,11 +355,11 @@ public class QimMvtWatermark : IMvtWatermark
     /// <summary>
     /// Embeds a message into one vector tile
     /// </summary>
-    /// <param name="tiles">Vector tile for embedding message</param>
+    /// <param name="tile">Vector tile for embedding message</param>
     /// <param name="key">Secret key</param>
     /// <param name="message">The message to embed</param>
     /// <returns>Vector tile with an embedded message</returns>
-    public VectorTile Embed(VectorTile tile, int key, BitArray message)
+    public VectorTile? Embed(VectorTile tile, int key, BitArray message)
     {
         var embedded = false;
         var t = new Tile(tile.TileId);
@@ -418,17 +418,17 @@ public class QimMvtWatermark : IMvtWatermark
                 }
             }
         if (!embedded)
-            return null!;
+            return null;
         return tile;
     }
 
     /// <summary>
     /// Extracts an embedded message from one vector tile
     /// </summary>
-    /// <param name="tiles">Vector tile to extract the message from</param>
+    /// <param name="tile">Vector tile to extract the message from</param>
     /// <param name="key">Secret key</param>
     /// <returns>Extracted message</returns>
-    public BitArray Extract(VectorTile tile, int key)
+    public BitArray? Extract(VectorTile tile, int key)
     {
         var embedded = false;
         var t = new Tile(tile.TileId);
@@ -516,7 +516,7 @@ public class QimMvtWatermark : IMvtWatermark
         }
 
         if (!embedded)
-            return null!;
+            return null;
 
         return bits;
     }
@@ -557,7 +557,7 @@ public class QimMvtWatermark : IMvtWatermark
     }
 
     /// <summary>
-    /// Extracts an embedded message from vectortiletree
+    /// Extracts an embedded message from VectorTileTree
     /// </summary>
     /// <param name="tiles">VectorTileTree to extract the message from</param>
     /// <param name="key">Secret key</param>
