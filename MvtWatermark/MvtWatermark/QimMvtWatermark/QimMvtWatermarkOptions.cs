@@ -45,7 +45,8 @@ public class QimMvtWatermarkOptions
     /// </summary>
     public bool IsGeneralExtractionMethod { get; set; }
 
-    public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance, int? nb, int? r, int? m, bool isGeneralExtractionMethod = false)
+    public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance,
+                                  int? nb, int? r, int? m, bool isGeneralExtractionMethod = false)
     {
         T2 = t2;
         Delta2 = k * T2;
@@ -53,32 +54,34 @@ public class QimMvtWatermarkOptions
         Delta1 = (int)Math.Round(k * T1);
         Extent = extent;
         Distance = distance;
-        if ((nb == null && r == null && m == null) || (nb == null && r == null) || (nb == null && m == null) || (r == null && m == null))
-            throw new ArgumentNullException("Only on of nb, r, m parameters can be null");
-        if (nb == null)
+
+        if (nb == null && r != null && m != null)
         {
             R = (int)r!;
             M = (int)m!;
             Nb = (int)Math.Floor((double)M * M / R);
         }
-        if (r == null)
+        else if (r == null && nb != null && m != null)
         {
             M = (int)m!;
             Nb = (int)nb!;
             R = (int)Math.Floor((double)M * M / Nb);
         }
-        if (m == null)
+        else if (m == null && nb != null && r != null)
         {
             R = (int)r!;
             Nb = (int)nb!;
             M = (int)Math.Ceiling(Math.Sqrt(Nb * R));
         }
-        if (r != null && m != null && nb != null)
+        else if (nb != null && r != null && m != null)
         {
             Nb = (int)nb!;
             R = (int)r!;
             M = (int)m!;
         }
+        else
+            throw new ArgumentNullException(nb==null? nameof(nb):nameof(r),"Only one of nb, r, m parameters can be null");
+
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
     }
 

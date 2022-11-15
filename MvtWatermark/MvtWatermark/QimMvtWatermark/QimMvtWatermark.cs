@@ -261,7 +261,8 @@ public class QimMvtWatermark : IMvtWatermark
     /// <param name="value">The value that corresponds to the value in the re-quantization matrix to which the coordinates will need to be shifted</param>
     /// <param name="countToChange">The number of points that need to change coordinates</param>
     /// <param name="count">Total number of points</param>
-    private void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope, double extentDist, bool[,] map, bool value, int countToChange, int count)
+    private void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope,
+                                  double extentDist, bool[,] map, bool value, int countToChange, int count)
     {
         var step = (int)Math.Floor((double)count / countToChange);
         var countChanged = 0;
