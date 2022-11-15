@@ -63,12 +63,12 @@ public class QimMvtWatermarkTests
 
         Assert.NotNull(tileWatermarked);
 
-        var m = watermark.Extract(tileWatermarked, 0);
+        var m = watermark.Extract(tileWatermarked!, 0);
 
         Assert.NotNull(m);
 
         for (var i = 0; i < message.Count; i++)
-            Assert.True(m[i] == message[i]);
+            Assert.True(m![i] == message[i]);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class QimMvtWatermarkTests
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
 
-        var tiletree = new VectorTileTree();
+        var tileTree = new VectorTileTree();
         for (var x = 653; x < 658; x++)
             for (var y = 330; y < 334; y++)
             {
@@ -145,7 +145,7 @@ public class QimMvtWatermarkTests
                 using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
                 var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
 
-                tiletree[tile.TileId] = tile;
+                tileTree[tile.TileId] = tile;
             }
 
         var bits = new bool[100];
@@ -153,10 +153,10 @@ public class QimMvtWatermarkTests
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, (int)Math.Floor((double)message.Count / tiletree.Count()), 20);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, (int)Math.Floor((double)message.Count / tileTree.Count()), 20);
 
         var watermark = new QimMvtWatermark(options);
-        var tileWatermarked = watermark.Embed(tiletree, 0, message);
+        var tileWatermarked = watermark.Embed(tileTree, 0, message);
         var m = watermark.Extract(tileWatermarked, 0);
 
         for (var i = 0; i < message.Count; i++)
