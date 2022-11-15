@@ -162,5 +162,25 @@ public class QimMvtWatermarkTests
         for (var i = 0; i < message.Count; i++)
             Assert.True(m[i] == message[i]);
     }
+
+    [Fact]
+    public void EmptyTile()
+    {
+        var tile = new VectorTile { TileId = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(0, 0, 0).Id };
+        tile.Layers.Add(new Layer { Name = "test" });
+
+        var message = new BitArray(new[] {true});
+
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 5);
+
+        var watermark = new QimMvtWatermark(options);
+        var tileWatermarked = watermark.Embed(tile, 0, message);
+
+        Assert.Null(tileWatermarked);
+
+        var m = watermark.Extract(tile, 0);
+
+        Assert.Null(m);
+    }
 }
 
