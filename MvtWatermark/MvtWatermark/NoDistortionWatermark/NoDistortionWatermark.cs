@@ -14,8 +14,8 @@ namespace MvtWatermark.NoDistortionWatermark
     {
         public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
         {
-            BitArray keyBitArray = new BitArray(new int[] { key });
-            var TileDict = tiles.WriteWM(message, keyBitArray);
+            //BitArray keyBitArray = new BitArray(new int[] { key });
+            var TileDict = tiles.WriteWM(message, key);
 
             var readerWM = new MapboxTileReaderWM();
 

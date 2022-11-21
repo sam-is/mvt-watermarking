@@ -1,4 +1,4 @@
-п»їusing System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -8,8 +8,7 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
-//namespace MvtWatermark.NoDistortionWatermark
-namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
+namespace NetTopologySuite.IO.VectorTiles.Mapbox.NoNeed
 {
     // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
     public static class MapboxTileWriterWM
@@ -21,13 +20,13 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="path">The path.</param>
         /// <param name="extent">The extent.</param>
         /// <remarks>Replaces the files if they are already present.</remarks>
-        public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, int Key, uint extent = 4096)
+        public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, BitArray Key, uint extent = 4096)
         {
             var result = new Dictionary<ulong, Tile>();
 
             foreach (var tileIndex in tree)
             {
-                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, Key, 1, extent)); // m = 1
+                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, Key, extent));
             }
 
             return result;
@@ -40,31 +39,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="stream">The stream to write to.</param>
         /// <param name="extent">The extent.</param>
         /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, int Key, int m = 1,
+        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, BitArray Key,
             uint extent = 4096, string idAttributeName = "id")
         {
-            var WatermarkInt = WatermarkTransform.getIntFromBitArray(WatermarkString); // Р¤СЂР°РіРјРµРЅС‚ Р¦Р’Р— РІ int
-            var rand = new Random(Key); // РїРѕРєР° С‚Р°Рє, РїРѕС‚РѕРј Random, РЅР°РІРµСЂРЅРѕРµ, Р±СѓРґРµС‚ СЃРѕР·РґР°РІР°С‚СЊСЃСЏ РІС‹С€Рµ Рё РїРµСЂРµРґР°РІР°С‚СЊСЃСЏ РєР°Рє РїР°СЂР°РјРµС‚СЂ
-            var DElementarySegmentsCount = Convert.ToInt32(2 * m * Math.Pow(2, WatermarkString.Count));
-
-            var maxBitArray = new BitArray(WatermarkString.Count, true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt];
-
-            var keySequence = new int[DElementarySegmentsCount / 2];
-
-            for (int i = 0; i < DElementarySegmentsCount/2; i++)
-            {
-                int value;
-                do
-                {
-                    value = rand.Next(MaxInt);
-                } while (HowMuchEachValue[value] >= 2);
-                keySequence[i] = value;
-                HowMuchEachValue[value]++;
-            } // РЅР°РіРµРЅРµСЂРёР»Рё {Sk}
-
-
             var tile = new Tiles.Tile(vectorTile.TileId);
             var tgt = new TileGeometryTransform(tile, extent);
 
@@ -89,7 +66,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                             break;
                         case ILineal lineal:
                             feature.Type = Tile.GeomType.LineString;
-                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, DElementarySegmentsCount, keySequence)); // Р¦Р’Р— С‚РѕР»СЊРєРѕ РІ Р»Р°Р№РЅСЃС‚СЂРёРЅРіРё Р·Р°РїРёС…РёРІР°РµС‚СЃСЏ
+                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkString, Key)); // ЦВЗ только в лайнстринги запихивается
                             break;
                         case IPolygonal polygonal:
                             feature.Type = Tile.GeomType.Polygon;
@@ -145,7 +122,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 var tileValue = ToTileValue(aValues[a]);
                 if (tileValue == null) continue;
 
-                tags.Add(keys.AddOrGet(key));
+                tags.Add(keys.AddOrGet(key)); 
                 tags.Add(values.AddOrGet(tileValue));
             }
         }
@@ -213,19 +190,30 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
         }
 
-        // РљРѕРґРёСЂСѓРµС‚ LineString РІ MVT
-        private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int WatermarkInt, 
-            int DElementarySegmentsCount, int[] KeySequence)
-        // С„СЂР°РіРјРµРЅС‚ Р¦Р’Р— РґР»СЏ РєР°Р¶РґРѕРіРѕ С‚Р°Р№Р»Р° РЅР°РґРѕ РѕРїСЂРµРґРµР»СЏС‚СЊ РєР°Рє-С‚Рѕ
+        // Кодирует LineString в MVT
+        private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, BitArray WatermarkString, BitArray Key)
+            // фрагмент ЦВЗ для каждого тайла надо определять как-то
         {
             var geometry = (Geometry)lineal;
             int currentX = 0, currentY = 0;
-            for (int i = 0; i < geometry.NumGeometries; i++)
+            if (WatermarkString.Count != 0 && Key.Count >= WatermarkString.Count) // ЦВЗ не пустой, и ключ равной или большей длины, чем ЦВЗ
             {
-                var lineString = (LineString)geometry.GetGeometryN(i);
-                foreach (uint encoded in EncodeWithWatermark(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, WatermarkInt,
-                    DElementarySegmentsCount, KeySequence))
-                    yield return encoded;
+                //int D = 2 * WatermarkString.Length;
+                for (int i = 0; i < geometry.NumGeometries; i++)
+                {
+                    var lineString = (LineString)geometry.GetGeometryN(i);
+                    foreach (uint encoded in EncodeWithWatermark(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, WatermarkString, Key))
+                        yield return encoded;
+                }
+            }
+            else // Иначе кодируем без ЦВЗ
+            {
+                for (int i = 0; i < geometry.NumGeometries; i++)
+                {
+                    var lineString = (LineString)geometry.GetGeometryN(i);
+                    foreach (uint encoded in Encode(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, false))
+                        yield return encoded;
+                }
             }
         }
 
@@ -257,21 +245,37 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
         /// <summary>
-        /// Encodes geometry with watermark (РЎС‚РѕР№РєРёР№ Р¦Р’Р—, Р°Р»РіРѕСЂРёС‚Рј РІСЃС‚СЂР°РёРІР°РЅРёСЏ РІ РїРѕР»РѕРІРёРЅСѓ )
+        /// Encodes geometry with watermark (Стойкий ЦВЗ, алгоритм встраивания в половину )
         /// </summary>
         private static IEnumerable<uint> EncodeWithWatermark(CoordinateSequence sequence, TileGeometryTransform tgt,
-            ref int currentX, ref int currentY, int WatermarkInt, int DElementarySegmentsCount, int[] keySequence)
+            ref int currentX, ref int currentY, BitArray WatermarkString, BitArray Key)
         {
+            int DElementarySegmentsCount = WatermarkString.Count * 2;
+            // !!!элементарных сегментов пока что будет ровно в два раза больше, чем битов в ЦВЗ!!!
+
+            /////////// (DElementarySegmentsCount % WatermarkString.Length) != 0
+            int WatermarkInt = WatermarkTransform.getIntFromBitArray(WatermarkString);
+            // главное, чтобы после xor было не 0
+            if (WatermarkInt == 0 || WatermarkString.Count == 0) // лучше ошибку выбрасывать
+                // Если ЦВЗ пустой или D не делится на длину ЦВЗ без остатка, вызывается простой Encode. Но пока точно делится ^^^^^
+            {
+                return Encode(sequence, tgt, ref currentX, ref currentY);
+            }
+            ///////////
+            
+
             // how many parameters for LineTo command
             int count = sequence.Count;
             var encoded = new List<uint>();
 
-            // СЃРѕС…СЂР°РЅСЏРµРј currentX Рё currentY, РїРѕС‚РѕРјСѓ С‡С‚Рѕ tgt.Transform РёР·РјРµРЅСЏРµС‚ РёС… РїРѕ СЃСЃС‹Р»РєР°Рј
-            int X = currentX; int Y = currentY;
-
-            // РІРµСЃСЊ СЌС‚РѕС‚ РєСѓСЃРѕРє РєРѕРґР° РЅСѓР¶РµРЅ РґР»СЏ С‚РѕРіРѕ, С‡С‚РѕР±С‹ РїРѕСЃС‡РёС‚Р°С‚СЊ РєРѕР»РёС‡РµСЃС‚РІРѕ СЂРµР°Р»СЊРЅС‹С… СЃРµРіРјРµРЅС‚РѕРІ
+            // Start point
+            encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-            int realSegments = 0;
+            encoded.Add(GenerateParameterInteger(position.x));
+            encoded.Add(GenerateParameterInteger(position.y));
+
+            int realSegments = 0; // число реальных сегментов (Pj-1)
+            // по первому кругу считаем количество реальных сегментов
             for (int i = 1; i < count; i++)
             {
                 position = tgt.Transform(sequence, i, ref currentX, ref currentY);
@@ -281,81 +285,59 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
-
-            // РІРѕР·РІСЂР°С‰Р°РµРј currentX Рё currentY Рє РЅР°С‡Р°Р»СЊРЅС‹Рј Р·РЅР°С‡РµРЅРёСЏРј
-            currentX = X; currentY = Y;
-
             if (realSegments < DElementarySegmentsCount)
             {
-                return Encode(sequence, tgt, ref currentX, ref currentY);
-                //throw new Exception("Р­Р»РµРјРµРЅС‚Р°СЂРЅС‹С… СЃРµРіРјРµРЅС‚РѕРІ Р±РѕР»СЊС€Рµ, С‡РµРј СЂРµР°Р»СЊРЅС‹С…. Р’СЃС‚СЂР°РёРІР°РЅРёРµ РЅРµРІРѕР·РјРѕР¶РЅРѕ.");
+                throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
             }
-            int realSegmentsInONEElemSegment = DElementarySegmentsCount / realSegments; 
+            int realSegmentsInONEElemSegment = DElementarySegmentsCount / realSegments; // может, сделать это по-другому,
+                                                                                        // чтобы рациональнее использовать реальные сегменты?
+            //int realSegmentsInLASTElemSegment = DElementarySegmentsCount % realSegments; // а это не нужно вообще по идее
 
-            // РЎС‚Р°СЂС‚РѕРІР°СЏ РєРѕРјР°РЅРґР°: РїРµСЂРІС‹Р№ MoveTo
-            encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-            position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-            encoded.Add(GenerateParameterInteger(position.x));
-            encoded.Add(GenerateParameterInteger(position.y));
+            // По второму кругу уже кодируем.
+            // Уже ДОЛЖНО БЫТЬ известно, что количество бит во фрагменте ЦВЗ
+            // как минимум в два раза меньше числа элементарных сегментов
 
-            X = position.x; Y = position.y; // С‚РµРїРµСЂСЊ РѕРЅРё РЅР° РЅР°С‡Р°Р»СЊРЅРѕР№ С‚РѕС‡РєРµ Р»Р°Р№РЅСЃС‚СЂРёРЅРіР°
+            // Изменяем встраиваемый ЦВЗ с помощью ключа
+            var XorWatermarkAndKey = new BitArray(WatermarkString); 
+            XorWatermarkAndKey.Xor(Key);
+            var readyArrayToImplement = new BitArray(WatermarkString); // Проверить, происходит ли здесь копирование.
+            // !ключ должен быть длиннее или равен вотермарке, наверное. Надо проверку сделать на это!
+            for (int i = XorWatermarkAndKey.Length - 1; i >= (XorWatermarkAndKey.Length - WatermarkString.Length); --i)
+            {
+                readyArrayToImplement[i] = XorWatermarkAndKey[i];
+            }
 
-            int encodedIndex = 2; // РїРѕРґ РёРЅРґРµРєСЃР°РјРё 0 - 2 РґРѕР±Р°РІРёР»Рё MoveTo Рё РїР°СЂР°РјРµС‚СЂС‹, РѕСЃС‚Р°РЅРѕРІРєР° РЅР° РІС‚РѕСЂРѕРј РїР°СЂР°РјРµС‚СЂРµ MoveTo
-
+            // Add LineTo command (stub)
             int lastLineToCount = 0;
-            int currentRealSegment = 0;
-            int currentElementarySegment = 0;
-            int lastLineToCommand; // РёРЅРґРµРєСЃ РїРѕСЃР»РµРґРЅРµРіРѕ LineTo CommandInteger
+            encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
 
-            int sequenceIndexStart = 1;
+            int X = currentX; // текущее положение курсора для встраивания нетипичной геометрии
+            int Y = currentY;
+            int currentRealSegment = 0; 
+            int encodedIndex = 3; // пока остановка на самом первом LineTo, до этого под индексами 0 - 2 добавили MoveTo и параметры
 
-            // РµСЃР»Рё СЌР»РµРјРµРЅС‚Р°СЂРЅС‹Р№ СЃРµРіРјРµРЅС‚ РїРѕРґС…РѕРґРёС‚, С‚Рѕ РІСЃС‚СЂР°РёРІР°РµРј РЅРµС‚РёРїРёС‡РЅСѓСЋ РєРѕРЅСЃС‚СЂСѓРєС†РёСЋ РІ РїРµСЂРІС‹Р№ СЂРµР°Р»СЊРЅС‹Р№ СЃРµРіРјРµРЅС‚
-            if (keySequence[0] == WatermarkInt) 
-            {
-                lastLineToCount = 1; // РїРѕРєР° РґРѕР±Р°РІРёР»Рё 1 LineTo
-
-                encoded[0] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
-                position = tgt.Transform(sequence, 1, ref currentX, ref currentY);
-                encoded.Add(GenerateParameterInteger(position.x));
-                encoded.Add(GenerateParameterInteger(position.y));
-                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount)); // РЅР°РґРѕ Р·Р°РїРѕРјРёРЅР°С‚СЊ РёРЅРґРµРєСЃ РїРѕСЃР»РµРґРЅРµР№ LineTo Рё РѕР±РЅРѕРІР»СЏС‚СЊ
-                encoded.Add(GenerateParameterInteger(X));
-                encoded.Add(GenerateParameterInteger(Y));
-
-                encodedIndex += 5;
-                sequenceIndexStart = 2; // РїРµСЂРІС‹Р№ СЂРµР°Р»СЊРЅС‹Р№ СЃРµРіРјРµРЅС‚ Р·Р°РєРѕРґРёСЂРѕРІР°Р»Рё, С†РёРєР» РЅР°С‡РЅС‘С‚ СЂР°Р±РѕС‚Сѓ СЃРѕ РІС‚РѕСЂРѕРіРѕ
-                currentRealSegment = 1;
-
-                lastLineToCommand = encodedIndex - 2; // С‚Рѕ РµСЃС‚СЊ 5
-            }
-            else
-            {
-                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
-                encodedIndex++; // encodedIndex = 3
-                lastLineToCommand = encodedIndex;
-            }
-
-            for (int i = sequenceIndexStart; i < count; i++)
+            int lastLineToCommand = encodedIndex; // индекс последнего LineTo CommandInteger
+            for (int i = 1; i < count; i++)
             {
                 position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
-                if (position.x != 0 || position.y != 0) 
+                //!!!!!!
+                if (position.x != 0 || position.y != 0) // переделать для элементарных сегментов!
                 {
-                    currentElementarySegment = currentRealSegment / realSegmentsInONEElemSegment;
-                    if (currentElementarySegment < keySequence.Length
-                        // currentRealSegment РЅР° РїРµСЂРІРѕРј С€Р°РіРµ = 0, currentElementarySegment С‚РѕР¶Рµ = 0
-                        && keySequence[currentElementarySegment] == WatermarkInt // С‚СѓС‚ РїСЂРѕР±Р»РµРјР° СЃ РёРЅРґРµРєСЃР°РјРё (СѓР¶Рµ РЅРµС‚)
-                        && currentRealSegment - realSegmentsInONEElemSegment * currentElementarySegment == 0) // РїРѕРєР° С‡С‚Рѕ РІ РєР°Р¶РґС‹Р№ РїРµСЂРІС‹Р№ СЂРµР°Р»СЊРЅС‹Р№ СЃРµРіРјРµРЅС‚ РІСЃС‚СЂР°РёРІР°РµРј
+                    currentRealSegment++;
+                    if (i < readyArrayToImplement.Count && readyArrayToImplement[i] == true
+                        && currentRealSegment % realSegmentsInONEElemSegment == 1)
                     {
+                        // перед одним LineTo - MoveTo в следующую точку, потому LineTo назад. А после if уже сам LineTo
                         lastLineToCount = 1;
                         encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
                         encoded.Add(GenerateParameterInteger(position.x));
                         encoded.Add(GenerateParameterInteger(position.y));
-                        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount)); // РЅР°РґРѕ Р·Р°РїРѕРјРёРЅР°С‚СЊ РёРЅРґРµРєСЃ РїРѕСЃР»РµРґРЅРµР№ LineTo Рё РѕР±РЅРѕРІР»СЏС‚СЊ
+                        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount)); // надо запоминать индекс последней LineTo и обновлять
                         encoded.Add(GenerateParameterInteger(X));
                         encoded.Add(GenerateParameterInteger(Y));
-                        encodedIndex += 6; 
-                        lastLineToCommand = encodedIndex - 2; // РѕС‚РЅРёРјР°РµРј РґРІР° РїР°СЂР°РјРµС‚СЂР°
+                        encodedIndex += 6; // 6 команд/параметров в сумме добавили в список encoded при внесении нетипичной конструкции
+                        lastLineToCommand = encodedIndex - 2; // отнимаем два параметра
                     }
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
@@ -364,9 +346,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     X = position.x;
                     Y = position.y;
                     lastLineToCount++;
-                    encoded[lastLineToCommand] = GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount);
-
-                    currentRealSegment++;
+                    encoded[lastLineToCommand] = GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount); 
                 }
             }
 
