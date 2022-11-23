@@ -6,6 +6,7 @@ using System.Runtime.InteropServices.ComTypes;
 using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO.VectorTiles.Mapbox.NoNeed;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 //namespace MvtWatermark.NoDistortionWatermark
@@ -21,30 +22,68 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="path">The path.</param>
         /// <param name="extent">The extent.</param>
         /// <remarks>Replaces the files if they are already present.</remarks>
-        public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, int Key, uint extent = 4096)
+        public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, 
+            int DElementarySegmentsCount, int[] KeySequence, uint extent = 4096)
         {
             var result = new Dictionary<ulong, Tile>();
 
             foreach (var tileIndex in tree)
             {
-                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, Key, 1, extent)); // m = 1
+                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, DElementarySegmentsCount, KeySequence, 1, extent)); // m = 1
             }
 
             return result;
         }
 
+        public static void WriteVectorTileTreeToFiles(this VectorTileTree tree, BitArray WatermarkString, 
+            int DElementarySegmentsCount, int[] KeySequence, string path, uint extent = 4096)
+        {
+            IEnumerable<VectorTile> GetTiles()
+            {
+                foreach (var tile in tree)
+                {
+                    yield return tree[tile];
+                }
+            }
+
+            GetTiles().WriteToFilesWM(WatermarkString, DElementarySegmentsCount, KeySequence, path, extent);
+        }
+
+        public static void WriteToFilesWM(this IEnumerable<VectorTile> vectorTiles, BitArray WatermarkString,
+            int DElementarySegmentsCount, int[] KeySequence, string path, uint extent = 4096)
+        {
+            foreach (var vectorTile in vectorTiles)
+            {
+                var tile = new Tiles.Tile(vectorTile.TileId);
+                var zFolder = Path.Combine(path, tile.Zoom.ToString());
+                if (!Directory.Exists(zFolder)) Directory.CreateDirectory(zFolder);
+                var xFolder = Path.Combine(zFolder, tile.X.ToString());
+                if (!Directory.Exists(xFolder)) Directory.CreateDirectory(xFolder);
+                var file = Path.Combine(xFolder, $"{tile.Y}.mvt");
+
+                Console.WriteLine($"filename: {file}"); // отладка
+
+                using var stream = File.Open(file, FileMode.Create);
+                vectorTile.WriteToStreamWM(WatermarkString, DElementarySegmentsCount, KeySequence, stream, 2, extent);
+            }
+        }
+
         /// <summary>
-        /// Writes the tile to the given stream.
+        /// Записывает mapbox-тайл в поток открытого файла
         /// </summary>
-        /// <param name="vectorTile">The vector tile.</param>
-        /// <param name="stream">The stream to write to.</param>
-        /// <param name="extent">The extent.</param>
-        /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, int Key, int m = 1,
-            uint extent = 4096, string idAttributeName = "id")
+        /// <param name="vectorTile"></param>
+        /// <param name="WatermarkString"></param>
+        /// <param name="Key"></param>
+        /// <param name="stream"></param>
+        /// <param name="m"></param>
+        /// <param name="extent"></param>
+        /// <param name="idAttributeName"></param>
+        public static void WriteToStreamWM(this VectorTile vectorTile, BitArray WatermarkString, int DElementarySegmentsCount, int[] KeySequence, Stream stream,
+            int m = 1, uint extent = 4096, string idAttributeName = "id")
         {
             var WatermarkInt = WatermarkTransform.getIntFromBitArray(WatermarkString); // Фрагмент ЦВЗ в int
-            var rand = new Random(Key); // пока так, потом Random, наверное, будет создаваться выше и передаваться как параметр
+            
+            /*var rand = new Random(Key); // пока так, потом Random, наверное, будет создаваться выше и передаваться как параметр
             var DElementarySegmentsCount = Convert.ToInt32(2 * m * Math.Pow(2, WatermarkString.Count));
 
             var maxBitArray = new BitArray(WatermarkString.Count, true);
@@ -53,7 +92,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var keySequence = new int[DElementarySegmentsCount / 2];
 
-            for (int i = 0; i < DElementarySegmentsCount/2; i++)
+            for (int i = 0; i < DElementarySegmentsCount / 2; i++)
             {
                 int value;
                 do
@@ -63,6 +102,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
+            */
 
 
             var tile = new Tiles.Tile(vectorTile.TileId);
@@ -89,7 +129,106 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                             break;
                         case ILineal lineal:
                             feature.Type = Tile.GeomType.LineString;
-                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, DElementarySegmentsCount, keySequence)); // ЦВЗ только в лайнстринги запихивается
+                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, DElementarySegmentsCount, KeySequence));
+                            break;
+                        case IPolygonal polygonal:
+                            feature.Type = Tile.GeomType.Polygon;
+                            feature.Geometry.AddRange(Encode(polygonal, tgt, tile.Zoom));
+                            break;
+                        default:
+                            feature.Type = Tile.GeomType.Unknown;
+                            break;
+                    }
+
+                    // If geometry collapsed during encoding, we don't add the feature at all
+                    if (feature.Geometry.Count == 0)
+                        continue;
+
+                    // Translate attributes for feature
+                    AddAttributes(feature.Tags, keys, values, localLayerFeature.Attributes);
+
+                    //Try and retrieve an ID from the attributes.
+                    var id = localLayerFeature.Attributes.GetOptionalValue(idAttributeName);
+
+                    //Converting ID to string, then trying to parse. This will handle situations will ignore situations where the ID value is not actually an integer or ulong number.
+                    if (id != null && ulong.TryParse(id.ToString(), out ulong idVal))
+                    {
+                        feature.Id = idVal;
+                    }
+
+                    // Add feature to layer
+                    layer.Features.Add(feature);
+                }
+
+                layer.Keys.AddRange(keys.Keys);
+                layer.Values.AddRange(values.Keys);
+
+                mapboxTile.Layers.Add(layer);
+            }
+
+            ProtoBuf.Serializer.Serialize<Tile>(stream, mapboxTile);
+        }
+
+
+        /// <summary>
+        /// Writes the tile to the given stream.
+        /// </summary>
+        /// <param name="vectorTile">The vector tile.</param>
+        /// <param name="stream">The stream to write to.</param>
+        /// <param name="extent">The extent.</param>
+        /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
+        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, int DElementarySegmentsCount, int[] KeySequence, int m = 1,
+            uint extent = 4096, string idAttributeName = "id")
+        {
+            var WatermarkInt = WatermarkTransform.getIntFromBitArray(WatermarkString); // Фрагмент ЦВЗ в int
+            
+            /*var rand = new Random(Key); // пока так, потом Random, наверное, будет создаваться выше и передаваться как параметр
+            var DElementarySegmentsCount = Convert.ToInt32(2 * m * Math.Pow(2, WatermarkString.Count));
+
+            var maxBitArray = new BitArray(WatermarkString.Count, true);
+            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
+            var HowMuchEachValue = new int[MaxInt];
+
+            var keySequence = new int[DElementarySegmentsCount / 2];
+
+            for (int i = 0; i < DElementarySegmentsCount/2; i++)
+            {
+                int value;
+                do
+                {
+                    value = rand.Next(MaxInt);
+                } while (HowMuchEachValue[value] >= 2);
+                keySequence[i] = value;
+                HowMuchEachValue[value]++;
+            } // нагенерили {Sk}
+            */
+
+
+            var tile = new Tiles.Tile(vectorTile.TileId);
+            var tgt = new TileGeometryTransform(tile, extent);
+
+            var mapboxTile = new Mapbox.Tile();
+            foreach (var localLayer in vectorTile.Layers)
+            {
+                var layer = new Mapbox.Tile.Layer { Version = 2, Name = localLayer.Name, Extent = extent };
+
+                var keys = new Dictionary<string, uint>();
+                var values = new Dictionary<Tile.Value, uint>();
+
+                foreach (var localLayerFeature in localLayer.Features)
+                {
+                    var feature = new Mapbox.Tile.Feature();
+
+                    // Encode geometry
+                    switch (localLayerFeature.Geometry)
+                    {
+                        case IPuntal puntal:
+                            feature.Type = Tile.GeomType.Point;
+                            feature.Geometry.AddRange(Encode(puntal, tgt));
+                            break;
+                        case ILineal lineal:
+                            feature.Type = Tile.GeomType.LineString;
+                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, DElementarySegmentsCount, KeySequence)); // ЦВЗ только в лайнстринги запихивается
                             break;
                         case IPolygonal polygonal:
                             feature.Type = Tile.GeomType.Polygon;
@@ -290,7 +429,13 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 return Encode(sequence, tgt, ref currentX, ref currentY);
                 //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
             }
-            int realSegmentsInONEElemSegment = DElementarySegmentsCount / realSegments; 
+
+            Console.WriteLine($"Элементарных сегментов: {DElementarySegmentsCount}"); // отладка
+            Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
+
+            int realSegmentsInONEElemSegment = realSegments / DElementarySegmentsCount;
+
+            Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInONEElemSegment}"); // отладка
 
             // Стартовая команда: первый MoveTo
             encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
@@ -341,7 +486,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
                 if (position.x != 0 || position.y != 0) 
                 {
-                    currentElementarySegment = currentRealSegment / realSegmentsInONEElemSegment;
+                    currentElementarySegment = currentRealSegment / realSegmentsInONEElemSegment; // тут ошибка: деление на ноль
                     if (currentElementarySegment < keySequence.Length
                         // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
                         && keySequence[currentElementarySegment] == WatermarkInt // тут проблема с индексами (уже нет)

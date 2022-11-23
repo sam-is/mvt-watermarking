@@ -3,10 +3,18 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <StartupObject>MvtWatermark.TestProgram</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
+    <PackageReference Include="protobuf-net" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NoDistortionWatermark\Tiles\" />
+    <Folder Include="NoDistortionWatermark\TilesWithWatermarks\" />
   </ItemGroup>
 
 </Project>
