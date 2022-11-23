@@ -182,5 +182,82 @@ public class QimMvtWatermarkTests
 
         Assert.Null(m);
     }
+
+    [Fact]
+    public void DoubleReadTile()
+    {
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
+        const int z = 10;
+        const int x = 654;
+        const int y = 333;
+        using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
+        sqliteConnection.Open();
+
+        using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
+        command.Parameters.AddWithValue("$z", z);
+        command.Parameters.AddWithValue("$x", x);
+        command.Parameters.AddWithValue("$y", (1 << z) - y - 1);
+        var obj = command.ExecuteScalar();
+
+        Assert.NotNull(obj);
+
+        var bytes = (byte[])obj!;
+
+        using var memoryStream = new MemoryStream(bytes);
+        var reader = new MapboxTileReader();
+
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+        using var mem = new MemoryStream();
+        tile.Write(mem);
+        mem.Seek(0, SeekOrigin.Begin);
+        var newtile = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+        Assert.NotNull(newtile);
+    }
+
+    [Fact]
+    public void NumPointsAfterWriting()
+    {
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
+        const int z = 10;
+        const int x = 655;
+        const int y = 334;
+        using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
+        sqliteConnection.Open();
+
+        using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
+        command.Parameters.AddWithValue("$z", z);
+        command.Parameters.AddWithValue("$x", x);
+        command.Parameters.AddWithValue("$y", (1 << z) - y - 1);
+        var obj = command.ExecuteScalar();
+
+        Assert.NotNull(obj);
+
+        var bytes = (byte[])obj!;
+
+        using var memoryStream = new MemoryStream(bytes);
+        var reader = new MapboxTileReader();
+
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+
+        using var mem = new MemoryStream();
+        tile.Write(mem);
+        mem.Seek(0, SeekOrigin.Begin);
+        var newTile = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+        Assert.NotNull(newTile);
+
+        for (var i = 0; i < newTile.Layers.Count; i++)
+            for (var j = 0; j < newTile.Layers[i].Features.Count; j++)
+            {
+                var newGeom = newTile.Layers[i].Features[j].Geometry;
+                var oldGeom = tile.Layers[i].Features[j].Geometry;
+                Assert.Equal(oldGeom.NumPoints, newGeom.NumPoints);
+            }
+    }
 }
 
