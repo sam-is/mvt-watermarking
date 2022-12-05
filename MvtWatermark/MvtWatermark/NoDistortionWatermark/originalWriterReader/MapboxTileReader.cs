@@ -5,33 +5,34 @@ using System.IO;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 
-namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
+//namespace NetTopologySuite.IO.VectorTiles.Mapbox.originalWriterReader
+namespace NetTopologySuite.IO.VectorTiles.Mapbox
 {
-    public class MapboxTileReaderWM
+    public class MapboxTileReader
     {
 
 
         private readonly GeometryFactory _factory;
 
-        public MapboxTileReaderWM()
+        public MapboxTileReader()
             : this(new GeometryFactory(new PrecisionModel(), 4326))
         {
         }
 
-        public MapboxTileReaderWM(GeometryFactory factory)
+        public MapboxTileReader(GeometryFactory factory)
         {
             _factory = factory;
         }
 
-        public VectorTileTree Read(Dictionary<ulong, Tile> TileDict)
+        /// <summary>
+        /// Reads a Vector Tile stream.
+        /// </summary>
+        /// <param name="stream">Vector tile stream.</param>
+        /// <param name="tileDefinition">Tile information.</param>
+        /// <returns></returns>
+        public VectorTile Read(Stream stream, Tiles.Tile tileDefinition)
         {
-            var resultTree = new VectorTileTree();
-            foreach (var tilePair in TileDict)
-            {
-                resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null);
-            }
-
-            return resultTree;
+            return Read(stream, tileDefinition, null);
         }
 
         /// <summary>
@@ -41,9 +42,11 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="tileDefinition">Tile information.</param>
         /// <param name="idAttributeName">Optional. Specifies the name of the attribute that the vector tile feature's ID should be stored in the NetTopologySuite Features AttributeTable.</param>
         /// <returns></returns>
-        public VectorTile Read(Tile tile, ulong tileId, string idAttributeName)
+        public VectorTile Read(Stream stream, Tiles.Tile tileDefinition, string idAttributeName)
         {
-            var tileDefinition = new Tiles.Tile(tileId); // tileId хранит в себе всю нужную информацию о тайле
+            // Deserialize the tile
+            var tile = ProtoBuf.Serializer.Deserialize<Mapbox.Tile>(stream);
+
             var vectorTile = new VectorTile { TileId = tileDefinition.Id };
             foreach (var mbTileLayer in tile.Layers)
             {
@@ -77,6 +80,13 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return new Feature(geometry, attributes);
         }
 
+        /// <summary>
+        /// Читаем геометрию
+        /// </summary>
+        /// <param name="tgs"></param>
+        /// <param name="type"></param>
+        /// <param name="geometry"></param>
+        /// <returns></returns>
         private Geometry ReadGeometry(TileGeometryTransform tgs, Tile.GeomType type, IList<uint> geometry)
         {
             switch (type)
@@ -101,6 +111,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return CreatePuntal(sequences);
         }
 
+        /// <summary>
+        /// Продолжаем читать уж лайнстринг
+        /// </summary>
+        /// <param name="tgs"></param>
+        /// <param name="geometry"></param>
+        /// <returns></returns>
         private Geometry ReadLineString(TileGeometryTransform tgs, IList<uint> geometry)
         {
             int currentIndex = 0; int currentX = 0; int currentY = 0;
@@ -199,98 +215,17 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return _factory.CreateMultiPolygon(polygons.ToArray());
         }
 
-
-
-        // Тут будет извлечение, скорее всего
-        private List<int> ExtractWMFromSingleLinestring(
-            TileGeometryTransform tgs, IList<uint> geometry,
-            ref int currentIndex, ref int currentX, ref int currentY, int[] keySequence)
-        {
-            // сюда запишем индексы сегментов с нетипичной геометрией
-            var RealSegments = new List<int>(); 
-
-            // (currentX, currentY) = (0, 0), currentIndex = 0
-            var currentPosition = (currentX, currentY);
-
-
-            var (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
-            Debug.Assert(command == MapboxCommandType.MoveTo);
-            Debug.Assert(count >= 1 && count <= 2);
-
-            // Read the current position
-            currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
-
-            bool firstSegmentEncoded = false;
-
-            if (count == 2)
-            {
-                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 5
-                firstSegmentEncoded = true;
-            }
-
-            while (currentIndex < geometry.Count)
-            {
-                // Если в первый сегмент встроено, то команда == LineTo
-                (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                if (firstSegmentEncoded)
-                {
-                    Debug.Assert(command == MapboxCommandType.LineTo);
-                    Debug.Assert(count >= 2);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    RealSegments.Add(1);
-                    count -= 2;
-
-                    firstSegmentEncoded = false;
-                }
-                // иначе - команда == MoveTo
-                else if (command == MapboxCommandType.MoveTo)
-                {
-                    Debug.Assert(count == 1);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                    Debug.Assert(command == MapboxCommandType.LineTo);
-                    Debug.Assert(count >= 2);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    RealSegments.Add(1);
-                    count -= 2;
-                }
-                else throw new Exception("Cannot decode the sequence");
-                
-
-                // Read and add offsets
-                for (int i = 0; i < count; i++)
-                {
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    RealSegments.Add(0);
-                }
-            }
-
-            var realSegmentsNum = RealSegments.Count;
-            var ElementarySegmentsNum = keySequence.Length * 2;
-            var realSegmentsInONEElemSegment = ElementarySegmentsNum / realSegmentsNum;
-
-            // предусмотреть возможность отражения лайнстринга
-            var ExtractedWatermarkInts = new List<int>();
-            //int WatermarkInt;
-            for (int i = 0; i < RealSegments.Count; i++) // условие изменить, так как ток половину лайнстринга рассматриваем
-            {
-                var currentElementarySegment = i/realSegmentsInONEElemSegment;
-                if (RealSegments[i] == 1)
-                {
-                    ExtractedWatermarkInts.Add(keySequence[currentElementarySegment]);
-                }
-            }
-
-            // update current position values
-            currentX = currentPosition.currentX;
-            currentY = currentPosition.currentY;
-
-            return RealSegments;
-        }
-
-
+        /// <summary>
+        /// Читаем последовательности координат
+        /// </summary>
+        /// <param name="tgs"></param>
+        /// <param name="geometry"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="currentX"></param>
+        /// <param name="currentY"></param>
+        /// <param name="buffer"></param>
+        /// <param name="forPoint"></param>
+        /// <returns></returns>
         private CoordinateSequence[] ReadCoordinateSequences(
             TileGeometryTransform tgs, IList<uint> geometry,
             ref int currentIndex, ref int currentX, ref int currentY, int buffer = 0, bool forPoint = false)
@@ -306,7 +241,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var sequences = new List<CoordinateSequence>();
             // (currentX, currentY) = (0, 0), currentIndex = 0
-            var currentPosition = (currentX, currentY);
+            var currentPosition = (currentX, currentY); 
             while (currentIndex < geometry.Count)
             {
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
@@ -322,85 +257,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 4
                     if (command != MapboxCommandType.LineTo)
                         count = 0;
-                }
-                else
-                {
-                    count = 0;
-                }
-
-                // Create sequence, add starting point
-                var sequence = _factory.CoordinateSequenceFactory.Create(1 + count + buffer, 2);
-                int sequenceIndex = 0;
-                TransformOffsetAndAddToSequence(tgs, currentPosition, sequence, sequenceIndex++);
-
-                // Read and add offsets
-                for (int i = 1; i <= count; i++)
-                {
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    TransformOffsetAndAddToSequence(tgs, currentPosition, sequence, sequenceIndex++);
-                }
-
-
-
-                // Check for ClosePath command
-                if (currentIndex < geometry.Count)
-                {
-                    (command, _) = ParseCommandInteger(geometry[currentIndex]);
-                    if (command == MapboxCommandType.ClosePath)
-                    {
-                        Debug.Assert(buffer > 0); 
-                        // в случае лайнстринга тут будет ошибка
-                        sequence.SetOrdinate(sequenceIndex, Ordinate.X, sequence.GetOrdinate(0, Ordinate.X));
-                        sequence.SetOrdinate(sequenceIndex, Ordinate.Y, sequence.GetOrdinate(0, Ordinate.Y));
-
-                        currentIndex++;
-                        sequenceIndex++;
-                    }
-                }
-
-
-
-                Debug.Assert(sequenceIndex == sequence.Count);
-
-                sequences.Add(sequence);
-            }
-
-            // update current position values
-            currentX = currentPosition.currentX;
-            currentY = currentPosition.currentY;
-
-            return sequences.ToArray();
-        }
-
-        /*
-        private CoordinateSequence[] ReadCoordinateSequencesOLD(
-            TileGeometryTransform tgs, IList<uint> geometry,
-            ref int currentIndex, ref int currentX, ref int currentY, int buffer = 0, bool forPoint = false)
-        {
-            (var command, int count) = ParseCommandInteger(geometry[currentIndex]);
-            Debug.Assert(command == MapboxCommandType.MoveTo);
-            if (count > 1)
-            {
-                currentIndex++;
-                return ReadSinglePointSequences(tgs, geometry, count, ref currentIndex, ref currentX, ref currentY);
-            }
-
-            var sequences = new List<CoordinateSequence>();
-            var currentPosition = (currentX, currentY);
-            while (currentIndex < geometry.Count)
-            {
-                (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                Debug.Assert(command == MapboxCommandType.MoveTo);
-                Debug.Assert(count == 1);
-
-                // Read the current position
-                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-
-                if (!forPoint)
-                {
-                    // Read the next command (should be LineTo)
-                    (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                    if (command != MapboxCommandType.LineTo) count = 0;
                 }
                 else
                 {
@@ -445,7 +301,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             return sequences.ToArray();
         }
-        */
 
         private CoordinateSequence[] ReadSinglePointSequences(TileGeometryTransform tgs, IList<uint> geometry,
             int numSequences, ref int currentIndex, ref int currentX, ref int currentY)
@@ -488,6 +343,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return unchecked(((MapboxCommandType) (commandInteger & 0x07U), (int)(commandInteger >> 3)));
 
         }
+
 
 
 

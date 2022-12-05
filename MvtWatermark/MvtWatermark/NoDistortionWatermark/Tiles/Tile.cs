@@ -281,7 +281,7 @@ namespace NetTopologySuite.IO.VectorTiles.Tiles
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        private static (int x, int y, int zoom) CalculateTile(ulong id)
+        internal static (int x, int y, int zoom) CalculateTile(ulong id) // изменил доступ с private на internal
         {
             // find out the zoom level first.
             int zoom = 0;

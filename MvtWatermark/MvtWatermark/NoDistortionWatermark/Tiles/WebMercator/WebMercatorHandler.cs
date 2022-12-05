@@ -10,11 +10,24 @@ namespace NetTopologySuite.IO.VectorTiles.Tiles.WebMercator
         private const double OriginShift = 2 * Math.PI * EarthRadius / 2;
         
         //Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913
-        public static (double x, double y) LatLonToMeters(double lat, double lon)
+        public static (double x, double y) LatLonToMeters(double lat, double lon) // Y, X
         {
+            //Console.BackgroundColor = ConsoleColor.DarkYellow; // отладка
+            //Console.ForegroundColor = ConsoleColor.Black; // отладка
+
+
             var x = lon * OriginShift / 180;
             var y = Math.Log(Math.Tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+
+            //Console.WriteLine($"x = {x} , y = {y}"); // отладка
+
             y = y * OriginShift / 180;
+
+            //Console.WriteLine($"y (updated) = {y}"); // отладка
+
+            //Console.BackgroundColor = ConsoleColor.Black; // отладка
+            //Console.ForegroundColor = ConsoleColor.White; // отладка
+
             return (x, y);
         }
         

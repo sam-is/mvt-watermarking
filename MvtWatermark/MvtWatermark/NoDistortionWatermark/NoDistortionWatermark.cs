@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,49 +13,23 @@ namespace MvtWatermark.NoDistortionWatermark
 {
     public class NoDistortionWatermark: IMvtWatermark
     {
-        private int m;
-        private int D;
-        public NoDistortionWatermark(int m_par)
+        private NoDistortionWatermarkOptions _options;
+        int[] _keySequence; // Убрать: Sk будет генерироваться в кажом тайле своя
+        
+        public NoDistortionWatermark(NoDistortionWatermarkOptions options)
         {
-            m = m_par;
+            _options = options;
         }
+
         public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
         {
-            //BitArray keyBitArray = new BitArray(new int[] { key });
-
-            var rand = new Random(key); // пока так, потом Random, наверное, будет создаваться выше и передаваться как параметр
-            var DElementarySegmentsCount = Convert.ToInt32(2 * m * Math.Pow(2, message.Count));
-
-            this.D = DElementarySegmentsCount;
-
-            Console.WriteLine($"Количество элементарных сегментов:{this.D}"); // отладка
-
-            var maxBitArray = new BitArray(message.Count, true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt + 1];
-
-            var keySequence = new int[DElementarySegmentsCount / 2];
-
-            Console.WriteLine("Перед заполнением keySequence"); // отладка
-
-            for (int i = 0; i < DElementarySegmentsCount / 2; i++)
+            if (message.Count < _options.Nb)
             {
-                int value;
-                do
-                {
-                    value = Convert.ToInt32(rand.Next(MaxInt + 1));
-                } while (HowMuchEachValue[value] >= 2);
-                keySequence[i] = value;
+                throw new Exception("ЦВЗ меньше размера в options");
+            }
+            // message уже внутри будет делиться на фрагменты размером Nb
 
-                Console.WriteLine(value); // отладка
-
-                HowMuchEachValue[value]++;
-            } // нагенерили {Sk}
-
-            Console.WriteLine("Последовательность сгенерирована"); // отладка
-            Console.WriteLine(keySequence.ToString); // отладка
-
-            var TileDict = tiles.WriteWM(message, this.D, keySequence);
+            var TileDict = tiles.WriteWM(message, key, _options);
 
             Console.WriteLine("После Embed"); // отладка
 
@@ -67,66 +42,31 @@ namespace MvtWatermark.NoDistortionWatermark
             return toReturn;
         }
 
-        public BitArray Extract(VectorTileTree tiles, int key)
+        public BitArray? Extract(VectorTileTree tiles, int key)
         {
-            var rand = new Random(key);
-            var maxBitArray = new BitArray(D /(2*m), true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt];
-            var keySequence = new int[this.D / 2];
-
-            for (int i = 0; i < this.D / 2; i++)
+            var readerWM = new MapboxTileReaderWM();
+            var WatermarkInts = new List<int>();
+            foreach (var tileIndex in tiles) // тут проверочки организовать пустое дерево или нет
             {
-                int value;
-                do
-                {
-                    value = rand.Next(MaxInt);
-                } while (HowMuchEachValue[value] >= 2);
-                keySequence[i] = value;
-                HowMuchEachValue[value]++;
-            } // нагенерили {Sk}
+                WatermarkInts.Add(readerWM.ExtractWM(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, key));
+            }
+
+            return new BitArray(new int[] { WatermarkInts[0] });
 
             //throw new NotImplementedException();
-            return maxBitArray; // это временно
         }
 
 
-        public void EmbedAndWriteToFile(VectorTileTree tiles, int key, BitArray message)
+        public void EmbedAndWriteToFile(VectorTileTree tiles, int key, BitArray message, string path)
         {
-
-            var rand = new Random(key); // пока так, потом Random, наверное, будет создаваться выше и передаваться как параметр
-            var DElementarySegmentsCount = Convert.ToInt32(2 * m * Math.Pow(2, message.Count));
-
-            this.D = DElementarySegmentsCount;
-
-            Console.WriteLine($"Количество элементарных сегментов:{this.D}"); // отладка
-
-            var maxBitArray = new BitArray(message.Count, true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt + 1];
-
-            var keySequence = new int[DElementarySegmentsCount / 2];
-
-            Console.WriteLine("Перед заполнением keySequence"); // отладка
-
-            for (int i = 0; i < DElementarySegmentsCount / 2; i++)
+            if (message.Count < _options.Nb)
             {
-                int value;
-                do
-                {
-                    value = Convert.ToInt32(rand.Next(MaxInt + 1));
-                } while (HowMuchEachValue[value] >= 2);
-                keySequence[i] = value;
+                throw new Exception("ЦВЗ меньше размера в options");
+            }
 
-                Console.WriteLine(value); // отладка
+            Console.WriteLine($"Количество элементарных сегментов:{_options.D}"); // отладка
 
-                HowMuchEachValue[value]++;
-            } // нагенерили {Sk}
-
-            Console.WriteLine("Последовательность сгенерирована"); // отладка
-
-            string path = "C:\\SerializedTiles\\SerializedWithWatermark";
-            tiles.WriteVectorTileTreeToFiles(message, this.D, keySequence, path);
+            tiles.WriteVectorTileTreeToFiles(message, key, path, _options);
 
             Console.WriteLine("После Embed"); // отладка
         }

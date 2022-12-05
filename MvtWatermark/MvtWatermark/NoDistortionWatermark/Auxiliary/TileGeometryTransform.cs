@@ -1,6 +1,8 @@
 
+using System;
 using System.Runtime.CompilerServices;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.GeometriesGraph;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]
@@ -45,14 +47,42 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
         {
             var lon = sequence.GetOrdinate(index, Ordinate.X);
             var lat = sequence.GetOrdinate(index, Ordinate.Y);
-            
+
             var meters = WebMercatorHandler.LatLonToMeters(lat, lon);
             var pixels = WebMercatorHandler.MetersToPixels(meters, _tile.Zoom, (int) _extent);
-            
+
             int localX = (int) (pixels.x - _left);
             int localY = (int) (_top - pixels.y);
+
             int dx = localX - currentX;
             int dy = localY - currentY;
+
+
+            
+            Console.BackgroundColor = ConsoleColor.Gray; // отладка
+            Console.ForegroundColor = ConsoleColor.Blue; // отладка
+            Console.WriteLine($"currentX = {currentX} , currentY = {currentY}"); // отладка
+            Console.BackgroundColor = ConsoleColor.Black; // отладка
+            Console.ForegroundColor = ConsoleColor.White; // отладка
+
+            Console.WriteLine($"lon (X) = {lon} , lat (Y) = {lat}"); // отладка
+            Console.WriteLine($"meters = {meters}"); // отладка
+            Console.WriteLine($"pixels = {pixels}"); // отладка
+
+            if (!Double.IsNaN(pixels.y))
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGreen; // отладка
+            }
+            else
+                Console.ForegroundColor = ConsoleColor.DarkRed; // отладка
+            Console.WriteLine($"pixels.x = {pixels.x}, left = {_left}"); // отладка
+            Console.WriteLine($"top = {_top}, pixels.y = {pixels.y}"); // отладка
+            Console.ForegroundColor = ConsoleColor.White; // отладка
+            Console.WriteLine($"localX = {localX} , localY = {localY}"); // отладка
+            Console.WriteLine($"dx = {dx} , dy = {dy}"); // отладка
+            
+
+            
             currentX = localX;
             currentY = localY;
 
