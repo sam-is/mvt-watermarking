@@ -51,7 +51,7 @@ namespace MvtWatermark.NoDistortionWatermark
                 WatermarkInts.Add(readerWM.ExtractWM(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, key));
             }
 
-            return new BitArray(new int[] { WatermarkInts[0] });
+            return new BitArray(new int[] { WatermarkInts[0] }); // пока что просто возвращается первый элемент из списка вотермарок
 
             //throw new NotImplementedException();
         }

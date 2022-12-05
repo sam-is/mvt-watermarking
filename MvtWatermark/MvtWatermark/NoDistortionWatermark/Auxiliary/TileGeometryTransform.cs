@@ -58,7 +58,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             int dy = localY - currentY;
 
 
-            
+            /*
             Console.BackgroundColor = ConsoleColor.Gray; // отладка
             Console.ForegroundColor = ConsoleColor.Blue; // отладка
             Console.WriteLine($"currentX = {currentX} , currentY = {currentY}"); // отладка
@@ -80,7 +80,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             Console.ForegroundColor = ConsoleColor.White; // отладка
             Console.WriteLine($"localX = {localX} , localY = {localY}"); // отладка
             Console.WriteLine($"dx = {dx} , dy = {dy}"); // отладка
-            
+            */
 
             
             currentX = localX;

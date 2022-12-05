@@ -347,12 +347,16 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 firstSegmentEncoded = true;
             }
 
-            while (currentIndex < geometry.Count)
+            while (currentIndex < geometry.Count) // тут что-то не то.
             {
+                Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
+
                 // Если в первый сегмент встроено, то команда == LineTo
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
                 if (firstSegmentEncoded)
                 {
+                    Console.WriteLine("LineTo, первый сегмент закодирован"); // отладка
+
                     Debug.Assert(command == MapboxCommandType.LineTo);
                     Debug.Assert(count >= 2);
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
@@ -361,28 +365,44 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     count -= 2;
 
                     firstSegmentEncoded = false;
+
+                    Console.WriteLine("Первый закодированный сегмент рассмотрен"); // отладка
+
                 }
                 // иначе - команда == MoveTo
                 else if (command == MapboxCommandType.MoveTo)
                 {
-                    Debug.Assert(count == 1);
+                    Console.WriteLine("MoveTo, после закодированного сегмента"); // отладка
+
+                    Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                    Debug.Assert(command == MapboxCommandType.LineTo);
-                    Debug.Assert(count >= 2);
+                    Debug.Assert(command == MapboxCommandType.LineTo, $"Assertion: MapboxCommandType = {command}");
+                    Debug.Assert(count >= 2, $"Assertion: LineTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     RealSegments.Add(true);
                     count -= 2;
+
+                    Console.WriteLine("Очередной закодированный сегмент рассмотрен"); // отладка
                 }
-                else throw new Exception("Cannot decode the sequence");
+                else
+                {
+                    Debug.Assert(command == MapboxCommandType.LineTo, "ну и че");
+                    Console.WriteLine($"Первый сегмент не закодирован, вторая команда - LineTo, count = {count}"); // отладка
+                }
+                //else throw new Exception("Cannot decode the sequence");
                 
 
                 // Read and add offsets
                 for (int i = 0; i < count; i++)
                 {
+                    Console.WriteLine($"currentPositionX: {currentPosition.currentX}, currentPositionY: {currentPosition.currentY}," + // отладка
+                        $"currentIndex: {currentIndex}"); // отладка
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     RealSegments.Add(false);
+
+                    Console.WriteLine("параметры LineTo"); // отладка
                 }
             }
 
@@ -406,7 +426,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             {
                 for (int j = 0; j < realSegmentsInONEElemSegment; j++)
                 {
-                    if (RealSegments[realSegmentsInONEElemSegment * i + j])
+                    if (RealSegments[realSegmentsInONEElemSegment * i + j]) // исключение вот тут
+                        // index out of range
                     {
                         ExtractedWatermarkInts.Add(keySequence[i]);
                         break;
@@ -615,6 +636,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
         private (int, int) ParseOffset((int x, int y) currentPosition, IList<uint> parameterIntegers, ref int offset)
         {
+            var size = parameterIntegers.Count;
+            Console.WriteLine($"size = {size}");
+
             return (currentPosition.x + Decode(parameterIntegers[offset++]),
                     currentPosition.y + Decode(parameterIntegers[offset++]));
         }

@@ -409,6 +409,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
@@ -421,6 +423,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
+
+            currentX = X; currentY = Y;
 
             if (realSegments < options.D)
             {
@@ -537,6 +541,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
@@ -549,6 +555,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
+
+            currentX = X; currentY = Y;
 
             if (realSegments < options.D)
             {
@@ -673,6 +681,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
             for (int i = 1; i < count; i++)
@@ -684,6 +694,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
+
+            currentX = X; currentY = Y;
 
             if (realSegments < options.D)
             {
