@@ -22,11 +22,16 @@ namespace MvtWatermark
         {
             Console.WriteLine("Работает TestProgram");
 
-            //WithoutWatermark(1, 0, 0);
+            int zoom = 0; int x = 0; int y = 0;
+            //WithoutWatermark(zoom, x, y);
 
+            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
+            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt);
+            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
             int key = 123;
-            var reulttree = EmbedingWatermark(1, 0, 0, key);
-            //ExtractFromVTtree(reulttree, key);
+            var boolArr = new bool[] { true, false, true };
+            var reulttree = EmbedingWatermark(zoom, x, y, options, boolArr, key);
+            ExtractFromVTtree(reulttree, options, key);
 
             //var tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Tile.CalculateTileId(10, 6, 6);
             //ReadSomething("C:\\SerializedTiles\\SerializedTrees\\10\\6\\6.mvt", tile_id);
@@ -155,6 +160,12 @@ namespace MvtWatermark
             return vt;
         }
 
+        /// <summary>
+        /// Запись MVT по файлам и папкам без вотермарки
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
         static void WithoutWatermark(int zoom, int x, int y)
         {
 
@@ -172,24 +183,27 @@ namespace MvtWatermark
             ReadSomething($"C:\\SerializedTiles\\SerializedTrees\\{zoom}\\{x}\\{y}.mvt", tile_id);
         }
 
-        static VectorTileTree EmbedingWatermark(int zoom, int x, int y, int key = 123)
+        /// <summary>
+        /// Встраивание вотермарки и запись в файл
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="options"></param>
+        /// <param name="boolArr"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        static VectorTileTree EmbedingWatermark(int zoom, int x, int y, NoDistortionWatermarkOptions options, bool[] boolArr, int key = 123)
         {
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1); // MtLtMt по умолчанию
-            
-            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt); 
-            
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
             var NdWm = new NoDistortionWatermark.NoDistortionWatermark(options);
 
             var vtTree = new VectorTileTree();
             ulong tile_id;
             //VectorTile vt = createVectorTileWithTestFeature(out tile_id);
             //VectorTile vt = createVectorTile(0, 0, 1, out tile_id);
-            //VectorTile vt = createVectorTile(0, 0, 2, out tile_id);
             VectorTile vt = createVectorTile(x, y, zoom, out tile_id);
             vtTree[tile_id] = vt;
 
-            var boolArr = new bool[] { true, false, true };
             var message = new System.Collections.BitArray(boolArr);
             Console.WriteLine(message.ToString);
 
@@ -202,31 +216,29 @@ namespace MvtWatermark
 
             Console.WriteLine("Встраивание завершено"); // отладка
 
-
-            //ReadSomething("C:\\SerializedTiles\\SerializedWithWatermark\\10\\6\\6.mvt", tile_id);
-            //ReadSomething("C:\\SerializedTiles\\SerializedWithWatermark\\1\\0\\0.mvt", tile_id);
-            //ReadSomething("C:\\SerializedTiles\\SerializedWithWatermark\\2\\0\\0.mvt", tile_id);
             ReadSomething($"C:\\SerializedTiles\\SerializedWithWatermark\\{zoom}\\{x}\\{y}.mvt", tile_id);
 
             return resulttree;
         }
 
-        static VectorTileTree EmbedToVTtree(int zoom, int x, int y, int key)
+        /// <summary>
+        /// То же самое, что и EmbedingWatermark, но без записи в файл
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="options"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        static VectorTileTree EmbedToVTtree(int zoom, int x, int y, NoDistortionWatermarkOptions options, bool[] boolArr, int key = 123)
         {
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1); // MtLtMt по умолчанию
-            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
             var NdWm = new NoDistortionWatermark.NoDistortionWatermark(options);
 
             var vtTree = new VectorTileTree();
             ulong tile_id;
-            //VectorTile vt = createVectorTileWithTestFeature(out tile_id);
-            //VectorTile vt = createVectorTile(0, 0, 1, out tile_id);
-            //VectorTile vt = createVectorTile(0, 0, 2, out tile_id);
             VectorTile vt = createVectorTile(x, y, zoom, out tile_id);
             vtTree[tile_id] = vt;
 
-            var boolArr = new bool[] { true, false, true };
             var message = new System.Collections.BitArray(boolArr);
             Console.WriteLine(message.ToString);
 
@@ -239,12 +251,11 @@ namespace MvtWatermark
             return resulttree;
         }
 
-        static void ExtractFromVTtree(VectorTileTree tiles, int key = 123)
+        static void ExtractFromVTtree(VectorTileTree tiles, NoDistortionWatermarkOptions options, int key = 123)
         {
-            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
             var NdWm = new NoDistortionWatermark.NoDistortionWatermark(options);
 
-            var WatermarkInt = NdWm.Extract(tiles, key);
+            var WatermarkInt = WatermarkTransform.getIntFromBitArrayNullable(NdWm.Extract(tiles, key));
             Console.WriteLine($"\n\nИзвлечённая вотермарка: {WatermarkInt}");
         }
 

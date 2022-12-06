@@ -113,8 +113,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 Debug.Assert(mbTileLayer.Version == 2U);
 
                 var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+
+                int featureIndex = 0;
+
                 foreach (var mbTileFeature in mbTileLayer.Features)
                 {
+                    Console.WriteLine($"текущая Фича: {featureIndex++}"); // отладка
                     int? WatermarkIntFromFeature = ExtractFromFeature(tgs, mbTileFeature, options, keySequence);
                     if (WatermarkIntFromFeature != null)
                     {
@@ -194,10 +198,11 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="geometry"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        private int ReadLineStringWM(TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
+        private int? ReadLineStringWM(TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
         {
             int currentIndex = 0; int currentX = 0; int currentY = 0;
-            int WatermarkInt = -1; 
+            //int WatermarkInt = -1; 
+            int? WatermarkInt = null;
             switch (options.AtypicalEncodingType){
                 case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt:
                     WatermarkInt = ExtractWMFromSingleLinestringMtLtLt(tgs, geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence);
@@ -321,7 +326,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
 
         // Тут будет извлечение, скорее всего
-        private int ExtractWMFromSingleLinestringMtLtLt(
+        private int? ExtractWMFromSingleLinestringMtLtLt(
             TileGeometryTransform tgs, IList<uint> geometry,
             ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
         {
@@ -331,10 +336,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             // (currentX, currentY) = (0, 0), currentIndex = 0
             var currentPosition = (currentX, currentY);
 
-
             var (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
             Debug.Assert(command == MapboxCommandType.MoveTo);
-            Debug.Assert(count >= 1 && count <= 2);
+            Debug.Assert(count >= 1 && count <= 2, "Первая команда MoveTo имеет счётчик команд не 1 и не 2");
 
             // Read the current position
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
@@ -347,9 +351,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 firstSegmentEncoded = true;
             }
 
-            while (currentIndex < geometry.Count) // тут что-то не то.
+            while (currentIndex < geometry.Count)
             {
-                Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
+                //Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
 
                 // Если в первый сегмент встроено, то команда == LineTo
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
@@ -372,7 +376,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 // иначе - команда == MoveTo
                 else if (command == MapboxCommandType.MoveTo)
                 {
-                    Console.WriteLine("MoveTo, после закодированного сегмента"); // отладка
+                    //Console.WriteLine("MoveTo, после закодированного сегмента"); // отладка
 
                     Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
@@ -384,12 +388,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     RealSegments.Add(true);
                     count -= 2;
 
-                    Console.WriteLine("Очередной закодированный сегмент рассмотрен"); // отладка
+                    //Console.WriteLine("Очередной закодированный сегмент рассмотрен"); // отладка
                 }
                 else
                 {
                     Debug.Assert(command == MapboxCommandType.LineTo, "ну и че");
-                    Console.WriteLine($"Первый сегмент не закодирован, вторая команда - LineTo, count = {count}"); // отладка
+                    //Console.WriteLine($"Первый сегмент не закодирован, вторая команда - LineTo, count = {count}"); // отладка
                 }
                 //else throw new Exception("Cannot decode the sequence");
                 
@@ -397,18 +401,18 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 // Read and add offsets
                 for (int i = 0; i < count; i++)
                 {
-                    Console.WriteLine($"currentPositionX: {currentPosition.currentX}, currentPositionY: {currentPosition.currentY}," + // отладка
-                        $"currentIndex: {currentIndex}"); // отладка
+                    //Console.WriteLine($"currentPositionX: {currentPosition.currentX}, currentPositionY: {currentPosition.currentY}," + // отладка
+                        //$"currentIndex: {currentIndex}"); // отладка
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     RealSegments.Add(false);
 
-                    Console.WriteLine("параметры LineTo"); // отладка
+                    //Console.WriteLine("параметры LineTo"); // отладка
                 }
             }
 
             var realSegmentsNum = RealSegments.Count;
             //var ElementarySegmentsNum = keySequence.Length * 2;
-            var realSegmentsInONEElemSegment = options.D / realSegmentsNum;
+            var realSegmentsInONEElemSegment = realSegmentsNum / options.D;
 
             // предусмотреть возможность отражения лайнстринга
             var ExtractedWatermarkInts = new List<int>();
@@ -422,6 +426,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 }
             }*/
 
+            if (RealSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
+                return null;
+
             for (int i = 0; i < options.D/2; i++)
             {
                 for (int j = 0; j < realSegmentsInONEElemSegment; j++)
@@ -434,6 +441,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     }
                 }
             }
+
+            // if (ExtractedWatermarkInts.Count == 0) return null;
 
             var groupsWithCounts = from s in ExtractedWatermarkInts
                                    group s by s into g
@@ -637,7 +646,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         private (int, int) ParseOffset((int x, int y) currentPosition, IList<uint> parameterIntegers, ref int offset)
         {
             var size = parameterIntegers.Count;
-            Console.WriteLine($"size = {size}");
+            //Console.WriteLine($"size = {size}"); // отладка
 
             return (currentPosition.x + Decode(parameterIntegers[offset++]),
                     currentPosition.y + Decode(parameterIntegers[offset++]));

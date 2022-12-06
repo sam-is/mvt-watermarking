@@ -9,6 +9,19 @@ namespace MvtWatermark.NoDistortionWatermark
 {
     internal static class WatermarkTransform
     {
+        public static int? getIntFromBitArrayNullable(BitArray? bitArray)
+        {
+            if (bitArray == null)
+                return null;
+
+            if (bitArray.Length > 32)
+                throw new ArgumentException("Argument length shall be at most 32 bits.");
+
+            int[] array = new int[1];
+            bitArray.CopyTo(array, 0);
+            return array[0];
+        }
+
         public static int getIntFromBitArray(BitArray bitArray)
         {
             if (bitArray.Length > 32)
