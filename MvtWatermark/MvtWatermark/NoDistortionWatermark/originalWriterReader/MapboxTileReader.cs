@@ -245,8 +245,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             while (currentIndex < geometry.Count)
             {
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
-                Debug.Assert(command == MapboxCommandType.MoveTo);
-                Debug.Assert(count == 1);
+                Debug.Assert(command == MapboxCommandType.MoveTo, "команда не MoveTo");
+                Debug.Assert(count == 1, "MoveTo count != 1");
 
                 // Read the current position
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3

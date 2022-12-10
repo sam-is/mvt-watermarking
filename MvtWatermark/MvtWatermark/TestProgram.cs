@@ -25,11 +25,12 @@ namespace MvtWatermark
             int zoom = 0; int x = 0; int y = 0;
             //WithoutWatermark(zoom, x, y);
 
-            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
+            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
             //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt);
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
+            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
             int key = 123;
             var boolArr = new bool[] { true, false, true };
+            //EmbedAndWriteToFile2(zoom, x, y, options, boolArr, key);
             var reulttree = EmbedingWatermark(zoom, x, y, options, boolArr, key);
             ExtractFromVTtree(reulttree, options, key);
 
@@ -219,6 +220,32 @@ namespace MvtWatermark
             ReadSomething($"C:\\SerializedTiles\\SerializedWithWatermark\\{zoom}\\{x}\\{y}.mvt", tile_id);
 
             return resulttree;
+        }
+
+        static void EmbedAndWriteToFile2(int zoom, int x, int y, NoDistortionWatermarkOptions options, bool[] boolArr, int key = 123)
+        {
+            var NdWm = new NoDistortionWatermark.NoDistortionWatermark(options);
+
+            var vtTree = new VectorTileTree();
+            ulong tile_id;
+            //VectorTile vt = createVectorTileWithTestFeature(out tile_id);
+            //VectorTile vt = createVectorTile(0, 0, 1, out tile_id);
+            VectorTile vt = createVectorTile(x, y, zoom, out tile_id);
+            vtTree[tile_id] = vt;
+
+            var message = new System.Collections.BitArray(boolArr);
+            Console.WriteLine(message.ToString);
+
+            string path = "C:\\SerializedTiles\\SerializedWithWatermark";
+
+            //var resulttree = NdWm.Embed(vtTree, key, message);
+            NdWm.EmbedAndWriteToFile(vtTree, key, message, path);
+
+            //resulttree.Write(path);
+
+            Console.WriteLine("Встраивание завершено"); // отладка
+
+            ReadSomething($"C:\\SerializedTiles\\SerializedWithWatermark\\{zoom}\\{x}\\{y}.mvt", tile_id);
         }
 
         /// <summary>

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
+using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
@@ -95,13 +96,15 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var keySequence = new int[options.D / 2];
 
-            for (int i = 0; i < options.D / 2; i++)
+            keySequence[0] = 0;
+            HowMuchEachValue[0] = 1;
+            for (int i = 1; i < options.D / 2; i++)
             {
                 int value;
                 do
                 {
                     value = rand.Next(0, MaxInt + 1);
-                } while (HowMuchEachValue[value] >= 2);
+                } while (HowMuchEachValue[value] >= options.M);
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
@@ -211,7 +214,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     throw new NotImplementedException();
                     break;
                 case NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands:
-                    throw new NotImplementedException();
+                    WatermarkInt = ExtractWMFromSingleLinestringNLt(tgs, geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence);
                     break;
             }
              
@@ -325,7 +328,17 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
 
 
-        // Тут будет извлечение, скорее всего
+        /// <summary>
+        /// Извлечение ЦВЗ из лайнстринга, закодированного, как MoveTo-LineTo-LineTo
+        /// </summary>
+        /// <param name="tgs"></param>
+        /// <param name="geometry"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="currentX"></param>
+        /// <param name="currentY"></param>
+        /// <param name="options"></param>
+        /// <param name="keySequence"></param>
+        /// <returns></returns>
         private int? ExtractWMFromSingleLinestringMtLtLt(
             TileGeometryTransform tgs, IList<uint> geometry,
             ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
@@ -338,11 +351,13 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
             Debug.Assert(command == MapboxCommandType.MoveTo);
-            Debug.Assert(count >= 1 && count <= 2, "Первая команда MoveTo имеет счётчик команд не 1 и не 2");
+            //Debug.Assert(count >= 1 && count <= 2, "Первая команда MoveTo имеет счётчик команд не 1 и не 2");
+            Debug.Assert(count == 1, "Первая команда MoveTo имеет счётчик команд не 1");
 
             // Read the current position
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
 
+            /*
             bool firstSegmentEncoded = false;
 
             if (count == 2)
@@ -350,6 +365,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 5
                 firstSegmentEncoded = true;
             }
+            */
 
             while (currentIndex < geometry.Count)
             {
@@ -357,6 +373,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
                 // Если в первый сегмент встроено, то команда == LineTo
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+                /*
                 if (firstSegmentEncoded)
                 {
                     Console.WriteLine("LineTo, первый сегмент закодирован"); // отладка
@@ -373,8 +390,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     Console.WriteLine("Первый закодированный сегмент рассмотрен"); // отладка
 
                 }
+                */
                 // иначе - команда == MoveTo
-                else if (command == MapboxCommandType.MoveTo)
+                if (command == MapboxCommandType.MoveTo)
                 {
                     //Console.WriteLine("MoveTo, после закодированного сегмента"); // отладка
 
@@ -388,6 +406,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     RealSegments.Add(true);
                     count -= 2;
 
+                    Console.WriteLine($"currentPosition: {currentPosition}"); // отладка
                     //Console.WriteLine("Очередной закодированный сегмент рассмотрен"); // отладка
                 }
                 else
@@ -406,6 +425,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     RealSegments.Add(false);
 
+                    Console.WriteLine($"currentPosition: {currentPosition}"); // отладка
                     //Console.WriteLine("параметры LineTo"); // отладка
                 }
             }
@@ -429,19 +449,24 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             if (RealSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
                 return null;
 
+            Console.WriteLine($"realSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
+            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
+
             for (int i = 0; i < options.D/2; i++)
             {
                 for (int j = 0; j < realSegmentsInONEElemSegment; j++)
                 {
-                    if (RealSegments[realSegmentsInONEElemSegment * i + j]) // исключение вот тут
-                        // index out of range
+                    if (RealSegments[realSegmentsInONEElemSegment * i + j])
                     {
+                        Console.WriteLine($"current keySequence[{i}]: {keySequence[i]}"); // отладка
+
                         ExtractedWatermarkInts.Add(keySequence[i]);
                         break;
                     }
                 }
             }
 
+            Console.WriteLine($"ExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
             // if (ExtractedWatermarkInts.Count == 0) return null;
 
             var groupsWithCounts = from s in ExtractedWatermarkInts
@@ -461,6 +486,106 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return mostFrequestWatermarkInt;
         }
 
+        private int? ExtractWMFromSingleLinestringNLt(
+            TileGeometryTransform tgs, IList<uint> geometry,
+            ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
+        {
+            // сюда запишем индексы сегментов с нетипичной геометрией
+            var RealSegments = new List<bool>();
+
+            // (currentX, currentY) = (0, 0), currentIndex = 0
+            var currentPosition = (currentX, currentY);
+
+            // для проверки, что новый MoveTo не смещает курсор (почти) относительно предыдущего положения
+            var lastPosition = currentPosition;
+
+            bool isFirstSegment = true;
+
+            while (currentIndex < geometry.Count)
+            {
+                //Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
+
+                var (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+                Debug.Assert(command == MapboxCommandType.MoveTo);
+                Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
+                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                Console.WriteLine($"lastPosition = {lastPosition}, currentPosition = {currentPosition}"); // отладка
+                if (!isFirstSegment && lastPosition != currentPosition)
+                {
+                    return null;
+                }
+
+                (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+                Debug.Assert(command == MapboxCommandType.LineTo, $"Assertion: MapboxCommandType = {command}");
+                Debug.Assert(count >= 1, $"Assertion: LineTo count = {count}");
+                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                if (!isFirstSegment) {
+                    RealSegments.Add(true);
+                }
+                else
+                {
+                    RealSegments.Add(false);
+                }
+                isFirstSegment = false;
+
+
+                for (int i = 1; i < count; i++)
+                {
+                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+                    RealSegments.Add(false);
+
+                    lastPosition = currentPosition;
+                }
+            }
+
+            var realSegmentsNum = RealSegments.Count;
+            var realSegmentsInONEElemSegment = realSegmentsNum / options.D;
+
+            // предусмотреть возможность отражения лайнстринга
+            var ExtractedWatermarkInts = new List<int>();
+
+            if (RealSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
+                return null;
+
+            Console.WriteLine($"realSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
+            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
+
+            for (int i = 0; i < options.D / 2; i++)
+            {
+                for (int j = 0; j < realSegmentsInONEElemSegment; j++)
+                {
+                    if (RealSegments[realSegmentsInONEElemSegment * i + j]) 
+                    {
+                        Console.WriteLine($"current keySequence[{i}]: {keySequence[i]}"); // отладка
+
+                        ExtractedWatermarkInts.Add(keySequence[i]);
+                        break;
+                    }
+                }
+            }
+
+            Console.WriteLine($"ExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
+
+            // if (ExtractedWatermarkInts.Count == 0) return null;
+
+            var groupsWithCounts = from s in ExtractedWatermarkInts
+                                   group s by s into g
+                                   select new
+                                   {
+                                       Item = g.Key,
+                                       Count = g.Count()
+                                   };
+            var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
+            int mostFrequestWatermarkInt = groupsSorted.First().Item;
+
+            // update current position values
+            currentX = currentPosition.currentX;
+            currentY = currentPosition.currentY;
+
+            return mostFrequestWatermarkInt;
+        }
 
         private CoordinateSequence[] ReadCoordinateSequences(
             TileGeometryTransform tgs, IList<uint> geometry,
@@ -542,81 +667,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             return sequences.ToArray();
         }
-
-        /*
-        private CoordinateSequence[] ReadCoordinateSequencesOLD(
-            TileGeometryTransform tgs, IList<uint> geometry,
-            ref int currentIndex, ref int currentX, ref int currentY, int buffer = 0, bool forPoint = false)
-        {
-            (var command, int count) = ParseCommandInteger(geometry[currentIndex]);
-            Debug.Assert(command == MapboxCommandType.MoveTo);
-            if (count > 1)
-            {
-                currentIndex++;
-                return ReadSinglePointSequences(tgs, geometry, count, ref currentIndex, ref currentX, ref currentY);
-            }
-
-            var sequences = new List<CoordinateSequence>();
-            var currentPosition = (currentX, currentY);
-            while (currentIndex < geometry.Count)
-            {
-                (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                Debug.Assert(command == MapboxCommandType.MoveTo);
-                Debug.Assert(count == 1);
-
-                // Read the current position
-                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-
-                if (!forPoint)
-                {
-                    // Read the next command (should be LineTo)
-                    (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                    if (command != MapboxCommandType.LineTo) count = 0;
-                }
-                else
-                {
-                    count = 0;
-                }
-
-                // Create sequence, add starting point
-                var sequence = _factory.CoordinateSequenceFactory.Create(1 + count + buffer, 2);
-                int sequenceIndex = 0;
-                TransformOffsetAndAddToSequence(tgs, currentPosition, sequence, sequenceIndex++);
-
-                // Read and add offsets
-                for (int i = 1; i <= count; i++)
-                {
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    TransformOffsetAndAddToSequence(tgs, currentPosition, sequence, sequenceIndex++);
-                }
-
-                // Check for ClosePath command
-                if (currentIndex < geometry.Count)
-                {
-                    (command, _) = ParseCommandInteger(geometry[currentIndex]);
-                    if (command == MapboxCommandType.ClosePath)
-                    {
-                        Debug.Assert(buffer > 0);
-                        sequence.SetOrdinate(sequenceIndex, Ordinate.X, sequence.GetOrdinate(0, Ordinate.X));
-                        sequence.SetOrdinate(sequenceIndex, Ordinate.Y, sequence.GetOrdinate(0, Ordinate.Y));
-
-                        currentIndex++;
-                        sequenceIndex++;
-                    }
-                }
-
-                Debug.Assert(sequenceIndex == sequence.Count);
-
-                sequences.Add(sequence);
-            }
-
-            // update current position values
-            currentX = currentPosition.currentX;
-            currentY = currentPosition.currentY;
-
-            return sequences.ToArray();
-        }
-        */
 
         private CoordinateSequence[] ReadSinglePointSequences(TileGeometryTransform tgs, IList<uint> geometry,
             int numSequences, ref int currentIndex, ref int currentX, ref int currentY)

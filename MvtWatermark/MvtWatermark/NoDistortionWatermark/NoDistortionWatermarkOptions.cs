@@ -15,7 +15,7 @@ namespace MvtWatermark.NoDistortionWatermark
         public enum AtypicalEncodingTypes
         {
             MtLtLt,
-            MtLtMt,
+            MtLtMt, // нормально не работает, от этого придётся отказаться, судя по всему
             NLtCommands
         }
         /// <summary>
@@ -27,7 +27,7 @@ namespace MvtWatermark.NoDistortionWatermark
         /// <summary>
         /// Количество элементарных сегментов с одинаковым значением (для каждого значения)
         /// </summary>
-        public int m { get; init; }
+        public int M { get; init; }
 
         /// <summary>
         /// Количество бит в ЦВЗ
@@ -60,9 +60,9 @@ namespace MvtWatermark.NoDistortionWatermark
         public bool SecondHalfOfLineStringIsUsed { get; set; } = false;
 
         public NoDistortionWatermarkOptions(int m, int Nb, int Ls_key, int Lf, 
-            AtypicalEncodingTypes AtypicalEncodingType = AtypicalEncodingTypes.MtLtMt, bool SecondHalfOfLineStringIsUsed = false)
+            AtypicalEncodingTypes AtypicalEncodingType = AtypicalEncodingTypes.MtLtLt, bool SecondHalfOfLineStringIsUsed = false)
         {
-            this.m = m;
+            this.M = m;
             this.Nb = Nb;
             this.Ls_Key = Ls_key;
             this.Lf = Lf;

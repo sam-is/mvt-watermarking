@@ -23,11 +23,15 @@ namespace MvtWatermark.NoDistortionWatermark
 
         public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
         {
+            // message уже внутри будет делиться на фрагменты размером Nb
             if (message.Count < _options.Nb)
             {
                 throw new Exception("ЦВЗ меньше размера в options");
             }
-            // message уже внутри будет делиться на фрагменты размером Nb
+            else if (message.Length == 1 && message[0] == false)
+            {
+                throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
+            }
 
             var TileDict = tiles.WriteWM(message, key, _options);
 
@@ -62,6 +66,10 @@ namespace MvtWatermark.NoDistortionWatermark
             if (message.Count < _options.Nb)
             {
                 throw new Exception("ЦВЗ меньше размера в options");
+            }
+            else if (message.Length == 1 && message[0] == false)
+            {
+                throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
             }
 
             Console.WriteLine($"Количество элементарных сегментов:{_options.D}"); // отладка

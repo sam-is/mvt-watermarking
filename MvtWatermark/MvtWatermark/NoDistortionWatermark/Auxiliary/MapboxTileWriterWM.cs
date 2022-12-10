@@ -68,18 +68,20 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var keySequence = new int[options.D / 2];
 
-            for (int i = 0; i < options.D / 2; i++)
+            keySequence[0] = 0;
+            HowMuchEachValue[0] = 1;
+            for (int i = 1; i < options.D / 2; i++)
             {
                 int value;
                 do
                 {
                     value = rand.Next(0, MaxInt + 1);
-                } while (HowMuchEachValue[value] >= 2);
+                } while (HowMuchEachValue[value] >= options.M);
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
-
-
+            Console.WriteLine($"HowMuchEachValue: {ConsoleWriter.GetArrayStr<int>(HowMuchEachValue)}");
+            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}");
 
             var tile = new Tiles.Tile(vectorTile.TileId);
             var tgt = new TileGeometryTransform(tile, extent);
@@ -429,7 +431,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             if (realSegments < options.D)
             {
                 return Encode(sequence, tgt, ref currentX, ref currentY);
-                //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
             }
 
             Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
@@ -439,6 +440,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+
+            int lastLineToCount = 0;
+            int currentRealSegment = 0;
+            int lastLineToCommand; // индекс последнего LineTo CommandInteger
+
             // Стартовая команда: первый MoveTo
             encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
             position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
@@ -447,59 +454,29 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             int encodedIndex = 2; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
-            int lastLineToCount = 0;
-            int currentRealSegment = 0;
-            int currentElementarySegment = 0;
-            int lastLineToCommand; // индекс последнего LineTo CommandInteger
+            encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
+            encodedIndex++; // encodedIndex = 3
+            lastLineToCommand = encodedIndex;
 
-            int sequenceIndexStart = 1;
-
-            // если элементарный сегмент подходит, то встраиваем нетипичную конструкцию в первый реальный сегмент
-            if (keySequence[0] == WatermarkInt) 
-            {
-                lastLineToCount = 1; // пока добавили 1 LineTo
-
-                encoded[0] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
-                position = tgt.Transform(sequence, 1, ref currentX, ref currentY);
-                encoded.Add(GenerateParameterInteger(position.x));
-                encoded.Add(GenerateParameterInteger(position.y));
-                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount)); // надо запоминать индекс последней LineTo и обновлять
-                //encoded.Add(GenerateParameterInteger(X));
-                //encoded.Add(GenerateParameterInteger(Y));
-                position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-                encoded.Add(GenerateParameterInteger(position.x));
-                encoded.Add(GenerateParameterInteger(position.y));
-
-                encodedIndex += 5;
-                sequenceIndexStart = 1; // первый реальный сегмент закодировали, цикл начнёт работу со второго
-                currentRealSegment = 1;
-
-                lastLineToCommand = encodedIndex - 2; // то есть 5
-            }
-            else
-            {
-                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
-                encodedIndex++; // encodedIndex = 3
-                lastLineToCommand = encodedIndex;
-            }
-
-            for (int i = sequenceIndexStart; i < count; i++)
+            for (int i = 1; i < count; i++)
             {
                 position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
                 if (position.x != 0 || position.y != 0) 
                 {
-                    currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment; // тут ошибка: деление на ноль
+                    var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
+                    var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+
                     if (currentElementarySegment < keySequence.Length
                         // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                        && keySequence[currentElementarySegment] == WatermarkInt // тут проблема с индексами (уже нет)
-                        && currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment == 0) // пока что в каждый первый реальный сегмент встраиваем
+                        && keySequence[currentElementarySegment] == WatermarkInt 
+                        && LsArray[realSegmentIndexInElementary] == 1) 
                     {
                         lastLineToCount = 1;
                         encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
                         encoded.Add(GenerateParameterInteger(position.x));
                         encoded.Add(GenerateParameterInteger(position.y));
-                        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount)); // надо запоминать индекс последней LineTo и обновлять
+                        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
                         position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
                         encoded.Add(GenerateParameterInteger(position.x));
                         encoded.Add(GenerateParameterInteger(position.y));
@@ -529,7 +506,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return encoded;
         }
 
-
+        // Не работает нормально, пока не используем
         private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, TileGeometryTransform tgt,
             ref int currentX, ref int currentY, int WatermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
         {
@@ -586,10 +563,17 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             encoded.Add(GenerateParameterInteger(position.x));
             encoded.Add(GenerateParameterInteger(position.y));
 
-            encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
-            //encodedIndex = 4;
-            encodedIndex = 3;
-            lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
+            if (!(keySequence[currentElementarySegment] == WatermarkInt && LsArray[0] == 1))
+            {
+                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+                encodedIndex = 3;
+                lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
+            }
+            else
+            {
+                encodedIndex = 2;
+                lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.MoveTo };
+            }
 
             // 0-й отсчёт - это первый MoveTo
             for (int i = 1; i < count; i++)
@@ -607,10 +591,15 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                         && keySequence[currentElementarySegment] == WatermarkInt // тут проблема с индексами (уже нет)
                         && LsArray[realSegmentIndexInElementary] == 1)
                     {
-                        if (lastCommand.Index == encodedIndex && lastCommand.Type == MapboxCommandType.LineTo)
+                        if (lastCommand.Index == encodedIndex)
                         {
-                            // если в первый сегмент встраиваем, то две подряд команды MoveTo будут
-                            encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 1);
+                            if (lastCommand.Type == MapboxCommandType.LineTo) {
+                                encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 1);
+                            }
+                            else if (lastCommand.Type == MapboxCommandType.MoveTo)
+                            {
+                                encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
+                            }
                             encodedIndex += 9;
                         }
                         else
@@ -849,26 +838,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return encoded;
         }
 
-        /*
-        /// <summary>
-        /// Generates a move command. 
-        /// </summary>
-        private static void GenerateMoveTo(List<uint> geometry, int dx, int dy)
-        {
-            geometry.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-            geometry.Add(GenerateParameterInteger(dx));
-            geometry.Add(GenerateParameterInteger(dy));
-        }
-         
-        /// <summary>
-        /// Generates a close path command.
-        /// </summary>
-        private static void GenerateClosePath(List<uint> geometry)
-        {
-            geometry.Add(GenerateCommandInteger(MapboxCommandType.ClosePath, 1));
-        }
-         */
-
         /// <summary>
         /// Generates a command integer.
         /// </summary>
@@ -905,6 +874,13 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return dx > 0 && dy > 0 && (dx > 1 || dy > 1);
         }
 
+        /// <summary>
+        /// Генерирует количество Ls (реальных сегментов в одном элементарном, в которые втраивается НТГ) на основе ключа Ls_Key;
+        /// Генерирует массив интов с указанием, куда именно вставлять НТГ
+        /// </summary>
+        /// <param name="realSegmentsInOneElemSegment"></param>
+        /// <param name="Ls_Key"></param>
+        /// <returns></returns>
         private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int Ls_Key)
         {
             var random = new Random(Ls_Key);
@@ -912,7 +888,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             var Ls = random.Next(1, realSegmentsInOneElemSegment);
 
             var resultArr = new List<int>(realSegmentsInOneElemSegment);
-            int randomNum;
+            int randomIndex;
 
             for (var i = 0; i < realSegmentsInOneElemSegment; i++)
             {
@@ -923,9 +899,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             {
                 do
                 {
-                    randomNum = random.Next(0, realSegmentsInOneElemSegment - 1);
-                } while (resultArr[randomNum] != -1);
-                resultArr[randomNum] = 1;
+                    randomIndex = random.Next(0, realSegmentsInOneElemSegment - 1);
+                } while (resultArr[randomIndex] != -1);
+                resultArr[randomIndex] = 1;
             }
 
             Console.WriteLine($"Отладка ||| Массив Ls: {ConsoleWriter.GetIEnumerableStr(resultArr)}");

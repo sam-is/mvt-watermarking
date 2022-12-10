@@ -94,16 +94,35 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             var rand = new Random(key + Convert.ToInt32(tileId)); // а извлечь-то сможем с таким ключом?
 
-            for (int i = 0; i < options.D / 2; i++)
+            keySequence[0] = 0;
+            HowMuchEachValue[0] = 1;
+            for (int i = 1; i < options.D / 2; i++)
             {
                 int value;
                 do
                 {
                     value = rand.Next(0, MaxInt + 1);
-                } while (HowMuchEachValue[value] >= 2);
+                } while (HowMuchEachValue[value] >= options.M);
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
+
+            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr(keySequence)}");
+            
+
+            
+            // ДЛЯ ТЕСТА
+            for (int i = 0; i < options.D / 2; i++)
+            {
+                keySequence[i] = 0;
+            }
+            keySequence[14] = 5;
+            keySequence[15] = 5;
+
+            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr(keySequence)}");
+
+            // ДЛЯ ТЕСТА
+            
 
             Console.WriteLine("WriteToStreamWM сгенерировали Sk"); // отладка
 
@@ -260,7 +279,27 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
         }
 
-        // Кодирует LineString в MVT
+        private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt)
+        {
+            var geometry = (Geometry)lineal;
+            int currentX = 0, currentY = 0;
+            for (int i = 0; i < geometry.NumGeometries; i++)
+            {
+                var lineString = (LineString)geometry.GetGeometryN(i);
+                foreach (uint encoded in Encode(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, false))
+                    yield return encoded;
+            }
+        }
+
+        /// <summary>
+        /// Кодирует LineString в MVT
+        /// </summary>
+        /// <param name="lineal"></param>
+        /// <param name="tgt"></param>
+        /// <param name="WatermarkInt"></param>
+        /// <param name="options"></param>
+        /// <param name="KeySequence"></param>
+        /// <returns></returns>
         private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int WatermarkInt,
             NoDistortionWatermarkOptions options, int[] KeySequence)
         // фрагмент ЦВЗ для каждого тайла надо определять как-то
@@ -347,6 +386,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
@@ -359,6 +400,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
+
+            currentX = X; currentY = Y;
 
             if (realSegments < options.D)
             {
@@ -475,6 +518,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
@@ -488,8 +533,11 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 }
             }
 
+            currentX = X; currentY = Y;
+
             if (realSegments < options.D)
             {
+                Console.WriteLine("\nВстроить невозможно"); // отладка
                 return Encode(sequence, tgt, ref currentX, ref currentY);
                 //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
             }
@@ -516,8 +564,22 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             encoded.Add(GenerateParameterInteger(position.x));
             encoded.Add(GenerateParameterInteger(position.y));
 
+            /*if (!(keySequence[currentElementarySegment] == WatermarkInt && LsArray[0] == 1))
+            {
+                encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+                encodedIndex = 3;
+                lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
+
+                Console.WriteLine("\nПервый сегмент НЕ закодирован"); // отладка
+            }
+            else
+            {
+                encodedIndex = 2;
+                lastCommand = new LastCommandInfo { Index = 0, Type = MapboxCommandType.MoveTo };
+                Console.WriteLine("\nПервый сегмент закодирован!"); // отладка
+            }*/
+
             encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
-            //encodedIndex = 4;
             encodedIndex = 3;
             lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
 
@@ -537,14 +599,22 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                         && keySequence[currentElementarySegment] == WatermarkInt // тут проблема с индексами (уже нет)
                         && LsArray[realSegmentIndexInElementary] == 1)
                     {
+                        /*if (lastCommand.Type == MapboxCommandType.MoveTo && lastCommand.Index == 0)
+                        {
+                            Console.WriteLine("\t\tОп оп оп"); // отладка
+                            encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
+                            encodedIndex += 9;
+                        }*/
                         if (lastCommand.Index == encodedIndex && lastCommand.Type == MapboxCommandType.LineTo)
                         {
-                            // если в первый сегмент встраиваем, то две подряд команды MoveTo будут
-                            encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 1);
-                            encodedIndex += 9;
+                            Console.WriteLine("\t\tLineTo заменяется на MoveTo"); // отладка
+                            encoded[lastCommand.Index - 3] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
+                            encoded.RemoveAt(lastCommand.Index);
+                            encodedIndex += 8;
                         }
                         else
                         {
+                            Console.WriteLine("\t\tпросто добавляется MoveTo"); // отладка
                             encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
                             encodedIndex += 10;
                         }
@@ -611,6 +681,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             Console.WriteLine($"sequence count = {count}"); // отладка
             Console.WriteLine($"sequence = {sequence}"); // отладка
 
+            var X = currentX; var Y = currentY;
+
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
             int realSegments = 0;
             for (int i = 1; i < count; i++)
@@ -622,6 +694,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     realSegments++;
                 }
             }
+
+            currentX = X; currentY = Y;
 
             if (realSegments < options.D)
             {
@@ -795,10 +869,10 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
          */
 
-        /// <summary>
-        /// Generates a command integer.
-        /// </summary>
-        private static uint GenerateCommandInteger(MapboxCommandType command, int count)
+            /// <summary>
+            /// Generates a command integer.
+            /// </summary>
+            private static uint GenerateCommandInteger(MapboxCommandType command, int count)
         { // CommandInteger = (id & 0x7) | (count << 3)
             return (uint)(((int)command & 0x7) | (count << 3));
         }
