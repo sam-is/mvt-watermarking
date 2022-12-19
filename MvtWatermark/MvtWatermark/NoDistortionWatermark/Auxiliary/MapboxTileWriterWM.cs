@@ -23,6 +23,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             public MapboxCommandType Type { get; set; }
         }
 
+        private static bool _hasSuccessfullyEmbeded = false;
+
         /// <summary>
         /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
         /// </summary>
@@ -94,6 +96,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 var keys = new Dictionary<string, uint>();
                 var values = new Dictionary<Tile.Value, uint>();
 
+                int embedingIndex = 0; // для работы с Lf
+
                 foreach (var localLayerFeature in localLayer.Features)
                 {
                     var feature = new Mapbox.Tile.Feature();
@@ -107,7 +111,18 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                             break;
                         case ILineal lineal:
                             feature.Type = Tile.GeomType.LineString;
-                            feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
+
+                            // для реализации параметра Lf
+                            if (embedingIndex < options.Lf) 
+                            {
+                                feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
+                                if (_hasSuccessfullyEmbeded) // для реализации параметра Lf
+                                    embedingIndex++;
+                            }
+                            else
+                            {
+                                feature.Geometry.AddRange(Encode(lineal, tgt));
+                            }
                             break;
                         case IPolygonal polygonal:
                             feature.Type = Tile.GeomType.Polygon;
@@ -430,11 +445,20 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             if (realSegments < options.D)
             {
+                _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
 
             Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
             Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
+
+
+            if (options.SecondHalfOfLineStringIsUsed)
+            {
+                sequence = sequence.Reversed();
+            }
+
 
             int realSegmentsInOneElemSegment = realSegments / options.D;
 
@@ -502,6 +526,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             {
                 encoded.Clear();
             }
+
+            _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
 
             return encoded;
         }
@@ -659,6 +685,17 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
 
+        /// <summary>
+        /// Встраивание с нетипичной геометрией вида New LineString
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <param name="tgt"></param>
+        /// <param name="currentX"></param>
+        /// <param name="currentY"></param>
+        /// <param name="WatermarkInt"></param>
+        /// <param name="options"></param>
+        /// <param name="keySequence"></param>
+        /// <returns></returns>
         private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, TileGeometryTransform tgt,
             ref int currentX, ref int currentY, int WatermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
         {
@@ -688,11 +725,20 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             if (realSegments < options.D)
             {
+                _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
 
             Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
             Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
+
+
+            if (options.SecondHalfOfLineStringIsUsed)
+            {
+                sequence = sequence.Reversed();
+            }
+
 
             int realSegmentsInOneElemSegment = realSegments / options.D;
 
@@ -771,6 +817,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             {
                 encoded.Clear();
             }
+
+            _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
 
             return encoded;
         }

@@ -25,9 +25,11 @@ namespace MvtWatermark
             int zoom = 0; int x = 0; int y = 0;
             //WithoutWatermark(zoom, x, y);
 
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
-            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt);
-            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 1, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
+            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 3, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt);
+            var options = new NoDistortionWatermarkOptions(2, 3, 54321, 3, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, true);
+
+            //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 3, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands);
+
             int key = 123;
             var boolArr = new bool[] { true, false, true };
             //EmbedAndWriteToFile2(zoom, x, y, options, boolArr, key);

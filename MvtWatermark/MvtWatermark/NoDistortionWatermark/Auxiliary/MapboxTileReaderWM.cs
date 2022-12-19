@@ -121,7 +121,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
                 foreach (var mbTileFeature in mbTileLayer.Features)
                 {
-                    Console.WriteLine($"текущая Фича: {featureIndex++}"); // отладка
+                    Console.WriteLine($"\nТекущая Фича: {featureIndex++}"); // отладка
                     int? WatermarkIntFromFeature = ExtractFromFeature(tgs, mbTileFeature, options, keySequence);
                     if (WatermarkIntFromFeature != null)
                     {
@@ -344,107 +344,149 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
         {
             // сюда запишем индексы сегментов с нетипичной геометрией
-            var RealSegments = new List<bool>(); 
-
-            // (currentX, currentY) = (0, 0), currentIndex = 0
+            var RealSegments = new List<bool>();
+            var RealSegmentsReversedLineString = new List<bool>();
             var currentPosition = (currentX, currentY);
 
             var (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
             Debug.Assert(command == MapboxCommandType.MoveTo);
-            //Debug.Assert(count >= 1 && count <= 2, "Первая команда MoveTo имеет счётчик команд не 1 и не 2");
             Debug.Assert(count == 1, "Первая команда MoveTo имеет счётчик команд не 1");
+
+            bool shouldTryReversed = false;
 
             // Read the current position
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
+            var savedPosition = currentPosition;
 
-            /*
-            bool firstSegmentEncoded = false;
-
-            if (count == 2)
-            {
-                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 5
-                firstSegmentEncoded = true;
-            }
-            */
+            // для проверки, что новый MoveTo не смещает курсор (почти) относительно предыдущего положения
+            var lastPosition1 = currentPosition;
+            var lastPosition2 = currentPosition;
 
             while (currentIndex < geometry.Count)
             {
-                //Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
-
-                // Если в первый сегмент встроено, то команда == LineTo
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                /*
-                if (firstSegmentEncoded)
-                {
-                    Console.WriteLine("LineTo, первый сегмент закодирован"); // отладка
-
-                    Debug.Assert(command == MapboxCommandType.LineTo);
-                    Debug.Assert(count >= 2);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
-                    RealSegments.Add(true);
-                    count -= 2;
-
-                    firstSegmentEncoded = false;
-
-                    Console.WriteLine("Первый закодированный сегмент рассмотрен"); // отладка
-
-                }
-                */
-                // иначе - команда == MoveTo
                 if (command == MapboxCommandType.MoveTo)
                 {
-                    //Console.WriteLine("MoveTo, после закодированного сегмента"); // отладка
-
                     Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                    lastPosition2 = currentPosition;
+
                     (command, count) = ParseCommandInteger(geometry[currentIndex++]);
-                    Debug.Assert(command == MapboxCommandType.LineTo, $"Assertion: MapboxCommandType = {command}");
-                    Debug.Assert(count >= 2, $"Assertion: LineTo count = {count}");
+
+                    if (command != MapboxCommandType.LineTo)
+                    {
+                        return null;
+                    }
+                    else if (count < 2) // это условие, возможно, не нужно
+                    {
+                        shouldTryReversed = true;
+                        break;
+                    }
+
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                    if (lastPosition1 != currentPosition)
+                    {
+                        shouldTryReversed = true;
+                        break;
+                    }
+
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                    if (lastPosition2 != currentPosition)
+                        return null;
+
+                    lastPosition1 = currentPosition;
+
                     RealSegments.Add(true);
                     count -= 2;
 
                     Console.WriteLine($"currentPosition: {currentPosition}"); // отладка
-                    //Console.WriteLine("Очередной закодированный сегмент рассмотрен"); // отладка
                 }
                 else
                 {
-                    Debug.Assert(command == MapboxCommandType.LineTo, "ну и че");
-                    //Console.WriteLine($"Первый сегмент не закодирован, вторая команда - LineTo, count = {count}"); // отладка
+                    Debug.Assert(command == MapboxCommandType.LineTo, "команда не MoveTo и не LineTo");
                 }
-                //else throw new Exception("Cannot decode the sequence");
-                
 
                 // Read and add offsets
                 for (int i = 0; i < count; i++)
                 {
-                    //Console.WriteLine($"currentPositionX: {currentPosition.currentX}, currentPositionY: {currentPosition.currentY}," + // отладка
-                        //$"currentIndex: {currentIndex}"); // отладка
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     RealSegments.Add(false);
 
-                    Console.WriteLine($"currentPosition: {currentPosition}"); // отладка
-                    //Console.WriteLine("параметры LineTo"); // отладка
+                    lastPosition1 = currentPosition;
                 }
             }
 
+
+            if (shouldTryReversed)
+            {
+                currentIndex = 3;
+                currentPosition = savedPosition;
+
+                lastPosition1 = currentPosition;
+                lastPosition2 = currentPosition;
+
+                var rNTGstart = false;
+
+                while (currentIndex < geometry.Count)
+                {
+                    (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+                    if (command == MapboxCommandType.MoveTo)
+                    {
+                        Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
+                        currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+                        if (lastPosition2 == currentPosition && rNTGstart)
+                        {
+                            RealSegmentsReversedLineString.Add(true);
+                        }
+
+                        (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+
+                        if (command != MapboxCommandType.LineTo)
+                        {
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        Debug.Assert(command == MapboxCommandType.LineTo, "команда не MoveTo и не LineTo");
+                    }
+
+                    if (count < 1)
+                        return null;
+
+                    for (int i = 0; i < count - 1; i++)
+                    {
+                        lastPosition1 = currentPosition;
+
+                        currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+                        RealSegmentsReversedLineString.Add(false);
+                    }
+
+                    lastPosition2 = currentPosition;
+
+                    currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+                    RealSegmentsReversedLineString.Add(false);
+
+                    if (currentPosition != lastPosition1)
+                        return null;
+                    else 
+                        rNTGstart = true;
+                }
+
+                RealSegmentsReversedLineString.Reverse();
+                RealSegments = RealSegmentsReversedLineString;
+            }
+
+
             var realSegmentsNum = RealSegments.Count;
-            //var ElementarySegmentsNum = keySequence.Length * 2;
             var realSegmentsInONEElemSegment = realSegmentsNum / options.D;
 
             // предусмотреть возможность отражения лайнстринга
             var ExtractedWatermarkInts = new List<int>();
-            //int WatermarkInt;
-            /*for (int i = 0; i < RealSegments.Count; i++) // условие изменить, так как ток половину лайнстринга рассматриваем
-            {
-                var currentElementarySegment = i/realSegmentsInONEElemSegment;
-                if (RealSegments[i] == true)
-                {
-                    ExtractedWatermarkInts.Add(keySequence[currentElementarySegment]);
-                }
-            }*/
 
             if (RealSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
                 return null;
@@ -466,8 +508,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 }
             }
 
-            Console.WriteLine($"ExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
-            // if (ExtractedWatermarkInts.Count == 0) return null;
+            Console.WriteLine($"\tExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
+
+            if (ExtractedWatermarkInts.Count == 0) return null;
 
             var groupsWithCounts = from s in ExtractedWatermarkInts
                                    group s by s into g
@@ -513,7 +556,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 Console.WriteLine($"lastPosition = {lastPosition}, currentPosition = {currentPosition}"); // отладка
                 if (!isFirstSegment && lastPosition != currentPosition)
                 {
-                    return null;
+                    return null; // а всегда ли это работает?
                 }
 
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
@@ -546,12 +589,15 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             // предусмотреть возможность отражения лайнстринга
             var ExtractedWatermarkInts = new List<int>();
 
+            var ExtractedWatermarkIntsSecondHalf = new List<int>();
+
             if (RealSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
                 return null;
 
-            Console.WriteLine($"realSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
+            Console.WriteLine($"\trealSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
             Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
 
+            // работает также с отражённым лайнстрингом
             for (int i = 0; i < options.D / 2; i++)
             {
                 for (int j = 0; j < realSegmentsInONEElemSegment; j++)
@@ -563,12 +609,31 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                         ExtractedWatermarkInts.Add(keySequence[i]);
                         break;
                     }
+
+                    if (RealSegments[RealSegments.Count - 1 - (realSegmentsInONEElemSegment * i + j)])
+                    {
+                        Console.WriteLine($"current (Second Half) keySequence[{i}]: {keySequence[i]}"); // отладка
+
+                        ExtractedWatermarkIntsSecondHalf.Add(keySequence[i]);
+                        break;
+                    }
                 }
             }
 
-            Console.WriteLine($"ExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
+            Console.WriteLine($"\t\tExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
 
-            // if (ExtractedWatermarkInts.Count == 0) return null;
+
+            bool wasReversed = false;
+
+            if (ExtractedWatermarkInts.Count == 0)
+            {
+                if (ExtractedWatermarkIntsSecondHalf.Count == 0)
+                    return null;
+                else
+                    ExtractedWatermarkInts = ExtractedWatermarkIntsSecondHalf;
+                    //wasReversed = true;
+            }
+
 
             var groupsWithCounts = from s in ExtractedWatermarkInts
                                    group s by s into g
