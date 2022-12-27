@@ -1,9 +1,10 @@
 ﻿using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
-using NetTopologySuite.IO.VectorTiles.Tiles;
+using NetTopologySuite.IO.VectorTiles.Mapbox;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace MvtWatermark.QimMvtWatermark;
@@ -265,6 +266,8 @@ public class QimMvtWatermark : IMvtWatermark
                                   double extentDist, bool[,] map, bool value, int countToChange, int count)
     {
         var step = (int)Math.Floor((double)count / countToChange);
+        if (step == 0)
+            step = 1;
         var countChanged = 0;
         var countSuited = 0;
         foreach (var layer in tile.Layers)
@@ -302,6 +305,19 @@ public class QimMvtWatermark : IMvtWatermark
                             foreach (var point in listPoints)
                             {
                                 var geometryCopy = geometry.Copy();
+                                var areas = new List<double>();
+
+                                if (geometryCopy.GeometryType == "MultiPolygon")
+                                {
+                                    var multipolygon = geometryCopy as MultiPolygon;
+                                    foreach (Polygon p in multipolygon!.Cast<Polygon>())
+                                        areas.Add(p.Area);
+                                }
+                                else
+                                {
+                                    areas.Add(geometryCopy.Area);
+                                }
+
                                 var xMeters = tileEnvelope.MinX + point.X * extentDist;
                                 var yMeters = tileEnvelope.MinY + point.Y * extentDist;
                                 var coord = CoordinateConverter.MetersToDegrees(new Coordinate(xMeters, yMeters));
@@ -319,9 +335,39 @@ public class QimMvtWatermark : IMvtWatermark
                                         geometryCopy.Coordinates[^1].X = geometryCopy.Coordinates[0].X;
                                         geometryCopy.Coordinates[^1].Y = geometryCopy.Coordinates[0].Y;
                                     }
+
+                                    if (geometryCopy.GeometryType == "MultiPolygon")
+                                    {
+                                        var multipolygon = geometryCopy as MultiPolygon;
+                                        foreach (Polygon p in multipolygon!.Cast<Polygon>())
+                                        {
+                                            p.Coordinates[^1].X = p.Coordinates[0].X;
+                                            p.Coordinates[^1].Y = p.Coordinates[0].Y;
+                                        }
+                                    }
+
+                                    countChangedForPoint++;
+
                                     if (!geometryCopy.IsValid)
                                         continue;
                                 }
+
+                                var isBroken = false;
+                                if (geometryCopy.GeometryType == "MultiPolygon")
+                                {
+                                    var multipolygon = geometryCopy as MultiPolygon;
+                                    for (var i = 0; i < multipolygon!.Geometries.Length; i++)
+                                        if (Math.Max(multipolygon[i].Area, areas[i]) / Math.Min(multipolygon[i].Area, areas[i]) > 3)
+                                            isBroken = true;
+                                }
+                                else
+                                {
+                                    if (Math.Max(geometryCopy.Area, areas[0]) / Math.Min(geometryCopy.Area, areas[0]) > 3)
+                                        isBroken = true;
+                                }
+
+                                if (isBroken)
+                                    continue;
 
                                 countChanged += countChangedForPoint;
                                 geometry = geometryCopy;
@@ -345,7 +391,7 @@ public class QimMvtWatermark : IMvtWatermark
     public VectorTile? Embed(VectorTile tile, int key, BitArray message)
     {
         var embedded = false;
-        var t = new Tile(tile.TileId);
+        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
         var a = envelopeTile.Height / _options.M;
@@ -355,6 +401,7 @@ public class QimMvtWatermark : IMvtWatermark
         var map = GenerateMap(key);
 
         for (var i = 0; i < _options.M; i++)
+        {
             for (var j = 0; j < _options.M; j++)
             {
                 var index = winx[i, j];
@@ -400,6 +447,8 @@ public class QimMvtWatermark : IMvtWatermark
                     ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
                 }
             }
+        }
+
         if (!embedded)
             return null;
         return tile;
@@ -414,7 +463,7 @@ public class QimMvtWatermark : IMvtWatermark
     public BitArray? Extract(VectorTile tile, int key)
     {
         var embedded = false;
-        var t = new Tile(tile.TileId);
+        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
 
@@ -436,6 +485,7 @@ public class QimMvtWatermark : IMvtWatermark
         }
 
         for (var i = 0; i < _options.M; i++)
+        {
             for (var j = 0; j < _options.M; j++)
             {
 
@@ -471,6 +521,7 @@ public class QimMvtWatermark : IMvtWatermark
                         dict[index] += 1;
                 }
             }
+        }
 
         if (_options.IsGeneralExtractionMethod)
         {
@@ -536,6 +587,8 @@ public class QimMvtWatermark : IMvtWatermark
                 current += _options.Nb;
             }
         }
+        if (current < message.Count)
+            throw new ArgumentException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.", nameof(message));
         return tiles;
     }
 
@@ -561,6 +614,6 @@ public class QimMvtWatermark : IMvtWatermark
                 }
             }
         }
-        return new BitArray(message);
+        return new BitArray(message.Take(index).ToArray());
     }
 }
