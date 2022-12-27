@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -6,7 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
+    <PackageReference Include="NetTopologySuite" Version="2.5.0" />
+    <PackageReference Include="NetTopologySuite.Features" Version="2.1.0" />
+    <PackageReference Include="protobuf-net" Version="3.1.26" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NetTopologySuite.IO.VectorTiles">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
