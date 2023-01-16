@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="NoDistortionWatermark\Tiles\" />
     <Folder Include="NoDistortionWatermark\TilesWithWatermarks\" />
   </ItemGroup>
 

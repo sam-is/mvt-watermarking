@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MvtWatermark.NoDistortionWatermark
 {
-    internal static class WatermarkTransform
+    public static class WatermarkTransform
     {
         public static int? getIntFromBitArrayNullable(BitArray? bitArray)
         {

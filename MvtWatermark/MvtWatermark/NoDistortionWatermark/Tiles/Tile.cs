@@ -1,8 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
+using NetTopologySuite.IO.VectorTiles.Tiles;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]
-namespace NetTopologySuite.IO.VectorTiles.Tiles
+namespace NetTopologySuite.IO.VectorTiles.Tiles.Changed
 {
     /// <summary>
     /// Represents a tile.
@@ -269,7 +270,7 @@ namespace NetTopologySuite.IO.VectorTiles.Tiles
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <returns></returns>
-        internal static ulong CalculateTileId(int zoom, int x, int y)
+        public static ulong CalculateTileId(int zoom, int x, int y)
         {
             ulong id = Tile.CalculateTileId(zoom);
             long width = (long) System.Math.Pow(2, zoom);
@@ -281,7 +282,7 @@ namespace NetTopologySuite.IO.VectorTiles.Tiles
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        internal static (int x, int y, int zoom) CalculateTile(ulong id) // изменил доступ с private на internal
+        public static (int x, int y, int zoom) CalculateTile(ulong id) // изменил доступ с private на internal
         {
             // find out the zoom level first.
             int zoom = 0;

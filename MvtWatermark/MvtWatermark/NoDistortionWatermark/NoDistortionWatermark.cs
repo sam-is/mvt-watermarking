@@ -14,7 +14,6 @@ namespace MvtWatermark.NoDistortionWatermark
     public class NoDistortionWatermark: IMvtWatermark
     {
         private NoDistortionWatermarkOptions _options;
-        int[] _keySequence; // Убрать: Sk будет генерироваться в кажом тайле своя
         
         public NoDistortionWatermark(NoDistortionWatermarkOptions options)
         {
@@ -35,29 +34,60 @@ namespace MvtWatermark.NoDistortionWatermark
 
             var TileDict = tiles.WriteWM(message, key, _options);
 
-            Console.WriteLine("После Embed"); // отладка
+            //Console.WriteLine("После Embed"); // отладка
 
             var readerWM = new MapboxTileReaderWM();
 
             var toReturn = readerWM.Read(TileDict);
 
-            Console.WriteLine("После ReadWM"); // отладка
+            //Console.WriteLine("После ReadWM"); // отладка
 
             return toReturn;
         }
 
-        public BitArray? Extract(VectorTileTree tiles, int key)
+        /*
+        public VectorTileTree Embed(VectorTile vt, int key, BitArray message)
+        {
+            // message уже внутри будет делиться на фрагменты размером Nb
+            if (message.Count < _options.Nb)
+            {
+                throw new Exception("ЦВЗ меньше размера в options");
+            }
+            else if (message.Length == 1 && message[0] == false)
+            {
+                throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
+            }
+
+            var TileDict = vt.WriteWM(message, key, vt.TileId, _options);
+
+            //Console.WriteLine("После Embed"); // отладка
+
+            var readerWM = new MapboxTileReaderWM();
+
+            var toReturn = readerWM.Read(TileDict);
+
+            //Console.WriteLine("После ReadWM"); // отладка
+
+            return toReturn;
+        }
+        */
+
+        public BitArray Extract(VectorTileTree tiles, int key)
         {
             var readerWM = new MapboxTileReaderWM();
             var WatermarkInts = new List<int>();
             foreach (var tileIndex in tiles) // тут проверочки организовать пустое дерево или нет
             {
-                WatermarkInts.Add(readerWM.ExtractWM(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, key));
+                var extractedInt = readerWM.ExtractWM(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, key);
+                if (extractedInt != null)
+                    WatermarkInts.Add(Convert.ToInt32(extractedInt));
             }
 
-            return new BitArray(new int[] { WatermarkInts[0] }); // пока что просто возвращается первый элемент из списка вотермарок
+            if (WatermarkInts.Count == 0)
+                return new BitArray(new bool[] { false }); // такой ЦВЗ не мог быть встроен, а значит, такой результат = "ничего не было извлечено"
 
-            //throw new NotImplementedException();
+            return new BitArray(new int[] { WatermarkInts[0] }); // пока что просто возвращается первый элемент из списка вотермарок
+            // но потом ЦВЗ будет собираться в один из множества фрагментов, которые должны храниться в этом списке
         }
 
 
@@ -72,11 +102,11 @@ namespace MvtWatermark.NoDistortionWatermark
                 throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
             }
 
-            Console.WriteLine($"Количество элементарных сегментов:{_options.D}"); // отладка
+            //Console.WriteLine($"Количество элементарных сегментов:{_options.D}"); // отладка
 
             tiles.WriteVectorTileTreeToFiles(message, key, path, _options);
 
-            Console.WriteLine("После Embed"); // отладка
+            //Console.WriteLine("После Embed"); // отладка
         }
     }
 }

@@ -33,8 +33,8 @@ namespace MvtWatermark
             int key = 123;
             var boolArr = new bool[] { true, false, true };
             //EmbedAndWriteToFile2(zoom, x, y, options, boolArr, key);
-            var reulttree = EmbedingWatermark(zoom, x, y, options, boolArr, key);
-            ExtractFromVTtree(reulttree, options, key);
+            var resulttree = EmbedingWatermark(zoom, x, y, options, boolArr, key);
+            ExtractFromVTtree(resulttree, options, key);
 
             //var tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Tile.CalculateTileId(10, 6, 6);
             //ReadSomething("C:\\SerializedTiles\\SerializedTrees\\10\\6\\6.mvt", tile_id);
@@ -44,7 +44,7 @@ namespace MvtWatermark
 
         static VectorTile createVectorTile(int x, int y, int zoom, out ulong tile_id)
         {
-            tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Tile.CalculateTileId(zoom, x, y);
+            tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Changed.Tile.CalculateTileId(zoom, x, y);
 
             var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
 
@@ -126,7 +126,7 @@ namespace MvtWatermark
             y = 0;
             zoom = 10;
 
-            tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Tile.CalculateTileId(zoom, x, y);
+            tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Changed.Tile.CalculateTileId(zoom, x, y);
 
             var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
 

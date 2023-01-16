@@ -257,7 +257,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             ref int currentX, ref int currentY,
             bool ring = false, bool ccw = false)
         {
-            Console.WriteLine("\n");
+            //Console.WriteLine("\n");
 
             // how many parameters for LineTo command
             int count = sequence.Count;

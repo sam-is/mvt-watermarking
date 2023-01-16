@@ -25,6 +25,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
         private static bool _hasSuccessfullyEmbeded = false;
 
+
         /// <summary>
         /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
         /// </summary>
@@ -48,7 +49,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
         /// <summary>
-        /// Возвращает мапбоксовый тайл для послеующего добавления его в словарь (tileId : Mapbox.Tile)
+        /// Возвращает мапбоксовый тайл для последующего добавления его в словарь (tileId : Mapbox.Tile)
         /// </summary>
         /// <param name="vectorTile">The vector tile.</param>
         /// <param name="WatermarkString">Watermark BitArray</param>
@@ -82,8 +83,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
-            Console.WriteLine($"HowMuchEachValue: {ConsoleWriter.GetArrayStr<int>(HowMuchEachValue)}");
-            Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}");
+            
+            //Console.WriteLine($"HowMuchEachValue: {ConsoleWriter.GetArrayStr<int>(HowMuchEachValue)}"); // отладка
+            //Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
 
             var tile = new Tiles.Tile(vectorTile.TileId);
             var tgt = new TileGeometryTransform(tile, extent);
@@ -347,12 +349,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             var geometry = (Geometry)lineal;
             int currentX = 0, currentY = 0;
 
-            Console.WriteLine("Проверияем тип нетипичной конструкции"); // отладка
+            //Console.WriteLine("Проверияем тип нетипичной конструкции"); // отладка
 
             switch (options.AtypicalEncodingType)
             {
                 case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt:
-                    Console.WriteLine("MtLtLt"); // отладка
+                    //Console.WriteLine("MtLtLt"); // отладка
                     for (int i = 0; i < geometry.NumGeometries; i++)
                     {
                         var lineString = (LineString)geometry.GetGeometryN(i);
@@ -362,7 +364,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     }
                     break;
                 case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt:
-                    Console.WriteLine("MtLtMt"); // отладка
+                    //Console.WriteLine("MtLtMt"); // отладка
                     for (int i = 0; i < geometry.NumGeometries; i++)
                     {
                         var lineString = (LineString)geometry.GetGeometryN(i);
@@ -372,7 +374,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                     }
                     break;
                 case NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands:
-                    Console.WriteLine("MtLtMt"); // отладка
+                    //Console.WriteLine("MtLtMt"); // отладка
                     for (int i = 0; i < geometry.NumGeometries; i++)
                     {
                         var lineString = (LineString)geometry.GetGeometryN(i);
@@ -422,9 +424,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             int count = sequence.Count;
             var encoded = new List<uint>();
 
-            Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
-            Console.WriteLine($"sequence count = {count}"); // отладка
-            Console.WriteLine($"sequence = {sequence}"); // отладка
+            //Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
+            //Console.WriteLine($"sequence count = {count}"); // отладка
+            //Console.WriteLine($"sequence = {sequence}"); // отладка
 
             var X = currentX; var Y = currentY;
 
@@ -450,8 +452,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
 
-            Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
-            Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
+            //Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
+            //Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
 
 
             if (options.SecondHalfOfLineStringIsUsed)
@@ -462,7 +464,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             int realSegmentsInOneElemSegment = realSegments / options.D;
 
-            Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
+            //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
             var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
 
@@ -703,9 +705,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             int count = sequence.Count;
             var encoded = new List<uint>();
 
-            Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
-            Console.WriteLine($"sequence count = {count}"); // отладка
-            Console.WriteLine($"sequence = {sequence}"); // отладка
+            //Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
+            //Console.WriteLine($"sequence count = {count}"); // отладка
+            //Console.WriteLine($"sequence = {sequence}"); // отладка
 
             var X = currentX; var Y = currentY;
 
@@ -730,8 +732,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
 
-            Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
-            Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
+            //Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
+            //Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
 
 
             if (options.SecondHalfOfLineStringIsUsed)
@@ -742,7 +744,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             int realSegmentsInOneElemSegment = realSegments / options.D;
 
-            Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
+            //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
             var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
 
@@ -952,7 +954,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 resultArr[randomIndex] = 1;
             }
 
-            Console.WriteLine($"Отладка ||| Массив Ls: {ConsoleWriter.GetIEnumerableStr(resultArr)}");
+            //Console.WriteLine($"Отладка ||| Массив Ls: {ConsoleWriter.GetIEnumerableStr(resultArr)}"); // отладка
 
             return resultArr;
         }
