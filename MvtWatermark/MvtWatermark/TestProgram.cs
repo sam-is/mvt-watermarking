@@ -241,7 +241,7 @@ namespace MvtWatermark
             string path = "C:\\SerializedTiles\\SerializedWithWatermark";
 
             //var resulttree = NdWm.Embed(vtTree, key, message);
-            NdWm.EmbedAndWriteToFile(vtTree, key, message, path);
+            //NdWm.EmbedAndWriteToFile(vtTree, key, message, path);
 
             //resulttree.Write(path);
 

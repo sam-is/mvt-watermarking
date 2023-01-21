@@ -31,5 +31,19 @@ namespace MvtWatermark.NoDistortionWatermark
             bitArray.CopyTo(array, 0);
             return array[0];
         }
+
+        public static bool AreEqual(this BitArray A, BitArray B)
+        {
+            if (A.Count != B.Count)
+                return false; // возможно, так не стоит делать
+
+            for (var i = 0; i < A.Count; i++)
+            {
+                if (A[i] != B[i])
+                    return false;
+            }
+
+            return true;
+        }
     }
 }

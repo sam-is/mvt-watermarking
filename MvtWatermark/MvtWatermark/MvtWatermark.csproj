@@ -8,6 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="NoNeed\**" />
+    <EmbeddedResource Remove="NoNeed\**" />
+    <None Remove="NoNeed\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="NoDistortionWatermark\Auxiliary\MapboxTileWriterWMToFiles.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
     <PackageReference Include="protobuf-net" Version="2.4.0" />
   </ItemGroup>

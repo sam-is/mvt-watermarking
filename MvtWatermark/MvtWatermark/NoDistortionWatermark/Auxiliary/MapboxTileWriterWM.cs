@@ -5,9 +5,9 @@ using System.IO;
 using System.Runtime.InteropServices.ComTypes;
 using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
+using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
-using NetTopologySuite.IO.VectorTiles.Mapbox.NoNeed;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 //namespace MvtWatermark.NoDistortionWatermark
@@ -36,13 +36,14 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="extent">The extent.</param>
         /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
         public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, 
-            int key, NoDistortionWatermarkOptions options, uint extent = 4096)
+            short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
         {
             var result = new Dictionary<ulong, Tile>();
 
-            foreach (var tileIndex in tree)
+            // узнать как оно обходит, в каком порядке. Это важно для порядка деления message по тайлам.
+            foreach (var tileIndex in tree) 
             {
-                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, key, tileIndex, options, extent)); 
+                result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, firstHalfOfTheKey, tileIndex, options, extent)); 
             }
 
             return result;
@@ -58,34 +59,42 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="options">All the parameters to embed the watermark</param>
         /// <param name="extent">The extent.</param>
         /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, int key,
+        public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, short firstHalfOfTheKey,
             ulong tileId, NoDistortionWatermarkOptions options, uint extent = 4096, string idAttributeName = "id")
         {
             var WatermarkInt = WatermarkTransform.getIntFromBitArray(WatermarkString); // Фрагмент ЦВЗ в int
 
-            var rand = new Random(key + Convert.ToInt32(tileId));
+            int key = firstHalfOfTheKey;
+            key = (key << 16) + (short)vectorTile.TileId;
+
+            //Console.WriteLine($"Embeding Key: {key}"); // отладка
+
+            //var rand = new Random(key + Convert.ToInt32(tileId));
+            /*
+            var rand = new Random(key);
 
             var maxBitArray = new BitArray(options.Nb, true);
             var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt + 1];
+            var howMuchEachValue = new int[MaxInt + 1];
 
             var keySequence = new int[options.D / 2];
 
+            // переделать в отдельный класс, общий для встраивания и извлечения
             keySequence[0] = 0;
-            HowMuchEachValue[0] = 1;
+            howMuchEachValue[0] = 1;
             for (int i = 1; i < options.D / 2; i++)
             {
                 int value;
                 do
                 {
                     value = rand.Next(0, MaxInt + 1);
-                } while (HowMuchEachValue[value] >= options.M);
+                } while (howMuchEachValue[value] >= options.M);
                 keySequence[i] = value;
-                HowMuchEachValue[value]++;
+                howMuchEachValue[value]++;
             } // нагенерили {Sk}
-            
-            //Console.WriteLine($"HowMuchEachValue: {ConsoleWriter.GetArrayStr<int>(HowMuchEachValue)}"); // отладка
-            //Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
+            */
+
+            var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
             var tile = new Tiles.Tile(vectorTile.TileId);
             var tgt = new TileGeometryTransform(tile, extent);
@@ -466,7 +475,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
-            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
             int lastLineToCount = 0;
             int currentRealSegment = 0;
@@ -576,7 +585,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
-            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
             int encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -746,7 +755,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
-            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
             int encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -925,15 +934,15 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
         /// <summary>
-        /// Генерирует количество Ls (реальных сегментов в одном элементарном, в которые втраивается НТГ) на основе ключа Ls_Key;
+        /// Генерирует количество Ls (реальных сегментов в одном элементарном, в которые втраивается НТГ) на основе ключа LsKey;
         /// Генерирует массив интов с указанием, куда именно вставлять НТГ
         /// </summary>
         /// <param name="realSegmentsInOneElemSegment"></param>
-        /// <param name="Ls_Key"></param>
+        /// <param name="LsKey"></param>
         /// <returns></returns>
-        private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int Ls_Key)
+        private static List<int> OLDGenerateSequenceLs(int realSegmentsInOneElemSegment, int LsKey)
         {
-            var random = new Random(Ls_Key);
+            var random = new Random(LsKey);
 
             var Ls = random.Next(1, realSegmentsInOneElemSegment);
 
@@ -951,6 +960,40 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 {
                     randomIndex = random.Next(0, realSegmentsInOneElemSegment - 1);
                 } while (resultArr[randomIndex] != -1);
+                resultArr[randomIndex] = 1;
+            }
+
+            //Console.WriteLine($"Отладка ||| Массив Ls: {ConsoleWriter.GetIEnumerableStr(resultArr)}"); // отладка
+
+            return resultArr;
+        }
+
+        private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int Ls)
+        {
+            //var random = new Random(key);
+            var random = new Random(); // лучше передавать ключ
+
+            //var Ls = random.Next(1, realSegmentsInOneElemSegment);
+
+            var resultArr = new List<int>(realSegmentsInOneElemSegment);
+            int randomIndex;
+
+            for (var i = 0; i < realSegmentsInOneElemSegment; i++)
+            {
+                resultArr.Add(0);
+            }
+
+            if (Ls < 1)
+                Ls = 1;
+            else if (Ls > realSegmentsInOneElemSegment)
+                Ls = realSegmentsInOneElemSegment;
+
+            for (var i = 0; i < Ls; i++)
+            {
+                do
+                {
+                    randomIndex = random.Next(0, realSegmentsInOneElemSegment);
+                } while (resultArr[randomIndex] != 0);
                 resultArr[randomIndex] = 1;
             }
 

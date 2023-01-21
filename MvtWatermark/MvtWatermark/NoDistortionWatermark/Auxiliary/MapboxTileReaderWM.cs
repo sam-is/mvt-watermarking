@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection.Metadata;
 using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
+using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 
@@ -70,6 +71,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
         // это не нужно!
+        /*
         public int? ExtractWM(string path, ulong tileId, NoDistortionWatermarkOptions options, int key)
         {
             var (zoom, x, y) = Tiles.Changed.Tile.CalculateTile(tileId);
@@ -87,10 +89,15 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 return -1; // тут надо исключение выбрасывать
             }
         }
+        */
 
-        public int? ExtractWM(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, int key)
+        public int? ExtractWM(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
         {
-            var rand = new Random(key + Convert.ToInt32(tileId));
+            int key = firstHalfOfTheKey;
+            key = (key << 16) + (short)tileId;
+
+            /*
+            var rand = new Random(key);
 
             var maxBitArray = new BitArray(options.Nb, true);
             var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
@@ -110,6 +117,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 keySequence[i] = value;
                 HowMuchEachValue[value]++;
             } // нагенерили {Sk}
+            */
+
+            var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
             var ExtractedWatermarkIntegers = new List<int>(); // в скобочках будет Lf видимо
             var tileDefinition = new Tiles.Tile(tileId); 

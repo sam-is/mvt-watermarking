@@ -7,7 +7,6 @@ using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
-using NetTopologySuite.IO.VectorTiles.Mapbox.NoNeed;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 //namespace MvtWatermark.NoDistortionWatermark
@@ -549,7 +548,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
-            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.LsKey);
 
             int encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -709,7 +708,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
-            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls_Key);
+            var LsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.LsKey);
 
             int encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -905,9 +904,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return dx > 0 && dy > 0 && (dx > 1 || dy > 1);
         }
 
-        private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int Ls_Key)
+        private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int LsKey)
         {
-            var random = new Random(Ls_Key);
+            var random = new Random(LsKey);
 
             var Ls = random.Next(1, realSegmentsInOneElemSegment);
 

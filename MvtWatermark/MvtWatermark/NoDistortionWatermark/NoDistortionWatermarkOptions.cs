@@ -40,7 +40,7 @@ namespace MvtWatermark.NoDistortionWatermark
         /// Затем этот массив анализируется уже в методе Encode. 
         /// Если по индексу реального элемента в массиве 1, то встраивается нетипичная геометрия, если 0, то ничего не встраивается.
         /// </summary>
-        public int Ls_Key { get; init; }
+        public int Ls { get; init; }
 
         /// <summary>
         /// Количество элементов LineString, в которые нужно встроить ЦВЗ, в каждом тайле.
@@ -59,12 +59,12 @@ namespace MvtWatermark.NoDistortionWatermark
         /// </summary>
         public bool SecondHalfOfLineStringIsUsed { get; set; } = false;
 
-        public NoDistortionWatermarkOptions(int m, int Nb, int Ls_key, int Lf, 
+        public NoDistortionWatermarkOptions(int m, int Nb, int Ls, int Lf, 
             AtypicalEncodingTypes AtypicalEncodingType = AtypicalEncodingTypes.MtLtLt, bool SecondHalfOfLineStringIsUsed = false)
         {
             this.M = m;
             this.Nb = Nb;
-            this.Ls_Key = Ls_key;
+            this.Ls = Ls;
             this.Lf = Lf;
             this.AtypicalEncodingType = AtypicalEncodingType;
             this.SecondHalfOfLineStringIsUsed = SecondHalfOfLineStringIsUsed;
