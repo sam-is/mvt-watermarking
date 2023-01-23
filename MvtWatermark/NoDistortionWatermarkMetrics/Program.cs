@@ -4,19 +4,21 @@
     {
         static void Main(string[] args)
         {
-            var parameterSet = new List<MetricAnalyzer.ZXYset>
+            var parameterSet = new List<MetricAnalyzer.ZxySet>
             {
-                new MetricAnalyzer.ZXYset(10, 658, 334),
-                //new MetricAnalyzer.ZXYset(10, 658, 335)
-                new MetricAnalyzer.ZXYset(10, 658, 337),
-                new MetricAnalyzer.ZXYset(10, 658, 338)
+                new MetricAnalyzer.ZxySet(10, 658, 334),
+                //new MetricAnalyzer.ZxySet(10, 658, 335)
+                new MetricAnalyzer.ZxySet(10, 658, 337),
+                new MetricAnalyzer.ZxySet(10, 658, 338)
             };
 
-            MetricAnalyzer.GetUsersTileMetric(1, 16, 0, 0, 0);
+            var parameterRangeSet = new MetricAnalyzer.ParameterRangeSet(1, 7, 2, 4, 1, 16);
 
-            //MetricAnalyzer.GetDBTileMetric(1, 16, parameterSet);
+            //MetricAnalyzer.DisplayUsersTileMetric(parameterRangeSet, 0, 0, 0);
 
-            //Console.WriteLine(MetricAnalyzer.TestVectorTileIsCorrect(new MetricAnalyzer.ZXYset(10, 658, 338)));
+            MetricAnalyzer.DisplayMetricForDBTileSet(parameterRangeSet, parameterSet);
+
+            //Console.WriteLine(MetricAnalyzer.TestVectorTileIsCorrect(new MetricAnalyzer.ZxySet(10, 658, 338)));
         }
     }
 }

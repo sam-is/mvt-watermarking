@@ -1,6 +1,5 @@
 ﻿using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.IO.VectorTiles;
-using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
 using NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
 using MvtWatermark.DebugClasses;
@@ -23,24 +22,72 @@ namespace NoDistortionWatermarkMetrics
 {
     internal static class MetricAnalyzer
     {
-        internal struct ZXYset
+        internal struct ZxySet
         {
-            internal ZXYset(int zoom, int x, int y)
+            internal int Zoom { get; set; }
+            internal int X { get; set; }
+            internal int Y { get; set; }
+
+            internal ZxySet(int zoom, int x, int y)
             {
                 this.Zoom = zoom;
                 this.X = x;
                 this.Y = y;
             }
-            internal int Zoom { get; init; }
-            internal int X { get; init; }
-            internal int Y { get; init; }
         }
 
-        internal static bool GetDBTileMetric(int begin, int end, IEnumerable<ZXYset> parameterSets)
+        internal struct ParameterRangeSet
         {
-            if (begin < 1 || begin >= end)
-                return false;
+            internal int Mmax { get; set; }
+            internal int Nbmax { get; set; }
+            internal int Lfmax { get; set; }
+            internal int Lsmax { get; set; }
+            private int _wmMin;
+            private int _wmMax;
+            internal int WmMin { 
+                get { return _wmMin; } 
+                set
+                {
+                    if (value < 1)
+                        throw new Exception("WmMin cannot be smaller then 1");
+                    else if (value > _wmMax)
+                        throw new Exception("WmMin cannot be bigger then WmMax");
+                    _wmMin = value;
+                } 
+            }
+            internal int WmMax
+            {
+                get { return _wmMax; }
+                set
+                {
+                    if (value < 1)
+                        throw new Exception("WmMax cannot be smaller then 1");
+                    else if(value < _wmMin)
+                        throw new Exception("WmMax cannot be smaller then WmMin");
+                    _wmMax = value;
+                }
+            }
 
+            internal ParameterRangeSet(int mMax, int nbMax, int lfMax, int lsMax, int wmMin, int wmMax)
+            {
+                if (wmMin > wmMax)
+                    throw new Exception("WmMin cannot be bigger then WmMax");
+                else if (wmMin < 1 || wmMax < 1)
+                {
+                    throw new Exception("WmMin and WmMax cannot be smaller then 1");
+                }
+
+                Mmax = mMax; 
+                Nbmax = nbMax; 
+                Lfmax = lfMax;
+                Lsmax = lsMax;
+                _wmMin = wmMin;
+                _wmMax = wmMax;
+            }
+        }
+
+        internal static bool DisplayMetricForDBTileSet(ParameterRangeSet parameterRangeSet, IEnumerable<ZxySet> parameterSets)
+        {
             var mainErrorsResultList = new List<int>();
             var resultExtractedIntsList = new List<int>();
 
@@ -68,28 +115,35 @@ namespace NoDistortionWatermarkMetrics
 
             if (!areAnyCorrectTilesHere)
                 return false;
-            
 
-            int LsKey = 54321;
-            //NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
-            NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
-            bool secondHalfIsUsed = false;
+            NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype;
 
-            var mMax = 1;
-            var nbMax = 7;
-            var lfMax = 2;
-
-            for (int m = 1; m <= mMax; m++)
+            for (int m = 1; m <= parameterRangeSet.Mmax; m++)
             {
-                for (int Nb = 1; Nb <= nbMax; Nb++)
+                for (int Nb = 1; Nb <= parameterRangeSet.Nbmax; Nb++)
                 {
-                    for (int Lf = 1; Lf <= lfMax; Lf++)
+                    for (int Lf = 1; Lf <= parameterRangeSet.Lfmax; Lf++)
                     {
-                        var options = new NoDistortionWatermarkOptions(m, Nb, LsKey, Lf, AEtype, secondHalfIsUsed);
+                        for (int Ls = 1; Ls <= parameterRangeSet.Lsmax; Ls++)
+                        {
+                            AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+                            var options = new NoDistortionWatermarkOptions(m, Nb, Ls, Lf, AEtype, false);
 
-                        var singleOptionsSetErrorsList = GetDifferentMessagesMetric(begin, end, vtTree, options, false, out singleOptionsSetIntsList);
-                        mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
-                        resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+                            var singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
+                                vtTree, options, false, out singleOptionsSetIntsList);
+
+                            mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                            resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
+                            AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
+                            options = new NoDistortionWatermarkOptions(m, Nb, Ls, Lf, AEtype, true);
+
+                            singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
+                                vtTree, options, false, out singleOptionsSetIntsList);
+
+                            mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                            resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+                        }
                     }
                 }
             }
@@ -102,7 +156,7 @@ namespace NoDistortionWatermarkMetrics
             return true;
         }
 
-        internal static bool TestVectorTileIsCorrect(ZXYset parameterSet)
+        internal static bool TestVectorTileIsCorrect(ZxySet parameterSet)
         {
             var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
             string? connectionString = $"Data Source = {dbPath}";
@@ -172,11 +226,8 @@ namespace NoDistortionWatermarkMetrics
             return vt;
         }
 
-        internal static bool GetUsersTileMetric(int begin, int end, int zoom, int x, int y)
+        internal static bool DisplayUsersTileMetric(ParameterRangeSet parameterRangeSet, int zoom, int x, int y)
         {
-            if (begin < 1 || begin >= end)
-                return false;
-
             var mainErrorsResultList = new List<int>();
             var resultExtractedIntsList = new List<int>();
 
@@ -187,25 +238,34 @@ namespace NoDistortionWatermarkMetrics
             VectorTile vt = CreateVectorTile(x, y, zoom, out tile_id);
             vtTree[tile_id] = vt;
 
-            int LsKey = 54321;
-            NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
-            bool secondHalfIsUsed = false;
+            NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype;
 
-            var mMax = 1;
-            var nbMax = 5;
-            var lfMax = 2;
-
-            for (int m = 1; m <= mMax; m++)
+            for (int m = 1; m <= parameterRangeSet.Mmax; m++)
             {
-                for (int Nb = 1; Nb <= nbMax; Nb++)
+                for (int Nb = 1; Nb <= parameterRangeSet.Nbmax; Nb++)
                 {
-                    for (int Lf = 1; Lf <= lfMax; Lf++)
+                    for (int Lf = 1; Lf <= parameterRangeSet.Lfmax; Lf++)
                     {
-                        var options = new NoDistortionWatermarkOptions(m, Nb, LsKey, Lf, AEtype, secondHalfIsUsed);
+                        for (int Ls = 1; Ls <= parameterRangeSet.Lsmax; Ls++)
+                        {
+                            AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+                            var options = new NoDistortionWatermarkOptions(m, Nb, Ls, Lf, AEtype, false);
 
-                        var singleOptionsSetErrorsList = GetDifferentMessagesMetric(begin, end, vtTree, options, false, out singleOptionsSetIntsList);
-                        mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
-                        resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+                            var singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
+                                vtTree, options, false, out singleOptionsSetIntsList);
+
+                            mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                            resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
+                            AEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
+                            options = new NoDistortionWatermarkOptions(m, Nb, Ls, Lf, AEtype, true);
+
+                            singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
+                                vtTree, options, false, out singleOptionsSetIntsList);
+
+                            mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                            resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+                        }
                     }
                 }
             }
@@ -219,7 +279,7 @@ namespace NoDistortionWatermarkMetrics
 
         
 
-        internal static List<int> GetDifferentMessagesMetric(int begin, int end, VectorTileTree vtTree, NoDistortionWatermarkOptions options, bool isParallel,
+        private static List<int> GetDifferentMessagesSingleParameterSetMetric(int begin, int end, VectorTileTree vtTree, NoDistortionWatermarkOptions options, bool isParallel,
             out List<int> extractedIntsList)
         {
             if (begin < 1 || begin >= end) 
@@ -311,6 +371,15 @@ namespace NoDistortionWatermarkMetrics
             return resulttree;
         }
 
+        /// <summary>
+        /// Встраивание ЦВЗ в переданое дерево векторных тайлов
+        /// </summary>
+        /// <param name="vtTree"></param>
+        /// <param name="options"></param>
+        /// <param name="message"></param>
+        /// <param name="key"></param>
+        /// <param name="isParallel"></param>
+        /// <returns></returns>
         private static VectorTileTree EmbeddingWatermark(VectorTileTree vtTree, NoDistortionWatermarkOptions options, BitArray message, int key = 123, bool isParallel = false)
         {
             var NdWm = new NoDistortionWatermark(options);
@@ -383,6 +452,14 @@ namespace NoDistortionWatermarkMetrics
             }
         }
 
+        /// <summary>
+        /// Создание пользовательского VectorTile с одним слоем
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="zoom"></param>
+        /// <param name="tile_id"></param>
+        /// <returns></returns>
         private static VectorTile CreateVectorTile(int x, int y, int zoom, out ulong tile_id)
         {
             tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Changed.Tile.CalculateTileId(zoom, x, y);
@@ -392,7 +469,7 @@ namespace NoDistortionWatermarkMetrics
 
             for (int i = 1; i < 20; i++)
             {
-                var feature = createFeature(i * i, i);
+                var feature = CreateFeature(i * i, i);
                 lyr.Features.Add(feature);
             }
 
@@ -409,7 +486,7 @@ namespace NoDistortionWatermarkMetrics
         /// <param name="id"></param>
         /// <param name="isPolygon"></param>
         /// <returns></returns>
-        private static Feature createFeature(int numOfdots, int id, bool isPolygon = false)
+        private static Feature CreateFeature(int numOfdots, int id, bool isPolygon = false)
         {
             var rand = new Random(numOfdots);
             int X, Y;

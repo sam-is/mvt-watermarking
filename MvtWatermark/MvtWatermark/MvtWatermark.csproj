@@ -3,8 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <OutputType>Exe</OutputType>
-    <StartupObject>MvtWatermark.TestProgram</StartupObject>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +14,10 @@
 
   <ItemGroup>
     <Compile Remove="NoDistortionWatermark\Auxiliary\MapboxTileWriterWMToFiles.cs" />
+    <Compile Remove="NoDistortionWatermark\Tiles\TileExtensions.cs" />
+    <Compile Remove="NoDistortionWatermark\Tiles\TileRange.cs" />
+    <Compile Remove="NoDistortionWatermark\Tiles\WebMercator\WebMercatorHandler.cs" />
+    <Compile Remove="TestProgram.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +27,7 @@
 
   <ItemGroup>
     <Folder Include="NoDistortionWatermark\TilesWithWatermarks\" />
+    <Folder Include="NoDistortionWatermark\Tiles\WebMercator\" />
   </ItemGroup>
 
 </Project>

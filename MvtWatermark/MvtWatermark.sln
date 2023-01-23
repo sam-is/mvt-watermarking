@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MvtWatermark", "MvtWatermar
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MvtWatermarkTests", "MvtWatermarkTests\MvtWatermarkTests.csproj", "{E168E5B1-52B5-41E8-87D7-71C1AC5667C2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoDistortionWatermarkMetrics", "NoDistortionWatermarkMetrics\NoDistortionWatermarkMetrics.csproj", "{D09E99B8-7B27-4A89-B393-7BA390F47EB5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NoDistortionWatermarkMetrics", "NoDistortionWatermarkMetrics\NoDistortionWatermarkMetrics.csproj", "{D09E99B8-7B27-4A89-B393-7BA390F47EB5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

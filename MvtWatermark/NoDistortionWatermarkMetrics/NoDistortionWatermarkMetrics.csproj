@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.2" />
+    <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

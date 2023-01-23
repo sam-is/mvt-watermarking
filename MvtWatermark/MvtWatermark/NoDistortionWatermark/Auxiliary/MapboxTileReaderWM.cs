@@ -17,8 +17,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 {
     public class MapboxTileReaderWM
     {
-
-
         private readonly GeometryFactory _factory;
 
         public MapboxTileReaderWM()
@@ -51,7 +49,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <returns></returns>
         public VectorTile Read(Tile tile, ulong tileId, string idAttributeName)
         {
-            var tileDefinition = new Tiles.Tile(tileId); // tileId хранит в себе всю нужную информацию о тайле
+            var tileDefinition = new Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
             var vectorTile = new VectorTile { TileId = tileDefinition.Id };
             foreach (var mbTileLayer in tile.Layers)
             {
@@ -70,54 +68,10 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return vectorTile;
         }
 
-        // это не нужно!
-        /*
-        public int? ExtractWM(string path, ulong tileId, NoDistortionWatermarkOptions options, int key)
-        {
-            var (zoom, x, y) = Tiles.Changed.Tile.CalculateTile(tileId);
-            var filePath = $"{path}/{zoom}/{x}/{y}.mvt";
-            try
-            {
-                using (var fs = new FileStream(filePath, FileMode.Open))
-                {
-                    var tile = ProtoBuf.Serializer.Deserialize<Mapbox.Tile>(fs);
-                    return ExtractWM(tile, tileId, options, key);
-                }
-            }
-            catch(Exception ex)
-            {
-                return -1; // тут надо исключение выбрасывать
-            }
-        }
-        */
-
         public int? ExtractWM(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
         {
             int key = firstHalfOfTheKey;
             key = (key << 16) + (short)tileId;
-
-            /*
-            var rand = new Random(key);
-
-            var maxBitArray = new BitArray(options.Nb, true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var HowMuchEachValue = new int[MaxInt + 1];
-
-            var keySequence = new int[options.D / 2];
-
-            keySequence[0] = 0;
-            HowMuchEachValue[0] = 1;
-            for (int i = 1; i < options.D / 2; i++)
-            {
-                int value;
-                do
-                {
-                    value = rand.Next(0, MaxInt + 1);
-                } while (HowMuchEachValue[value] >= options.M);
-                keySequence[i] = value;
-                HowMuchEachValue[value]++;
-            } // нагенерили {Sk}
-            */
 
             var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
@@ -129,7 +83,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
                 var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
 
-                int featureIndex = 0;
+                //int featureIndex = 0;
 
                 foreach (var mbTileFeature in mbTileLayer.Features)
                 {
@@ -638,7 +592,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             //Console.WriteLine($"\t\tExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(ExtractedWatermarkInts)}"); // отладка
 
 
-            bool wasReversed = false;
+            //bool wasReversed = false;
 
             if (ExtractedWatermarkInts.Count == 0)
             {

@@ -9,6 +9,14 @@ namespace MvtWatermark.NoDistortionWatermark.Auxiliary
 {
     internal static class SequenceGenerator
     {
+        /// <summary>
+        /// Генерирует случайную последовательность Sk на основе ключа key и параметров Nb, D, M
+        /// </summary>
+        /// <param name="key">ключ, используется как seed для рандомайзера</param>
+        /// <param name="Nb"></param>
+        /// <param name="D"></param>
+        /// <param name="M"></param>
+        /// <returns></returns>
         internal static int[] GenerateSequence(int key, int Nb, int D, int M)
         {
             var rand = new Random(key);

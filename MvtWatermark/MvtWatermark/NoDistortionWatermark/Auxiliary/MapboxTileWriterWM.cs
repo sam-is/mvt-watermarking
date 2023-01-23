@@ -23,7 +23,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             public MapboxCommandType Type { get; set; }
         }
 
-        private static bool _hasSuccessfullyEmbeded = false;
+        private static bool s_hasSuccessfullyEmbeded = false;
 
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                             if (embedingIndex < options.Lf) 
                             {
                                 feature.Geometry.AddRange(Encode(lineal, tgt, WatermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
-                                if (_hasSuccessfullyEmbeded) // для реализации параметра Lf
+                                if (s_hasSuccessfullyEmbeded) // для реализации параметра Lf
                                     embedingIndex++;
                             }
                             else
@@ -456,7 +456,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             if (realSegments < options.D)
             {
-                _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+                s_hasSuccessfullyEmbeded = false; // для реализации параметра Lf
 
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
@@ -538,7 +538,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 encoded.Clear();
             }
 
-            _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
+            s_hasSuccessfullyEmbeded = true; // для реализации параметра Lf
 
             return encoded;
         }
@@ -736,7 +736,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
             if (realSegments < options.D)
             {
-                _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+                s_hasSuccessfullyEmbeded = false; // для реализации параметра Lf
 
                 return Encode(sequence, tgt, ref currentX, ref currentY);
             }
@@ -829,7 +829,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 encoded.Clear();
             }
 
-            _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
+            s_hasSuccessfullyEmbeded = true; // для реализации параметра Lf
 
             return encoded;
         }
