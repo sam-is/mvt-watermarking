@@ -67,33 +67,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             int key = firstHalfOfTheKey;
             key = (key << 16) + (short)vectorTile.TileId;
 
-            //Console.WriteLine($"Embeding Key: {key}"); // отладка
-
-            //var rand = new Random(key + Convert.ToInt32(tileId));
-            /*
-            var rand = new Random(key);
-
-            var maxBitArray = new BitArray(options.Nb, true);
-            var MaxInt = WatermarkTransform.getIntFromBitArray(maxBitArray);
-            var howMuchEachValue = new int[MaxInt + 1];
-
-            var keySequence = new int[options.D / 2];
-
-            // переделать в отдельный класс, общий для встраивания и извлечения
-            keySequence[0] = 0;
-            howMuchEachValue[0] = 1;
-            for (int i = 1; i < options.D / 2; i++)
-            {
-                int value;
-                do
-                {
-                    value = rand.Next(0, MaxInt + 1);
-                } while (howMuchEachValue[value] >= options.M);
-                keySequence[i] = value;
-                howMuchEachValue[value]++;
-            } // нагенерили {Sk}
-            */
-
             var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
             var tile = new Tiles.Tile(vectorTile.TileId);

@@ -20,15 +20,18 @@ using Microsoft.Data.Sqlite;
 
 namespace NoDistortionWatermarkMetrics
 {
-    internal static class MetricAnalyzer
+    public static class MetricAnalyzer
     {
-        internal struct ZxySet
+        /// <summary>
+        /// Набор характеристик тайла: zoom (приближение), x (абсцисса), y (ордината)
+        /// </summary>
+        public struct ZxySet
         {
-            internal int Zoom { get; set; }
-            internal int X { get; set; }
-            internal int Y { get; set; }
+            public int Zoom { get; set; }
+            public int X { get; set; }
+            public int Y { get; set; }
 
-            internal ZxySet(int zoom, int x, int y)
+            public ZxySet(int zoom, int x, int y)
             {
                 this.Zoom = zoom;
                 this.X = x;
@@ -36,15 +39,18 @@ namespace NoDistortionWatermarkMetrics
             }
         }
 
-        internal struct ParameterRangeSet
+        /// <summary>
+        /// Набор диапазона параметров NoDistortionWatermarkOptions для проверки валидности встроенных/извлеченных ЦВЗ
+        /// </summary>
+        public struct ParameterRangeSet
         {
-            internal int Mmax { get; set; }
-            internal int Nbmax { get; set; }
-            internal int Lfmax { get; set; }
-            internal int Lsmax { get; set; }
+            public int Mmax { get; set; }
+            public int Nbmax { get; set; }
+            public int Lfmax { get; set; }
+            public int Lsmax { get; set; }
             private int _wmMin;
             private int _wmMax;
-            internal int WmMin { 
+            public int WmMin { 
                 get { return _wmMin; } 
                 set
                 {
@@ -55,7 +61,7 @@ namespace NoDistortionWatermarkMetrics
                     _wmMin = value;
                 } 
             }
-            internal int WmMax
+            public int WmMax
             {
                 get { return _wmMax; }
                 set
@@ -68,7 +74,7 @@ namespace NoDistortionWatermarkMetrics
                 }
             }
 
-            internal ParameterRangeSet(int mMax, int nbMax, int lfMax, int lsMax, int wmMin, int wmMax)
+            public ParameterRangeSet(int mMax, int nbMax, int lfMax, int lsMax, int wmMin, int wmMax)
             {
                 if (wmMin > wmMax)
                     throw new Exception("WmMin cannot be bigger then WmMax");
@@ -86,7 +92,13 @@ namespace NoDistortionWatermarkMetrics
             }
         }
 
-        internal static bool DisplayMetricForDBTileSet(ParameterRangeSet parameterRangeSet, IEnumerable<ZxySet> parameterSets)
+        /// <summary>
+        /// Проверка валидности извлеченных ЦВЗ для дерева тайлов из Базы данных
+        /// </summary>
+        /// <param name="parameterRangeSet">Диапазон параметров NoDistortionWatermarkOptions</param>
+        /// <param name="parameterSets">Коллекция наборов параметров для тайлов, согласно которым тайлы будут браться из базы данных</param>
+        /// <returns></returns>
+        public static bool DisplayMetricForDBTileSet(ParameterRangeSet parameterRangeSet, IEnumerable<ZxySet> parameterSets)
         {
             var mainErrorsResultList = new List<int>();
             var resultExtractedIntsList = new List<int>();
@@ -156,7 +168,15 @@ namespace NoDistortionWatermarkMetrics
             return true;
         }
 
-        internal static bool TestVectorTileIsCorrect(ZxySet parameterSet)
+        /// <summary>
+        /// Проверка тайла на валидность геометрии (для библиотеки NetTopologySuite)
+        /// 
+        /// Ремарка: некоторые MVT-тайлы являются валидными для QGis, но невалидными для NetTopologySuite
+        /// </summary>
+        /// <param name="parameterSet"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static bool TestVectorTileIsCorrect(ZxySet parameterSet)
         {
             var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
             string? connectionString = $"Data Source = {dbPath}";
@@ -196,7 +216,15 @@ namespace NoDistortionWatermarkMetrics
             return true;
         }
 
-        internal static VectorTile? GetSingleVectorTileFromDB(SqliteConnection? sqliteConnection, int zoom, int x, int y)
+        /// <summary>
+        /// Возвращает MVT-тайл из Sqlite-базы данных
+        /// </summary>
+        /// <param name="sqliteConnection"></param>
+        /// <param name="zoom"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public static VectorTile? GetSingleVectorTileFromDB(SqliteConnection? sqliteConnection, int zoom, int x, int y)
         {
             using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
             command.Parameters.AddWithValue("$z", zoom);
@@ -226,7 +254,13 @@ namespace NoDistortionWatermarkMetrics
             return vt;
         }
 
-        internal static bool DisplayUsersTileMetric(ParameterRangeSet parameterRangeSet, int zoom, int x, int y)
+        /// <summary>
+        /// Проверка валидности извлеченных ЦВЗ для тайла, который будет создан в этой функции по переданным параемтрам
+        /// </summary>
+        /// <param name="parameterRangeSet"></param>
+        /// <param name="parameterSet"></param>
+        /// <returns></returns>
+        public static bool DisplayUsersTileMetric(ParameterRangeSet parameterRangeSet, ZxySet parameterSet)
         {
             var mainErrorsResultList = new List<int>();
             var resultExtractedIntsList = new List<int>();
@@ -235,7 +269,7 @@ namespace NoDistortionWatermarkMetrics
 
             var vtTree = new VectorTileTree();
             ulong tile_id;
-            VectorTile vt = CreateVectorTile(x, y, zoom, out tile_id);
+            VectorTile vt = CreateVectorTile(parameterSet.X, parameterSet.Y, parameterSet.Zoom, out tile_id);
             vtTree[tile_id] = vt;
 
             NoDistortionWatermarkOptions.AtypicalEncodingTypes AEtype;
@@ -489,12 +523,12 @@ namespace NoDistortionWatermarkMetrics
         private static Feature CreateFeature(int numOfdots, int id, bool isPolygon = false)
         {
             var rand = new Random(numOfdots);
-            int X, Y;
+            double X, Y;
 
             if (numOfdots == 1)
             {
-                X = rand.Next(-179, 179);
-                Y = rand.Next(-89, 89);
+                X = rand.Next(-179, 178) + 0.5;
+                Y = rand.Next(-89, 88) + 0.5;
                 var point = new Point(new Coordinate(X, Y));
                 //Console.WriteLine("\nПоинт: "); // отладка
                 //Console.WriteLine(point); // отладка
@@ -540,7 +574,7 @@ namespace NoDistortionWatermarkMetrics
 }
 
 /*
- internal static bool GetUsersTileMetricParallel(int begin, int end, int zoom, int x, int y)
+ public static bool GetUsersTileMetricParallel(int begin, int end, int zoom, int x, int y)
         {
             if (begin < 1 || begin >= end)
                 return false;
