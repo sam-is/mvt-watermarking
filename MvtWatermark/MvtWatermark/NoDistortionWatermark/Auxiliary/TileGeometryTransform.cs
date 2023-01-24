@@ -1,4 +1,4 @@
-
+п»ї
 using System;
 using System.Runtime.CompilerServices;
 using NetTopologySuite.Geometries;
@@ -11,7 +11,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
     /// <summary>
     /// A transformation utility from WGS84 coordinates to a local tile coordinate system in pixel
     /// </summary>
-    public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
+    public struct TileGeometryTransform // РР—РњР•РќРР› Р”РћРЎРўРЈРџ
     {
         private Tiles.Tile _tile;
         private uint _extent;
@@ -59,27 +59,27 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
 
 
             /*
-            Console.BackgroundColor = ConsoleColor.Gray; // отладка
-            Console.ForegroundColor = ConsoleColor.Blue; // отладка
-            Console.WriteLine($"currentX = {currentX} , currentY = {currentY}"); // отладка
-            Console.BackgroundColor = ConsoleColor.Black; // отладка
-            Console.ForegroundColor = ConsoleColor.White; // отладка
+            Console.BackgroundColor = ConsoleColor.Gray; // РѕС‚Р»Р°РґРєР°
+            Console.ForegroundColor = ConsoleColor.Blue; // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"currentX = {currentX} , currentY = {currentY}"); // РѕС‚Р»Р°РґРєР°
+            Console.BackgroundColor = ConsoleColor.Black; // РѕС‚Р»Р°РґРєР°
+            Console.ForegroundColor = ConsoleColor.White; // РѕС‚Р»Р°РґРєР°
 
-            Console.WriteLine($"lon (X) = {lon} , lat (Y) = {lat}"); // отладка
-            Console.WriteLine($"meters = {meters}"); // отладка
-            Console.WriteLine($"pixels = {pixels}"); // отладка
+            Console.WriteLine($"lon (X) = {lon} , lat (Y) = {lat}"); // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"meters = {meters}"); // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"pixels = {pixels}"); // РѕС‚Р»Р°РґРєР°
 
             if (!Double.IsNaN(pixels.y))
             {
-                Console.ForegroundColor = ConsoleColor.DarkGreen; // отладка
+                Console.ForegroundColor = ConsoleColor.DarkGreen; // РѕС‚Р»Р°РґРєР°
             }
             else
-                Console.ForegroundColor = ConsoleColor.DarkRed; // отладка
-            Console.WriteLine($"pixels.x = {pixels.x}, left = {_left}"); // отладка
-            Console.WriteLine($"top = {_top}, pixels.y = {pixels.y}"); // отладка
-            Console.ForegroundColor = ConsoleColor.White; // отладка
-            Console.WriteLine($"localX = {localX} , localY = {localY}"); // отладка
-            Console.WriteLine($"dx = {dx} , dy = {dy}"); // отладка
+                Console.ForegroundColor = ConsoleColor.DarkRed; // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"pixels.x = {pixels.x}, left = {_left}"); // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"top = {_top}, pixels.y = {pixels.y}"); // РѕС‚Р»Р°РґРєР°
+            Console.ForegroundColor = ConsoleColor.White; // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"localX = {localX} , localY = {localY}"); // РѕС‚Р»Р°РґРєР°
+            Console.WriteLine($"dx = {dx} , dy = {dy}"); // РѕС‚Р»Р°РґРєР°
             */
 
             

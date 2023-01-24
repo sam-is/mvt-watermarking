@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 using System.IO;
 using NetTopologySuite.Features;
@@ -49,7 +49,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
                 if (!Directory.Exists(xFolder)) Directory.CreateDirectory(xFolder);
                 var file = Path.Combine(xFolder, $"{tile.Y}.mvt");
 
-                Console.WriteLine($"filename: {file}"); // ÓÚÎ‡‰Í‡
+                Console.WriteLine($"filename: {file}"); // –æ—Ç–ª–∞–¥–∫–∞
 
                 using var stream = File.Open(file, FileMode.Create);
                 vectorTile.Write(stream, extent);
@@ -277,7 +277,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
             var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
 
-            //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // ÓÚÎ‡‰Í‡
+            //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // –æ—Ç–ª–∞–¥–∫–∞
 
             encoded.Add(GenerateParameterInteger(position.x));
             encoded.Add(GenerateParameterInteger(position.y));
@@ -289,7 +289,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             {
                 position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
-                //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // ÓÚÎ‡‰Í‡
+                //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // –æ—Ç–ª–∞–¥–∫–∞
 
                 if (position.x != 0 || position.y != 0)
                 {

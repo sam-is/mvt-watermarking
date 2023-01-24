@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Runtime.CompilerServices;
 using NetTopologySuite.IO.VectorTiles.Tiles;
 
@@ -282,7 +282,7 @@ namespace NetTopologySuite.IO.VectorTiles.Tiles.Changed
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public static (int x, int y, int zoom) CalculateTile(ulong id) // изменил доступ с private на internal
+        public static (int x, int y, int zoom) CalculateTile(ulong id) // РёР·РјРµРЅРёР» РґРѕСЃС‚СѓРї СЃ private РЅР° internal
         {
             // find out the zoom level first.
             int zoom = 0;

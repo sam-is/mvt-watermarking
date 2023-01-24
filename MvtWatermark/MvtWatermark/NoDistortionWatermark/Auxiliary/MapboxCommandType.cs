@@ -1,4 +1,4 @@
-namespace NetTopologySuite.IO.VectorTiles.Mapbox
+﻿namespace NetTopologySuite.IO.VectorTiles.Mapbox
 {
     /// <summary>
     /// <a href="https://github.com/mapbox/vector-tile-spec/tree/master/2.1#433-command-types">Command Types</a>

@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -79,7 +79,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
         }
 
         /// <summary>
-        /// Читаем геометрию
+        /// Р§РёС‚Р°РµРј РіРµРѕРјРµС‚СЂРёСЋ
         /// </summary>
         /// <param name="tgs"></param>
         /// <param name="type"></param>
@@ -110,7 +110,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
         }
 
         /// <summary>
-        /// Продолжаем читать уж лайнстринг
+        /// РџСЂРѕРґРѕР»Р¶Р°РµРј С‡РёС‚Р°С‚СЊ СѓР¶ Р»Р°Р№РЅСЃС‚СЂРёРЅРі
         /// </summary>
         /// <param name="tgs"></param>
         /// <param name="geometry"></param>
@@ -214,7 +214,7 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
         }
 
         /// <summary>
-        /// Читаем последовательности координат
+        /// Р§РёС‚Р°РµРј РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё РєРѕРѕСЂРґРёРЅР°С‚
         /// </summary>
         /// <param name="tgs"></param>
         /// <param name="geometry"></param>
@@ -235,24 +235,24 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
             {
                 currentIndex++;
                 return ReadSinglePointSequences(tgs, geometry, count, ref currentIndex, ref currentX, ref currentY);
-            } // если количество MoveTo больше, чем один
+            } // РµСЃР»Рё РєРѕР»РёС‡РµСЃС‚РІРѕ MoveTo Р±РѕР»СЊС€Рµ, С‡РµРј РѕРґРёРЅ
 
             var sequences = new List<CoordinateSequence>();
             // (currentX, currentY) = (0, 0), currentIndex = 0
             var currentPosition = (currentX, currentY); 
             while (currentIndex < geometry.Count)
             {
-                (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
-                Debug.Assert(command == MapboxCommandType.MoveTo, "команда не MoveTo");
+                (command, count) = ParseCommandInteger(geometry[currentIndex++]); // РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ currentIndex = 1
+                Debug.Assert(command == MapboxCommandType.MoveTo, "РєРѕРјР°РЅРґР° РЅРµ MoveTo");
                 Debug.Assert(count == 1, "MoveTo count != 1");
 
                 // Read the current position
-                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
+                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ currentIndex = 3
 
                 if (!forPoint)
                 {
                     // Read the next command (should be LineTo)
-                    (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 4
+                    (command, count) = ParseCommandInteger(geometry[currentIndex++]); // РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ currentIndex = 4
                     if (command != MapboxCommandType.LineTo)
                         count = 0;
                 }

@@ -1,4 +1,4 @@
-namespace NetTopologySuite.IO.VectorTiles.Mapbox
+﻿namespace NetTopologySuite.IO.VectorTiles.Mapbox
 {
     [ProtoBuf.ProtoContract(Name = @"tile")]
     public sealed partial class Tile : ProtoBuf.IExtensible
