@@ -375,36 +375,6 @@ namespace NoDistortionWatermarkMetrics
             else return 1;
         }
 
-        private static VectorTileTree EmbedingWatermark(int zoom, int x, int y, NoDistortionWatermarkOptions options, BitArray message, int key = 123, bool isParallel = false)
-        {
-            var NdWm = new NoDistortionWatermark(options);
-
-            var vtTree = new VectorTileTree();
-            ulong tile_id;
-            VectorTile vt = CreateVectorTile(x, y, zoom, out tile_id);
-            vtTree[tile_id] = vt;
-
-            string path;
-            if (!isParallel)
-            {
-                path = "C:\\SerializedTiles\\SerializedWM_Metric";
-            }
-            else
-            {
-                path = $"C:\\SerializedTiles\\SerializedWM_Metric_parallel\\{options.M}_{options.Nb}_{options.Lf}";
-            }
-
-            var resulttree = NdWm.Embed(vtTree, key, message);
-            resulttree.Write(path);
-
-            //Console.WriteLine($"messageInt = {WatermarkTransform.getIntFromBitArray(message)}");
-            //Console.WriteLine("Встраивание завершено"); // отладка
-
-            ReadSomething($"{path}\\{zoom}\\{x}\\{y}.mvt", tile_id);
-
-            return resulttree;
-        }
-
         /// <summary>
         /// Встраивание ЦВЗ в переданое дерево векторных тайлов
         /// </summary>

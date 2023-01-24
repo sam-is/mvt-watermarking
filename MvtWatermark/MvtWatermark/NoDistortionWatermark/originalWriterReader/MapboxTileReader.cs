@@ -10,8 +10,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox
 {
     public class MapboxTileReader
     {
-
-
         private readonly GeometryFactory _factory;
 
         public MapboxTileReader()

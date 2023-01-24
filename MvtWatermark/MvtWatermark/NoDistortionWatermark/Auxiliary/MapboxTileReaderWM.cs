@@ -29,6 +29,11 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             _factory = factory;
         }
 
+        /// <summary>
+        /// Creates VectorTileTree from Dictionary(key = ulong tileId, value = Tile)
+        /// </summary>
+        /// <param name="TileDict"></param>
+        /// <returns></returns>
         public VectorTileTree Read(Dictionary<ulong, Tile> TileDict)
         {
             var resultTree = new VectorTileTree();
@@ -146,11 +151,12 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
 
         /// <summary>
-        /// Извлечение из фичи, если в ней лежит лайнстринг
+        /// // Извлечение из фичи, если в ней лежит лайнстринг
         /// </summary>
         /// <param name="tgs"></param>
         /// <param name="mbTileFeature"></param>
         /// <param name="options"></param>
+        /// <param name="keySequence"></param>
         /// <returns></returns>
         private int? ExtractFromFeature(TileGeometryTransform tgs, Tile.Feature mbTileFeature, 
             NoDistortionWatermarkOptions options, int[] keySequence)
@@ -169,7 +175,9 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         /// <param name="tgs"></param>
         /// <param name="geometry"></param>
         /// <param name="options"></param>
+        /// <param name="keySequence"></param>
         /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         private int? ReadLineStringWM(TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
         {
             int currentIndex = 0; int currentX = 0; int currentY = 0;
@@ -295,10 +303,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
             return _factory.CreateMultiPolygon(polygons.ToArray());
         }
 
-
-
         /// <summary>
-        /// Извлечение ЦВЗ из лайнстринга, закодированного, как MoveTo-LineTo-LineTo
+        /// Extracting watermark from Linestring encoded as MoveTo-LineTo-LineTo
         /// </summary>
         /// <param name="tgs"></param>
         /// <param name="geometry"></param>
@@ -525,7 +531,8 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
                 //Console.WriteLine($"lastPosition = {lastPosition}, currentPosition = {currentPosition}"); // отладка
                 if (!isFirstSegment && lastPosition != currentPosition)
                 {
-                    return null; // а всегда ли это работает?
+                    return null; 
+                    // Если MoveTo не в ту же самую точку, то ЦВЗ больше не ищем и возвращаем
                 }
 
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);

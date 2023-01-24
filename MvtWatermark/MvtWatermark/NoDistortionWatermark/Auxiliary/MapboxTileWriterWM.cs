@@ -25,7 +25,6 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
 
         private static bool s_hasSuccessfullyEmbeded = false;
 
-
         /// <summary>
         /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
         /// </summary>
@@ -976,48 +975,3 @@ namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking
         }
     }
 }
-
-
-// если элементарный сегмент подходит, то встраиваем нетипичную конструкцию в первый реальный сегмент
-/*if (keySequence[0] == WatermarkInt)
-{
-    // Стартовая команда: первый MoveTo
-    encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 2));
-    position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-    encoded.Add(GenerateParameterInteger(position.x));
-    encoded.Add(GenerateParameterInteger(position.y));
-
-    // Встраивание MoveTo, LineTo, MoveTo
-    position = tgt.Transform(sequence, 1, ref currentX, ref currentY);
-    encoded.Add(GenerateParameterInteger(position.x));
-    encoded.Add(GenerateParameterInteger(position.y));
-
-    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1)); 
-    position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-    encoded.Add(GenerateParameterInteger(position.x));
-    encoded.Add(GenerateParameterInteger(position.y));
-
-    encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-    position = tgt.Transform(sequence, 1, ref currentX, ref currentY);
-    encoded.Add(GenerateParameterInteger(position.x));
-    encoded.Add(GenerateParameterInteger(position.y));
-
-    encodedIndex += 8;
-    sequenceIndexStart = 1; // первый реальный сегмент закодировали, цикл начнёт работу со второго
-    currentRealSegment = 1;
-
-    // то есть индекс = 8
-    lastCommand = new LastCommandInfo { Index = encodedIndex - 2, Type = MapboxCommandType.MoveTo }; 
-}
-else
-{
-    // Стартовая команда: первый MoveTo
-    encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-    position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
-    encoded.Add(GenerateParameterInteger(position.x));
-    encoded.Add(GenerateParameterInteger(position.y));
-
-    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
-    encodedIndex = 3; 
-    lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
-}*/

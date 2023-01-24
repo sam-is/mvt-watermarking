@@ -21,7 +21,7 @@ namespace MvtWatermark.DebugClasses
 
         public static string GetArrayStr<T>(T[] arr)
         {
-            Console.WriteLine($"Arr = {arr}");
+            //Console.WriteLine($"Arr = {arr}");
             string str = "";
             foreach (var elem in arr)
             {
