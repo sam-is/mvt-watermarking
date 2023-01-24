@@ -39,10 +39,15 @@ for (var x = 653; x < 655; x++)
     }
 
 var options = new QimMvtWatermarkOptions(0.6, 0.3, 20, 4096, 2, 5, 20, null, false);
-
 var checkParameters = new CheckParameters { Options = options };
 
-//Run(tileTree, checkParameters, "Parameter values test stp.txt");
+Run(tileTree, checkParameters, "Parameter values test stp general extraction.txt");
+
+options = new QimMvtWatermarkOptions(0.6, 0.3, 20, 4096, 2, 5, 20, null, true);
+checkParameters = new CheckParameters { Options = options };
+
+Run(tileTree, checkParameters, "Parameter values test stp general extraction.txt");
+
 
 var tileTreeTegola = new VectorTileTree();
 for (var x = 242; x < 246; x++)
@@ -67,10 +72,14 @@ for (var x = 242; x < 246; x++)
     }
 
 var optionsTegola = new QimMvtWatermarkOptions(0.6, 0.3, 5, 4096, 2, 5, 10, null, false);
-
-var checkParametersTegola = new CheckParameters { Options = options };
+var checkParametersTegola = new CheckParameters { Options = optionsTegola };
 
 Run(tileTreeTegola, checkParametersTegola, "Parameter values test tegola.txt");
+
+optionsTegola = new QimMvtWatermarkOptions(0.6, 0.3, 5, 4096, 2, 5, 10, null, true);
+checkParametersTegola = new CheckParameters { Options = optionsTegola };
+
+Run(tileTreeTegola, checkParametersTegola, "Parameter values test tegola general extraction.txt");
 
 void Run(VectorTileTree tileTree, CheckParameters checkParameters, string path)
 {
