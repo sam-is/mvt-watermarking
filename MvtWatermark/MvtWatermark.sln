@@ -5,7 +5,12 @@ VisualStudioVersion = 17.3.32825.248
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MvtWatermark", "MvtWatermark\MvtWatermark.csproj", "{20DD51F1-4547-4C98-A47A-45B4DE955E27}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MvtWatermarkTests", "MvtWatermarkTests\MvtWatermarkTests.csproj", "{E168E5B1-52B5-41E8-87D7-71C1AC5667C2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MvtWatermarkTests", "MvtWatermarkTests\MvtWatermarkTests.csproj", "{E168E5B1-52B5-41E8-87D7-71C1AC5667C2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{44E4ED71-5878-425C-8AE1-1BF2AD9F374E}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
