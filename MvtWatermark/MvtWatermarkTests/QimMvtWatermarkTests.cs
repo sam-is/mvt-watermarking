@@ -206,9 +206,9 @@ public class QimMvtWatermarkTests
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         var tileid = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(id);
-        int x = tileid.X;
-        int y = tileid.Y;
-        int z = tileid.Zoom;
+        var x = tileid.X;
+        var y = tileid.Y;
+        var z = tileid.Zoom;
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
 

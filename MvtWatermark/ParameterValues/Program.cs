@@ -85,7 +85,7 @@ void Run(VectorTileTree tileTree, CheckParameters checkParameters, string path)
 {
     var valuesT2AndK = new double[] { 0.01, 0.05, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98, 1 };
     var valuesT1 = new double[] { 1, 2, 3, 5, 8, 10, 15, 20, 30, 40, 50, 75, 100, 200, 300, 500, 1000 };
-    var valuesDistance = new double[] { 1, 2, 3};
+    var valuesDistance = new double[] { 1, 2, 3 };
     var valuesR = new double[] { 1, 2, 3, 5, 8, 10, 15, 20, 40, 60, 80, 100, 150, 200 };
     var valuesExtent = new double[] { 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
 
@@ -110,7 +110,7 @@ void Run(VectorTileTree tileTree, CheckParameters checkParameters, string path)
     WriteToFile(streamWriter, valuesExtent, extent, nameof(ParamName.EXTENT));
 }
 
-void WriteToFile(StreamWriter streamWriter, double[] values,Measures measure, string name)
+void WriteToFile(StreamWriter streamWriter, double[] values, Measures measure, string name)
 {
     streamWriter.Write($"{name}\n");
     streamWriter.Write(string.Format("{0, -4}\t{1, -8}\t{2, -12}\t{3, -12}\n", "value", "accuracy", "avg Hausdorff", "avg Frechet"));
