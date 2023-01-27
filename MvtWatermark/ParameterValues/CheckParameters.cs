@@ -123,15 +123,11 @@ public class CheckParameters
             var hausdorffSimilarityMeasure = new HausdorffSimilarityMeasure();
             var frechetSimilarityMeasure = new FrechetSimilarityMeasure();
 
-            var count = 0;
             foreach (var id in tileTree)
             {
                 for (var i = 0; i < tileTree[id].Layers.Count; i++)
                     for (var j = 0; j < tileTree[id].Layers[i].Features.Count; j++)
                     {
-                        if (count == 56)
-                            Console.WriteLine("");
-                        ++count;
                         var h = hausdorffSimilarityMeasure.Measure(tileTreeWatermarked[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
                         var f = frechetSimilarityMeasure.Measure(tileTreeWatermarked[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
                         listH.Add(double.IsNegativeInfinity(h) ? 0 : h);
