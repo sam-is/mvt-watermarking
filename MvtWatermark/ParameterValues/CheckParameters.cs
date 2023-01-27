@@ -14,19 +14,19 @@ public class CheckParameters
     {
         T2,
         K,
-        DISTANCE,
+        Distance,
         T1,
         R,
-        EXTENT
+        Extent
     }
 
-    public Measures Compute(VectorTileTree tileTree, ParamName paramName, double[] values)
+    public Measures Compute(VectorTileTree tileTree, ParamName paramName, IEnumerable values)
     {
         var avgH = new List<double>();
         var avgF = new List<double>();
         var accuracy = new List<double>();
 
-        foreach (var value in values)
+        foreach (double value in values)
         {
             var options = new QimMvtWatermarkOptions(
                 Options!.Delta2 / Options.T2,
@@ -57,10 +57,10 @@ public class CheckParameters
                 case ParamName.K:
                     options.Delta2 = value * options.T2;
                     break;
-                case ParamName.DISTANCE:
+                case ParamName.Distance:
                     options.Distance = Convert.ToInt32(value);
                     break;
-                case ParamName.EXTENT:
+                case ParamName.Extent:
                     options.Extent = Convert.ToInt32(value);
                     break;
                 case ParamName.R:

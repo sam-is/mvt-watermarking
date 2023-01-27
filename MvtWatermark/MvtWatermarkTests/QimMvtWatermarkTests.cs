@@ -205,10 +205,10 @@ public class QimMvtWatermarkTests
     public void TestOpenAfterWatermarking(ulong id)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
-        var tileid = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(id);
-        var x = tileid.X;
-        var y = tileid.Y;
-        var z = tileid.Zoom;
+        var tileId = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(id);
+        var x = tileId.X;
+        var y = tileId.Y;
+        var z = tileId.Zoom;
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
 
@@ -251,7 +251,7 @@ public class QimMvtWatermarkTests
         using var mem = new MemoryStream();
         tileWatermarked.Write(mem);
         mem.Seek(0, SeekOrigin.Begin);
-        var t = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileid.Id));
+        var t = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId.Id));
         Assert.NotNull(t);
     }
 
@@ -263,7 +263,7 @@ public class QimMvtWatermarkTests
         for (var x = 242; x < 246; x++)
             for (var y = 390; y < 394; y++)
             {
-                using var sharedClient = new HttpClient()
+                using var sharedClient = new HttpClient
                 {
                     BaseAddress = new Uri($"https://tegola-osm-demo.go-spatial.org/v1/maps/osm/{z}/{x}/{y}"),
                 };
@@ -292,13 +292,9 @@ public class QimMvtWatermarkTests
         var watermark = new QimMvtWatermark(options);
         var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
 
-        Assert.NotNull(tileTreeWatermarked);
+        var m = watermark.Extract(tileTreeWatermarked, 0);
 
-        var m = watermark.Extract(tileTreeWatermarked!, 0);
-
-        Assert.NotNull(m);
-
-        for (var i = 0; i < message!.Count; i++)
-            Assert.Equal(m![i], message[i]);
+        for (var i = 0; i < message.Count; i++)
+            Assert.Equal(m[i], message[i]);
     }
 }

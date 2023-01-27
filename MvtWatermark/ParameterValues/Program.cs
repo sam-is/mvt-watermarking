@@ -41,7 +41,7 @@ for (var x = 653; x < 655; x++)
 var options = new QimMvtWatermarkOptions(0.6, 0.3, 20, 4096, 2, 5, 20, null, false);
 var checkParameters = new CheckParameters { Options = options };
 
-Run(tileTree, checkParameters, "Parameter values test stp general extraction.txt");
+Run(tileTree, checkParameters, "Parameter values test stp.txt");
 
 options = new QimMvtWatermarkOptions(0.6, 0.3, 20, 4096, 2, 5, 20, null, true);
 checkParameters = new CheckParameters { Options = options };
@@ -100,23 +100,23 @@ void Run(VectorTileTree tileTree, CheckParameters checkParameters, string path)
     var t1 = checkParameters.Compute(tileTree, ParamName.T1, valuesT1);
     WriteToFile(streamWriter, valuesT1, t1, nameof(ParamName.T1));
 
-    var distance = checkParameters.Compute(tileTree, ParamName.DISTANCE, valuesDistance);
-    WriteToFile(streamWriter, valuesDistance, distance, nameof(ParamName.DISTANCE));
+    var distance = checkParameters.Compute(tileTree, ParamName.Distance, valuesDistance);
+    WriteToFile(streamWriter, valuesDistance, distance, nameof(ParamName.Distance));
 
     var r = checkParameters.Compute(tileTree, ParamName.R, valuesR);
     WriteToFile(streamWriter, valuesR, r, nameof(ParamName.R));
 
-    var extent = checkParameters.Compute(tileTree, ParamName.EXTENT, valuesExtent);
-    WriteToFile(streamWriter, valuesExtent, extent, nameof(ParamName.EXTENT));
+    var extent = checkParameters.Compute(tileTree, ParamName.Extent, valuesExtent);
+    WriteToFile(streamWriter, valuesExtent, extent, nameof(ParamName.Extent));
 }
 
-void WriteToFile(StreamWriter streamWriter, double[] values, Measures measure, string name)
+void WriteToFile(TextWriter textWriter, IReadOnlyList<double> values, Measures measure, string name)
 {
-    streamWriter.Write($"{name}\n");
-    streamWriter.Write(string.Format("{0, -4}\t{1, -8}\t{2, -12}\t{3, -12}\n", "value", "accuracy", "avg Hausdorff", "avg Frechet"));
+    textWriter.Write($"{name}\n");
+    textWriter.Write($"{"value",-4}\t{"accuracy",-8}\t{"avg Hausdorff",-12}\t{"avg Frechet",-12}\n");
 
-    for (var i = 0; i < values.Length; i++)
-        streamWriter.Write(string.Format("{0, -4}\t{1, -8}\t{2, -12:f7}\t{3, -12:f7}\n", values[i], measure.Accuracy![i], measure.AvgHausdorff![i], measure.AvgFrechet![i]));
+    for (var i = 0; i < values.Count; i++)
+        textWriter.Write($"{values[i],-4}\t{measure.Accuracy![i],-8}\t{measure.AvgHausdorff![i],-12:f7}\t{measure.AvgFrechet![i],-12:f7}\n");
 
-    streamWriter.Write("\n\n\n");
+    textWriter.Write("\n\n\n");
 }
