@@ -143,24 +143,30 @@ public static class MetricAnalyzer
 
                         var singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
                             vtTree, options, false, out singleOptionsSetIntsList);
-
                         mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
                         resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
+                        options.SecondHalfOfLineStringIsUsed = true;
+
+                        singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax,
+                            vtTree, options, false, out singleOptionsSetIntsList);
+                        mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                        resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
 
                         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
                         options.AtypicalEncodingType = aEtype;
+                        options.SecondHalfOfLineStringIsUsed = false;
 
                         singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
                             vtTree, options, false, out singleOptionsSetIntsList);
-
                         mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
                         resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
 
-                        options.AtypicalEncodingType = aEtype;
+                        options.SecondHalfOfLineStringIsUsed = true;
 
                         singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
                             vtTree, options, false, out singleOptionsSetIntsList);
-
                         mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
                         resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
                     }
@@ -295,17 +301,31 @@ public static class MetricAnalyzer
 
                         var singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
                             vtTree, options, false, out singleOptionsSetIntsList);
-
                         mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
                         resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
+                        options.SecondHalfOfLineStringIsUsed = true;
+
+                        singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax,
+                            vtTree, options, false, out singleOptionsSetIntsList);
+                        mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                        resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
+
 
                         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
                         //options = new NoDistortionWatermarkOptions(m, nb, Ls, Lf, aEtype, true);
                         options.AtypicalEncodingType = aEtype;
+                        options.SecondHalfOfLineStringIsUsed = false;
 
                         singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax, 
                             vtTree, options, false, out singleOptionsSetIntsList);
+                        mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
+                        resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
 
+                        options.SecondHalfOfLineStringIsUsed = true;
+
+                        singleOptionsSetErrorsList = GetDifferentMessagesSingleParameterSetMetric(parameterRangeSet.WmMin, parameterRangeSet.WmMax,
+                            vtTree, options, false, out singleOptionsSetIntsList);
                         mainErrorsResultList.AddRange(singleOptionsSetErrorsList);
                         resultExtractedIntsList.AddRange(singleOptionsSetIntsList);
                     }
