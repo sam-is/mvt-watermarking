@@ -5,39 +5,38 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MvtWatermark.DebugClasses
+namespace MvtWatermark.DebugClasses;
+
+public static class ConsoleWriter
 {
-    public static class ConsoleWriter
+    public static void WriteArray<T>(T[] arr)
     {
-        public static void WriteArray<T>(T[] arr)
-        {
-            Console.WriteLine(GetArrayStr(arr));
-        }
+        Console.WriteLine(GetArrayStr(arr));
+    }
 
-        public static void WriteIEnumerable<T>(IEnumerable<T> arr)
-        {
-            Console.WriteLine(GetIEnumerableStr(arr));
-        }
+    public static void WriteIEnumerable<T>(IEnumerable<T> arr)
+    {
+        Console.WriteLine(GetIEnumerableStr(arr));
+    }
 
-        public static string GetArrayStr<T>(T[] arr)
+    public static string GetArrayStr<T>(T[] arr)
+    {
+        //Console.WriteLine($"Arr = {arr}");
+        var str = "";
+        foreach (var elem in arr)
         {
-            //Console.WriteLine($"Arr = {arr}");
-            string str = "";
-            foreach (var elem in arr)
-            {
-                str += $"{elem} ";
-            }
-            return str;
+            str += $"{elem} ";
         }
+        return str;
+    }
 
-        public static string GetIEnumerableStr<T>(IEnumerable<T> arr)
+    public static string GetIEnumerableStr<T>(IEnumerable<T> arr)
+    {
+        var str = "";
+        foreach (var elem in arr)
         {
-            string str = "";
-            foreach (var elem in arr)
-            {
-                str += $"{elem} ";
-            }
-            return str;
+            str += $"{elem} ";
         }
+        return str;
     }
 }
