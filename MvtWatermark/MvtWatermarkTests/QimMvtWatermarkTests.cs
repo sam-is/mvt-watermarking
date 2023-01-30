@@ -6,7 +6,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
+using System.Net.Http;
 using Xunit;
 
 namespace MvtWatermarkTests;
@@ -24,7 +24,7 @@ public class QimMvtWatermarkTests
     [InlineData(4, 20)]
     [InlineData(5, 10)]
     [InlineData(10, 5)]
-    public void OneTileOneBit(int sizeMessage, int r)
+    public void OneTileStp(int sizeMessage, int r)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         const int x = 658;
@@ -72,7 +72,7 @@ public class QimMvtWatermarkTests
     }
 
     [Fact]
-    public void VectorTileTreeFromOneTile()
+    public void VectorTileTreeFromOneTileStp()
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         const int x = 658;
@@ -116,7 +116,7 @@ public class QimMvtWatermarkTests
     }
 
     [Fact]
-    public void VectorTileTreeFromFewTiles()
+    public void VectorTileTreeFromFewTilesStp()
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         const int z = 10;
@@ -124,6 +124,7 @@ public class QimMvtWatermarkTests
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
 
+        var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
         for (var x = 653; x < 658; x++)
             for (var y = 330; y < 334; y++)
@@ -139,7 +140,6 @@ public class QimMvtWatermarkTests
                 var bytes = (byte[])obj!;
 
                 using var memoryStream = new MemoryStream(bytes);
-                var reader = new MapboxTileReader();
 
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
@@ -148,16 +148,16 @@ public class QimMvtWatermarkTests
                 tileTree[tile.TileId] = tile;
             }
 
-        var bits = new bool[100];
-        for (var i = 0; i < 100; i++)
+        var bits = new bool[80];
+        for (var i = 0; i < bits.Length; i++)
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, (int)Math.Floor((double)message.Count / tileTree.Count()), 20, null);
+        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, 5, 20, null);
 
         var watermark = new QimMvtWatermark(options);
-        var tileWatermarked = watermark.Embed(tileTree, 0, message);
-        var m = watermark.Extract(tileWatermarked, 0);
+        var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
+        var m = watermark.Extract(tileTreeWatermarked, 0);
 
         for (var i = 0; i < message.Count; i++)
             Assert.True(m[i] == message[i]);
@@ -183,13 +183,32 @@ public class QimMvtWatermarkTests
         Assert.Null(m);
     }
 
-    [Fact]
-    public void DoubleReadTile()
+    [Theory]
+    [InlineData(687072)]
+    [InlineData(688101)]
+    [InlineData(690148)]
+    [InlineData(693216)]
+    [InlineData(687073)]
+    [InlineData(692194)]
+    [InlineData(693218)]
+    [InlineData(686051)]
+    [InlineData(693219)]
+    [InlineData(686052)]
+    [InlineData(686053)]
+    [InlineData(693221)]
+    [InlineData(684006)]
+    [InlineData(685030)]
+    [InlineData(692198)]
+    [InlineData(684007)]
+    [InlineData(690151)]
+    [InlineData(684008)]
+    public void TestOpenAfterWatermarking(ulong id)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
-        const int z = 10;
-        const int x = 654;
-        const int y = 333;
+        var tileId = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(id);
+        var x = tileId.X;
+        var y = tileId.Y;
+        var z = tileId.Zoom;
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
 
@@ -210,54 +229,72 @@ public class QimMvtWatermarkTests
         using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
         var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
 
+        var bits = new bool[3];
+        for (var i = 0; i < bits.Length; i++)
+            bits[i] = true;
+
+        var message = new BitArray(bits);
+
+        var options = new QimMvtWatermarkOptions(0.5, 0.6, 20, 4096, 2, message.Count, 10, null);
+
+        var watermark = new QimMvtWatermark(options);
+        var tileWatermarked = watermark.Embed(tile, (int)tile.TileId, message);
+
+        Assert.NotNull(tileWatermarked);
+
+        var m = watermark.Extract(tileWatermarked!, (int)tile.TileId);
+        Assert.NotNull(m);
+
+        for (var i = 0; i < message.Count; i++)
+            Assert.True(m![i] == message[i]);
+
         using var mem = new MemoryStream();
-        tile.Write(mem);
+        tileWatermarked.Write(mem);
         mem.Seek(0, SeekOrigin.Begin);
-        var newtile = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
-        Assert.NotNull(newtile);
+        var t = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId.Id));
+        Assert.NotNull(t);
     }
 
     [Fact]
-    public void NumPointsAfterWriting()
+    public void VectorTileTreeFromFewTilesTegola()
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         const int z = 10;
-        const int x = 655;
-        const int y = 334;
-        using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
-        sqliteConnection.Open();
-
-        using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
-        command.Parameters.AddWithValue("$z", z);
-        command.Parameters.AddWithValue("$x", x);
-        command.Parameters.AddWithValue("$y", (1 << z) - y - 1);
-        var obj = command.ExecuteScalar();
-
-        Assert.NotNull(obj);
-
-        var bytes = (byte[])obj!;
-
-        using var memoryStream = new MemoryStream(bytes);
-        var reader = new MapboxTileReader();
-
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
-        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
-
-
-        using var mem = new MemoryStream();
-        tile.Write(mem);
-        mem.Seek(0, SeekOrigin.Begin);
-        var newTile = reader.Read(mem, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
-        Assert.NotNull(newTile);
-
-        for (var i = 0; i < newTile.Layers.Count; i++)
-            for (var j = 0; j < newTile.Layers[i].Features.Count; j++)
+        var tileTree = new VectorTileTree();
+        for (var x = 242; x < 246; x++)
+            for (var y = 390; y < 394; y++)
             {
-                var newGeom = newTile.Layers[i].Features[j].Geometry;
-                var oldGeom = tile.Layers[i].Features[j].Geometry;
-                Assert.Equal(oldGeom.NumPoints, newGeom.NumPoints);
+                using var sharedClient = new HttpClient
+                {
+                    BaseAddress = new Uri($"https://tegola-osm-demo.go-spatial.org/v1/maps/osm/{z}/{x}/{y}"),
+                };
+
+                sharedClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 QGIS/32210");
+                sharedClient.DefaultRequestHeaders.Add("accept-encoding", "gzip");
+
+                var response = sharedClient.GetByteArrayAsync("").Result;
+                using var memoryStream = new MemoryStream(response);
+
+                var reader = new MapboxTileReader();
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+                var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+                tileTree[tile.TileId] = tile;
             }
+
+        var bits = new bool[60];
+        for (var i = 0; i < bits.Length; i++)
+            bits[i] = true;
+        var message = new BitArray(bits);
+
+        var options = new QimMvtWatermarkOptions(0.3, 0.3, 5, 4096, 2, 5, 10, null);
+
+        var watermark = new QimMvtWatermark(options);
+        var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
+
+        var m = watermark.Extract(tileTreeWatermarked, 0);
+
+        for (var i = 0; i < message.Count; i++)
+            Assert.Equal(m[i], message[i]);
     }
 }
-

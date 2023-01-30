@@ -80,7 +80,7 @@ public class QimMvtWatermarkOptions
             M = (int)m!;
         }
         else
-            throw new ArgumentNullException(nb==null? nameof(nb):nameof(r),"Only one of nb, r, m parameters can be null");
+            throw new ArgumentNullException(nb == null ? nameof(nb) : nameof(r), "Only one of nb, r, m parameters can be null");
 
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
     }
