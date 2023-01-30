@@ -23,13 +23,13 @@ public class SeparationByGeometryType : IDistortion
     {
         var copyTileTree = new VectorTileTree();
 
-        foreach (var id in tiles)
+        foreach (var tileId in tiles)
         {
             var pointLayer = new Layer { Name = "points" };
             var lineLayer = new Layer { Name = "lines" };
             var polygonLayer = new Layer { Name = "polygons" };
 
-            foreach (var layer in tiles[id].Layers)
+            foreach (var layer in tiles[tileId].Layers)
             {
                 foreach (var feature in layer.Features)
                 {
@@ -59,7 +59,7 @@ public class SeparationByGeometryType : IDistortion
                 }
             }
 
-            var tile = new VectorTile { TileId = id };
+            var tile = new VectorTile { TileId = tileId };
 
             switch (_mode)
             {
@@ -79,7 +79,7 @@ public class SeparationByGeometryType : IDistortion
                     break;
             }
 
-            copyTileTree[id] = tile;
+            copyTileTree[tileId] = tile;
         }
 
         return copyTileTree;
