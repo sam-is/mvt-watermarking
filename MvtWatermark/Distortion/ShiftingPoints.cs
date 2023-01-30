@@ -49,42 +49,41 @@ public class ShiftingPoints : IDistortion
                 foreach (var feature in layer.Features)
                 {
                     var geometry = feature.Geometry;
-                    var count = geometry.Coordinates.Count();
-                    var step = (int)Math.Ceiling(count / (count * _relativeNumberPoints));
+                    var length = geometry.Coordinates.Length;
+                    var step = (int)Math.Ceiling(length / (length * _relativeNumberPoints));
 
-                    for (var i = 0; i < count; i += step)
+                    for (var i = 0; i < length; i += step)
                     {
-                        if (i >= count)
-                            break;
                         var coordinateMeters = CoordinateConverter.DegreesToMeters(geometry.Coordinates[i]);
                         var randomNumber = random.Next(0, 3);
-                        if (randomNumber == 0)
+
+                        switch (randomNumber)
                         {
-                            coordinateMeters.X += extentDist;
-                            coordinateMeters.Y += extentDist;
+
+                            case 0:
+                                coordinateMeters.X += extentDist;
+                                coordinateMeters.Y += extentDist;
+                                break;
+
+                            case 1:
+                                coordinateMeters.X -= extentDist;
+                                coordinateMeters.Y += extentDist;
+                                break;
+
+                            case 2:
+                                coordinateMeters.X += extentDist;
+                                coordinateMeters.Y -= extentDist;
+                                break;
+
+                            case 3:
+                                coordinateMeters.X -= extentDist;
+                                coordinateMeters.Y -= extentDist;
+                                break;
                         }
 
-                        if (randomNumber == 1)
-                        {
-                            coordinateMeters.X -= extentDist;
-                            coordinateMeters.Y += extentDist;
-                        }
-
-                        if (randomNumber == 2)
-                        {
-                            coordinateMeters.X += extentDist;
-                            coordinateMeters.Y -= extentDist;
-                        }
-
-                        if (randomNumber == 3)
-                        {
-                            coordinateMeters.X -= extentDist;
-                            coordinateMeters.Y -= extentDist;
-                        }
-
-                        var coor = CoordinateConverter.MetersToDegrees(coordinateMeters);
-                        geometry.Coordinates[i].X = coor.X;
-                        geometry.Coordinates[i].Y = coor.Y;
+                        var coordinateDegrees = CoordinateConverter.MetersToDegrees(coordinateMeters);
+                        geometry.Coordinates[i].X = coordinateDegrees.X;
+                        geometry.Coordinates[i].Y = coordinateDegrees.Y;
                     }
 
 
