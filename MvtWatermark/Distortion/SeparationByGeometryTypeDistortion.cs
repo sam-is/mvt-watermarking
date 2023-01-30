@@ -3,7 +3,7 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class SeparationByGeometryType : IDistortion
+public class SeparationByGeometryTypeDistortion : IDistortion
 {
 
     private readonly Mode _mode;
@@ -15,7 +15,7 @@ public class SeparationByGeometryType : IDistortion
         Polygons
     }
 
-    public SeparationByGeometryType(Mode mode)
+    public SeparationByGeometryTypeDistortion(Mode mode)
     {
         _mode = mode;
     }

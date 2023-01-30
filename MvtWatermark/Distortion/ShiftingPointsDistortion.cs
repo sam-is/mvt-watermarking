@@ -4,11 +4,11 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class ShiftingPoints : IDistortion
+public class ShiftingPointsDistortion : IDistortion
 {
     private readonly double _relativeNumberPoints;
 
-    public ShiftingPoints(double relativeNumberPoints)
+    public ShiftingPointsDistortion(double relativeNumberPoints)
     {
         _relativeNumberPoints = relativeNumberPoints;
     }

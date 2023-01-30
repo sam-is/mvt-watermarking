@@ -3,11 +3,11 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class DeletingLayers : IDistortion
+public class DeletingLayersDistortion : IDistortion
 {
     private readonly double _relativeNumberLayers;
 
-    public DeletingLayers(double relativeNumberLayers)
+    public DeletingLayersDistortion(double relativeNumberLayers)
     {
         _relativeNumberLayers = relativeNumberLayers;
     }
