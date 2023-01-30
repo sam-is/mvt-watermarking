@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
-using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
 using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
-
-using NetTopologySuite.IO.VectorTiles.Tiles.Changed;
 
 namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
 
@@ -88,11 +82,8 @@ public class MapboxTileReaderWM
 
             var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
 
-            //int featureIndex = 0;
-
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
-                //Console.WriteLine($"\nТекущая Фича: {featureIndex++}"); // отладка
                 var watermarkIntFromFeature = ExtractFromFeature(tgs, mbTileFeature, options, keySequence);
                 if (watermarkIntFromFeature != null)
                 {
@@ -375,8 +366,6 @@ public class MapboxTileReaderWM
 
                 realSegments.Add(true);
                 count -= 2;
-
-                //Console.WriteLine($"currentPosition: {currentPosition}"); // отладка
             }
             else
             {
@@ -465,24 +454,17 @@ public class MapboxTileReaderWM
         if (realSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
             return null;
 
-        //Console.WriteLine($"realSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
-        //Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
-
         for (var i = 0; i < options.D/2; i++)
         {
             for (var j = 0; j < realSegmentsInONEElemSegment; j++)
             {
                 if (realSegments[realSegmentsInONEElemSegment * i + j])
                 {
-                    //Console.WriteLine($"current keySequence[{i}]: {keySequence[i]}"); // отладка
-
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
                 }
             }
         }
-
-        //Console.WriteLine($"\tExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(extractedWatermarkInts)}"); // отладка
 
         if (extractedWatermarkInts.Count == 0) return null;
 
@@ -520,14 +502,11 @@ public class MapboxTileReaderWM
 
         while (currentIndex < geometry.Count)
         {
-            //Console.WriteLine("Парсим MoveTo-LineTo"); // отладка
-
             var (command, count) = ParseCommandInteger(geometry[currentIndex++]);
             Debug.Assert(command == MapboxCommandType.MoveTo);
             Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
-            //Console.WriteLine($"lastPosition = {lastPosition}, currentPosition = {currentPosition}"); // отладка
             if (!isFirstSegment && lastPosition != currentPosition)
             {
                 return null; 
@@ -569,9 +548,6 @@ public class MapboxTileReaderWM
         if (realSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
             return null;
 
-        //Console.WriteLine($"\trealSegmentsInONEElemSegment: {realSegmentsInONEElemSegment}"); // отладка
-        //Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
-
         // работает также с отражённым лайнстрингом
         for (var i = 0; i < options.D / 2; i++)
         {
@@ -579,26 +555,17 @@ public class MapboxTileReaderWM
             {
                 if (realSegments[realSegmentsInONEElemSegment * i + j]) 
                 {
-                    //Console.WriteLine($"current keySequence[{i}]: {keySequence[i]}"); // отладка
-
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
                 }
 
                 if (realSegments[realSegments.Count - 1 - (realSegmentsInONEElemSegment * i + j)])
                 {
-                    //Console.WriteLine($"current (Second Half) keySequence[{i}]: {keySequence[i]}"); // отладка
-
                     extractedWatermarkIntsSecondHalf.Add(keySequence[i]);
                     break;
                 }
             }
         }
-
-        //Console.WriteLine($"\t\tExtractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr<int>(extractedWatermarkInts)}"); // отладка
-
-
-        //bool wasReversed = false;
 
         if (extractedWatermarkInts.Count == 0)
         {
@@ -735,9 +702,6 @@ public class MapboxTileReaderWM
 
     private (int, int) ParseOffset((int x, int y) currentPosition, IList<uint> parameterIntegers, ref int offset)
     {
-        var size = parameterIntegers.Count;
-        //Console.WriteLine($"size = {size}"); // отладка
-
         return (currentPosition.x + Decode(parameterIntegers[offset++]),
                 currentPosition.y + Decode(parameterIntegers[offset++]));
     }
@@ -752,8 +716,6 @@ public class MapboxTileReaderWM
         return unchecked(((MapboxCommandType) (commandInteger & 0x07U), (int)(commandInteger >> 3)));
 
     }
-
-
 
     private static IAttributesTable ReadAttributeTable(Tile.Feature mbTileFeature, List<string> keys, List<Tile.Value> values)
     {

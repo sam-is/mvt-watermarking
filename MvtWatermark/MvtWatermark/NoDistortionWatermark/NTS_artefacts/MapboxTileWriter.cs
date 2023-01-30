@@ -5,7 +5,6 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
-//namespace NetTopologySuite.IO.VectorTiles.Mapbox.originalWriterReader
 namespace NetTopologySuite.IO.VectorTiles.Mapbox;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
@@ -48,8 +47,6 @@ public static class MapboxTileWriter
             var xFolder = Path.Combine(zFolder, tile.X.ToString());
             if (!Directory.Exists(xFolder)) Directory.CreateDirectory(xFolder);
             var file = Path.Combine(xFolder, $"{tile.Y}.mvt");
-
-            Console.WriteLine($"filename: {file}"); // отладка
 
             using var stream = File.Open(file, FileMode.Create);
             vectorTile.Write(stream, extent);
@@ -257,8 +254,6 @@ public static class MapboxTileWriter
         ref int currentX, ref int currentY,
         bool ring = false, bool ccw = false)
     {
-        //Console.WriteLine("\n");
-
         // how many parameters for LineTo command
         var count = sequence.Count;
 
@@ -277,8 +272,6 @@ public static class MapboxTileWriter
         encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
 
-        //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // отладка
-
         encoded.Add(GenerateParameterInteger(position.x));
         encoded.Add(GenerateParameterInteger(position.y));
 
@@ -288,8 +281,6 @@ public static class MapboxTileWriter
         for (var i = 1; i < count; i++)
         {
             position = tgt.Transform(sequence, i, ref currentX, ref currentY);
-
-            //Console.WriteLine($"positionX = {position.x} , positionY = {position.y}"); // отладка
 
             if (position.x != 0 || position.y != 0)
             {
@@ -321,26 +312,6 @@ public static class MapboxTileWriter
 
         return encoded;
     }
-
-    /*
-    /// <summary>
-    /// Generates a move command. 
-    /// </summary>
-    private static void GenerateMoveTo(List<uint> geometry, int dx, int dy)
-    {
-        geometry.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-        geometry.Add(GenerateParameterInteger(dx));
-        geometry.Add(GenerateParameterInteger(dy));
-    }
-     
-    /// <summary>
-    /// Generates a close path command.
-    /// </summary>
-    private static void GenerateClosePath(List<uint> geometry)
-    {
-        geometry.Add(GenerateCommandInteger(MapboxCommandType.ClosePath, 1));
-    }
-     */
 
     /// <summary>
     /// Generates a command integer.

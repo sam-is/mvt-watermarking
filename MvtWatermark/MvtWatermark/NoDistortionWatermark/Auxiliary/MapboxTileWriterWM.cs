@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices.ComTypes;
-using MvtWatermark.DebugClasses;
 using MvtWatermark.NoDistortionWatermark;
 using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
-//namespace MvtWatermark.NoDistortionWatermark
 namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
@@ -34,15 +30,40 @@ public static class MapboxTileWriterWM
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
-    public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray WatermarkString, 
+    public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray watermarkString, 
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
         var result = new Dictionary<ulong, Tile>();
 
-        // узнать как оно обходит, в каком порядке. Это важно для порядка деления message по тайлам.
-        foreach (var tileIndex in tree) 
+        // !!! Разделение ещё не реализовано, это только начало
+        // Сортированного словаря здесь не будет (скорее всего)
+        /*
+        var sortedTree = new SortedDictionary<ulong, VectorTile>();
+        foreach (var tileIndex in tree)
         {
-            result.Add(tileIndex, tree[tileIndex].WriteWM(WatermarkString, firstHalfOfTheKey, tileIndex, options, extent)); 
+            sortedTree.Add(tileIndex, tree[tileIndex]);
+        }
+
+        // обходит в том же порядке, в котором пары были добавлены в дерево
+        var watermarkStringNumerator = watermarkString.GetEnumerator();
+
+        foreach (var elem in sortedTree) 
+        {
+            var watermarkStringFragment = new BitArray(options.Nb);
+            for (var i = 0; i < options.Nb; i++)
+            {
+                watermarkStringNumerator.MoveNext();
+                watermarkStringFragment[i] = (bool)watermarkStringNumerator.Current;
+            }
+            watermarkString.RightShift(options.Nb);
+
+            result.Add(elem.Key, elem.Value.WriteWM(watermarkString, firstHalfOfTheKey, elem.Key, options, extent)); 
+        }
+        */
+
+        foreach (var tileIndex in tree)
+        {
+            result.Add(tileIndex, tree[tileIndex].WriteWM(watermarkString, firstHalfOfTheKey, tileIndex, options, extent));
         }
 
         return result;
@@ -330,12 +351,9 @@ public static class MapboxTileWriterWM
         var geometry = (Geometry)lineal;
         int currentX = 0, currentY = 0;
 
-        //Console.WriteLine("Проверияем тип нетипичной конструкции"); // отладка
-
         switch (options.AtypicalEncodingType)
         {
             case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt:
-                //Console.WriteLine("MtLtLt"); // отладка
                 for (var i = 0; i < geometry.NumGeometries; i++)
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
@@ -345,7 +363,6 @@ public static class MapboxTileWriterWM
                 }
                 break;
             case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt:
-                //Console.WriteLine("MtLtMt"); // отладка
                 for (var i = 0; i < geometry.NumGeometries; i++)
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
@@ -355,7 +372,6 @@ public static class MapboxTileWriterWM
                 }
                 break;
             case NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands:
-                //Console.WriteLine("MtLtMt"); // отладка
                 for (var i = 0; i < geometry.NumGeometries; i++)
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
@@ -364,7 +380,6 @@ public static class MapboxTileWriterWM
                         yield return encoded;
                 }
                 break;
-                //throw new NotImplementedException();
         }
     }
 
@@ -405,10 +420,6 @@ public static class MapboxTileWriterWM
         var count = sequence.Count;
         var encoded = new List<uint>();
 
-        //Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
-        //Console.WriteLine($"sequence count = {count}"); // отладка
-        //Console.WriteLine($"sequence = {sequence}"); // отладка
-
         var xHolder = currentX; 
         var yHolder = currentY;
 
@@ -434,10 +445,6 @@ public static class MapboxTileWriterWM
             return Encode(sequence, tgt, ref currentX, ref currentY);
         }
 
-        //Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
-        //Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
-
-
         if (options.SecondHalfOfLineStringIsUsed)
         {
             sequence = sequence.Reversed();
@@ -445,8 +452,6 @@ public static class MapboxTileWriterWM
 
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
-
-        //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
         var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
@@ -524,10 +529,6 @@ public static class MapboxTileWriterWM
         var count = sequence.Count;
         var encoded = new List<uint>();
 
-        Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
-        Console.WriteLine($"sequence count = {count}"); // отладка
-        Console.WriteLine($"sequence = {sequence}"); // отладка
-
         var xHolder = currentX; var yHolder = currentY;
 
         // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
@@ -551,12 +552,7 @@ public static class MapboxTileWriterWM
             //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
         }
 
-        Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
-        Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
-
         var realSegmentsInOneElemSegment = realSegments / options.D;
-
-        Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
         var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
@@ -687,10 +683,6 @@ public static class MapboxTileWriterWM
         var count = sequence.Count;
         var encoded = new List<uint>();
 
-        //Console.WriteLine($"currentX = {currentX}, currentY = {currentY}"); // отладка
-        //Console.WriteLine($"sequence count = {count}"); // отладка
-        //Console.WriteLine($"sequence = {sequence}"); // отладка
-
         var xHolder = currentX; 
         var yHolder = currentY;
 
@@ -715,10 +707,6 @@ public static class MapboxTileWriterWM
             return Encode(sequence, tgt, ref currentX, ref currentY);
         }
 
-        //Console.WriteLine($"Элементарных сегментов: {options.D}"); // отладка
-        //Console.WriteLine($"Реальных сегментов: {realSegments}"); // отладка
-
-
         if (options.SecondHalfOfLineStringIsUsed)
         {
             sequence = sequence.Reversed();
@@ -726,8 +714,6 @@ public static class MapboxTileWriterWM
 
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
-
-        //Console.WriteLine($"Реальных сегментов в одном элементарном: {realSegmentsInOneElemSegment}"); // отладка
 
         var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
@@ -907,41 +893,6 @@ public static class MapboxTileWriterWM
         return dx > 0 && dy > 0 && (dx > 1 || dy > 1);
     }
 
-    /// <summary>
-    /// Генерирует количество lsParameter (реальных сегментов в одном элементарном, в которые втраивается НТГ) на основе ключа LsKey;
-    /// Генерирует массив интов с указанием, куда именно вставлять НТГ
-    /// </summary>
-    /// <param name="realSegmentsInOneElemSegment"></param>
-    /// <param name="LsKey"></param>
-    /// <returns></returns>
-    private static List<int> OLDGenerateSequenceLs(int realSegmentsInOneElemSegment, int LsKey)
-    {
-        var random = new Random(LsKey);
-
-        var lsParameter = random.Next(1, realSegmentsInOneElemSegment);
-
-        var resultArr = new List<int>(realSegmentsInOneElemSegment);
-        int randomIndex;
-
-        for (var i = 0; i < realSegmentsInOneElemSegment; i++)
-        {
-            resultArr.Add(-1);
-        }
-
-        for (var i = 0; i < lsParameter; i++)
-        {
-            do
-            {
-                randomIndex = random.Next(0, realSegmentsInOneElemSegment - 1);
-            } while (resultArr[randomIndex] != -1);
-            resultArr[randomIndex] = 1;
-        }
-
-        //Console.WriteLine($"Отладка ||| Массив lsParameter: {ConsoleWriter.GetIEnumerableStr(resultArr)}"); // отладка
-
-        return resultArr;
-    }
-
     private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int lsParameter)
     {
         //var random = new Random(key);
@@ -970,8 +921,6 @@ public static class MapboxTileWriterWM
             } while (resultArr[randomIndex] != 0);
             resultArr[randomIndex] = 1;
         }
-
-        //Console.WriteLine($"Отладка ||| Массив lsParameter: {ConsoleWriter.GetIEnumerableStr(resultArr)}"); // отладка
 
         return resultArr;
     }

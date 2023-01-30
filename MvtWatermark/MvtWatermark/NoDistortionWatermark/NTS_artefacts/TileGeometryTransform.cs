@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.GeometriesGraph;
@@ -56,32 +55,6 @@ public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
 
         var dx = localX - currentX;
         var dy = localY - currentY;
-
-
-        /*
-        Console.BackgroundColor = ConsoleColor.Gray; // отладка
-        Console.ForegroundColor = ConsoleColor.Blue; // отладка
-        Console.WriteLine($"currentX = {currentX} , currentY = {currentY}"); // отладка
-        Console.BackgroundColor = ConsoleColor.Black; // отладка
-        Console.ForegroundColor = ConsoleColor.White; // отладка
-
-        Console.WriteLine($"lon (X) = {lon} , lat (Y) = {lat}"); // отладка
-        Console.WriteLine($"meters = {meters}"); // отладка
-        Console.WriteLine($"pixels = {pixels}"); // отладка
-
-        if (!Double.IsNaN(pixels.y))
-        {
-            Console.ForegroundColor = ConsoleColor.DarkGreen; // отладка
-        }
-        else
-            Console.ForegroundColor = ConsoleColor.DarkRed; // отладка
-        Console.WriteLine($"pixels.x = {pixels.x}, left = {_left}"); // отладка
-        Console.WriteLine($"top = {_top}, pixels.y = {pixels.y}"); // отладка
-        Console.ForegroundColor = ConsoleColor.White; // отладка
-        Console.WriteLine($"localX = {localX} , localY = {localY}"); // отладка
-        Console.WriteLine($"dx = {dx} , dy = {dy}"); // отладка
-        */
-
         
         currentX = localX;
         currentY = localY;

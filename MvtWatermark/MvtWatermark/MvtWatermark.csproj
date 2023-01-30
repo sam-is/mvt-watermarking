@@ -7,8 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
+    <Compile Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
     <Compile Remove="NoNeed\**" />
+    <EmbeddedResource Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
+    <EmbeddedResource Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
     <EmbeddedResource Remove="NoNeed\**" />
+    <None Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
+    <None Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
     <None Remove="NoNeed\**" />
   </ItemGroup>
 
@@ -16,18 +22,12 @@
     <Compile Remove="NoDistortionWatermark\Auxiliary\MapboxTileWriterWMToFiles.cs" />
     <Compile Remove="NoDistortionWatermark\Tiles\TileExtensions.cs" />
     <Compile Remove="NoDistortionWatermark\Tiles\TileRange.cs" />
-    <Compile Remove="NoDistortionWatermark\Tiles\WebMercator\WebMercatorHandler.cs" />
     <Compile Remove="TestProgram.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
     <PackageReference Include="protobuf-net" Version="2.4.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="NoDistortionWatermark\TilesWithWatermarks\" />
-    <Folder Include="NoDistortionWatermark\Tiles\WebMercator\" />
   </ItemGroup>
 
 </Project>

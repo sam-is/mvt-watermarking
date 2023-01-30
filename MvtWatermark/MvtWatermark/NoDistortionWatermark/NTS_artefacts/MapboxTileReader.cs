@@ -5,7 +5,6 @@ using System.IO;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 
-//namespace NetTopologySuite.IO.VectorTiles.Mapbox.originalWriterReader
 namespace NetTopologySuite.IO.VectorTiles.Mapbox;
 
 public class MapboxTileReader

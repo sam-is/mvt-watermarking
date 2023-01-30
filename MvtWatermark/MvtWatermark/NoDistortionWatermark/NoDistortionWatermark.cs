@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MvtWatermark;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
 
@@ -20,6 +15,14 @@ public class NoDistortionWatermark: IMvtWatermark
         _options = options;
     }
 
+    /// <summary>
+    /// Встраивание ЦВЗ в формате BitArray в векторные тайлы в формате VectorTileTree (MVT) с использованием ключа
+    /// </summary>
+    /// <param name="tiles"></param>
+    /// <param name="key"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
     {
         // message уже внутри будет делиться на фрагменты размером Nb
@@ -37,7 +40,6 @@ public class NoDistortionWatermark: IMvtWatermark
 
         var firstHalfOfTheKey = (short)key;
 
-        //var TileDict = tiles.WriteWM(message, key, _options);
         var tileDict = tiles.WriteWM(message, firstHalfOfTheKey, _options);
 
         var readerWM = new MapboxTileReaderWM();
@@ -47,33 +49,12 @@ public class NoDistortionWatermark: IMvtWatermark
         return toReturn;
     }
 
-    /*
-    public VectorTileTree Embed(VectorTile vt, int key, BitArray message)
-    {
-        // message уже внутри будет делиться на фрагменты размером Nb
-        if (message.Count < _options.Nb)
-        {
-            throw new Exception("ЦВЗ меньше размера в options");
-        }
-        else if (message.Length == 1 && message[0] == false)
-        {
-            throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
-        }
-
-        var TileDict = vt.WriteWM(message, key, vt.TileId, _options);
-
-        //Console.WriteLine("После Embed"); // отладка
-
-        var readerWM = new MapboxTileReaderWM();
-
-        var toReturn = readerWM.Read(TileDict);
-
-        //Console.WriteLine("После ReadWM"); // отладка
-
-        return toReturn;
-    }
-    */
-
+    /// <summary>
+    /// Извлечение ЦВЗ из VectorTileTree с использованием ключа
+    /// </summary>
+    /// <param name="tiles"></param>
+    /// <param name="key"></param>
+    /// <returns></returns>
     public BitArray Extract(VectorTileTree tiles, int key)
     {
         var shortenedKey = (short)key;
@@ -93,26 +74,5 @@ public class NoDistortionWatermark: IMvtWatermark
 
         return new BitArray(new int[] { watermarkInts[0] }); 
         // пока что просто возвращается первый элемент из списка вотермарок
-        // но потом ЦВЗ будет собираться в один из множества фрагментов, которые должны храниться в этом списке
     }
-
-    /*
-    public void EmbedAndWriteToFile(VectorTileTree tiles, int key, BitArray message, string path)
-    {
-        if (message.Count < _options.Nb)
-        {
-            throw new Exception("ЦВЗ меньше размера в options");
-        }
-        else if (message.Length == 1 && message[0] == false)
-        {
-            throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
-        }
-
-        //Console.WriteLine($"Количество элементарных сегментов:{_options.D}"); // отладка
-
-        tiles.WriteVectorTileTreeToFiles(message, key, path, _options);
-
-        //Console.WriteLine("После Embed"); // отладка
-    }
-    */
 }

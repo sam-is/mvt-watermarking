@@ -1,21 +1,12 @@
 ﻿using MvtWatermark.NoDistortionWatermark;
+using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
-using NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
 using MvtWatermark.DebugClasses;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using System.Collections;
-using NetTopologySuite.Utilities;
 using System.IO.Compression;
-using System.IO;
-
 using Microsoft.Data.Sqlite;
 
 namespace NoDistortionWatermarkMetrics;

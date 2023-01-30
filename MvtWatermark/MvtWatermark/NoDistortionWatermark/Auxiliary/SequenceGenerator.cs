@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
@@ -38,10 +34,7 @@ internal static class SequenceGenerator
             } while (howMuchEachValueInstancesAreInKeySequence[value] >= M);
             keySequence[i] = value;
             howMuchEachValueInstancesAreInKeySequence[value]++;
-        } // нагенерили {Sk}
-
-        //Console.WriteLine($"howMuchEachValueInstancesAreInKeySequence: {ConsoleWriter.GetArrayStr<int>(howMuchEachValueInstancesAreInKeySequence)}"); // отладка
-        //Console.WriteLine($"keySequence: {ConsoleWriter.GetArrayStr<int>(keySequence)}"); // отладка
+        } 
 
         return keySequence;
     }
