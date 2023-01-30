@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -7,27 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
-    <Compile Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
-    <Compile Remove="NoNeed\**" />
-    <EmbeddedResource Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
-    <EmbeddedResource Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
-    <EmbeddedResource Remove="NoNeed\**" />
-    <None Remove="NoDistortionWatermark\TilesWithWatermarks\**" />
-    <None Remove="NoDistortionWatermark\Tiles\WebMercator\**" />
-    <None Remove="NoNeed\**" />
+    <PackageReference Include="NetTopologySuite" Version="2.5.0" />
+    <PackageReference Include="NetTopologySuite.Features" Version="2.1.0" />
+    <PackageReference Include="protobuf-net" Version="3.1.26" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="NoDistortionWatermark\Auxiliary\MapboxTileWriterWMToFiles.cs" />
-    <Compile Remove="NoDistortionWatermark\Tiles\TileExtensions.cs" />
-    <Compile Remove="NoDistortionWatermark\Tiles\TileRange.cs" />
-    <Compile Remove="TestProgram.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
-    <PackageReference Include="protobuf-net" Version="2.4.0" />
+    <Reference Include="NetTopologySuite.IO.VectorTiles">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

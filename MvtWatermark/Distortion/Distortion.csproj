@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetTopologySuite.Features" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MvtWatermark\MvtWatermark.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NetTopologySuite.IO.VectorTiles">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
