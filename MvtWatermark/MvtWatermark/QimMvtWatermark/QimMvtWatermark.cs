@@ -1,4 +1,5 @@
-﻿using NetTopologySuite.Geometries;
+﻿using NetTopologySuite.Features;
+using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using System;
 using System.Collections;
@@ -388,8 +389,20 @@ public class QimMvtWatermark : IMvtWatermark
     /// <returns>Vector tile with an embedded message</returns>
     public VectorTile? Embed(VectorTile tile, int key, BitArray message)
     {
+        var copyTile = new VectorTile { TileId = tile.TileId };
+        foreach (var layer in tile.Layers)
+        {
+            var l = new Layer { Name = layer.Name };
+            foreach (var feature in layer.Features)
+            {
+                var f = new Feature(feature.Geometry, feature.Attributes);
+                l.Features.Add(f);
+            }
+            copyTile.Layers.Add(l);
+        }
+
         var embedded = false;
-        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId);
+        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(copyTile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
         var a = envelopeTile.Height / _options.M;
@@ -419,7 +432,7 @@ public class QimMvtWatermark : IMvtWatermark
                         }
                 ));
 
-                var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
+                var stat = Statistics(copyTile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 
@@ -436,20 +449,20 @@ public class QimMvtWatermark : IMvtWatermark
                 if (value == 1)
                 {
                     var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s0 - s1) / 2);
-                    ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, true, countAdded, s0);
+                    ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, true, countAdded, s0);
                 }
 
                 if (value == 0)
                 {
                     var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s1 - s0) / 2);
-                    ChangeCoordinate(tile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
+                    ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
                 }
             }
         }
 
         if (!embedded)
             return null;
-        return tile;
+        return copyTile;
     }
 
     /// <summary>
@@ -567,27 +580,31 @@ public class QimMvtWatermark : IMvtWatermark
     public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
     {
         var current = 0;
+        var copyTileTree = new VectorTileTree();
+
         foreach (var tileId in tiles)
         {
-            if (tiles.TryGet(tileId, out var tile))
+            var tile = tiles[tileId];
+
+            if (current >= message.Count)
+                break;
+            var bits = new BitArray(_options.Nb);
+            for (var i = 0; i < _options.Nb && i < message.Count; i++)
+                bits[i] = message[i + current];
+
+            var copyTile = Embed(tile, key + (int)tileId, bits);
+            if (copyTile == null)
             {
-                if (current >= message.Count)
-                    break;
-                var bits = new BitArray(_options.Nb);
-                for (var i = 0; i < _options.Nb && i < message.Count; i++)
-                    bits[i] = message[i + current];
-
-                tile = Embed(tile, key + (int)tileId, bits);
-                if (tile == null)
-                    continue;
-
-                tiles[tileId] = tile;
-                current += _options.Nb;
+                copyTileTree[tileId] = tile;
+                continue;
             }
+
+            copyTileTree[tileId] = copyTile;
+            current += _options.Nb;
         }
         if (current < message.Count)
             throw new ArgumentException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.", nameof(message));
-        return tiles;
+        return copyTileTree;
     }
 
     /// <summary>

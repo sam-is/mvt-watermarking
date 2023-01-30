@@ -1,6 +1,5 @@
 ﻿using MvtWatermark.QimMvtWatermark;
 using NetTopologySuite.Algorithm.Match;
-using NetTopologySuite.Features;
 using NetTopologySuite.IO.VectorTiles;
 using System.Collections;
 
@@ -68,26 +67,6 @@ public class CheckParameters
                     options.M = (int)Math.Ceiling(Math.Sqrt(Options.Nb * options.R));
                     break;
             }
-            var copyTileTree = new VectorTileTree();
-
-            foreach (var tileId in tileTree)
-            {
-                var tile = new VectorTile { TileId = tileId };
-                foreach (var layer in tileTree[tileId].Layers)
-                {
-                    var l = new Layer
-                    {
-                        Name = layer.Name
-                    };
-                    foreach (var feature in layer.Features)
-                    {
-                        var f = new Feature(feature.Geometry, feature.Attributes);
-                        l.Features.Add(f);
-                    }
-                    tile.Layers.Add(l);
-                }
-                copyTileTree[tileId] = tile;
-            }
 
             var watermark = new QimMvtWatermark(options);
 
@@ -99,7 +78,7 @@ public class CheckParameters
             VectorTileTree tileTreeWatermarked;
             try
             {
-                tileTreeWatermarked = watermark.Embed(copyTileTree, 0, message);
+                tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
             }
             catch (Exception)
             {
