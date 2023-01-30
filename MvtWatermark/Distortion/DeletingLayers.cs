@@ -27,7 +27,7 @@ public class DeletingLayers : IDistortion
             {
                 var num = random.Next(0, count - 1);
 
-                while(indexList.Contains(num))
+                while (indexList.Contains(num))
                     num = random.Next(0, count - 1);
 
                 indexList.Add(num);
@@ -39,14 +39,11 @@ public class DeletingLayers : IDistortion
             foreach (var index in indexList)
             {
                 var layer = tile.Layers[index];
-                var l = new Layer
-                {
-                    Name = layer.Name
-                };
+                var l = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
                 {
-                    var f = new Feature(feature.Geometry, feature.Attributes);
-                    l.Features.Add(f);
+                    var copyFeature = new Feature(feature.Geometry, feature.Attributes);
+                    l.Features.Add(copyFeature);
                 }
                 copyTile.Layers.Add(l);
             }
