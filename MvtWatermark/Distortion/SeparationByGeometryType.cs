@@ -2,6 +2,7 @@
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
+
 public class SeparationByGeometryType : IDistortion
 {
 

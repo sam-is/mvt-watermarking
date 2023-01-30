@@ -2,6 +2,7 @@
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
+
 public class DeletingLayers : IDistortion
 {
     private readonly double _relativeNumberLayers;

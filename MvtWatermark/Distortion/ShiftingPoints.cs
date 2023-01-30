@@ -3,6 +3,7 @@ using NetTopologySuite.Features;
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
+
 public class ShiftingPoints : IDistortion
 {
     private readonly double _relativeNumberPoints;

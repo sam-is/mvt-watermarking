@@ -3,6 +3,7 @@ using NetTopologySuite.Features;
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
+
 public class DeletingByArea : IDistortion
 {
     private readonly double _relativeArea;
