@@ -2,7 +2,7 @@
 using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
-using MvtWatermark.DebugClasses;
+using NoDistortionWatermarkMetrics.DebugClasses;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using System.Collections;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MvtWatermark.DebugClasses;
+namespace NoDistortionWatermarkMetrics.DebugClasses;
 
 public static class ConsoleWriter
 {

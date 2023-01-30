@@ -643,8 +643,6 @@ public class MapboxTileReaderWM
                 TransformOffsetAndAddToSequence(tgs, currentPosition, sequence, sequenceIndex++);
             }
 
-
-
             // Check for ClosePath command
             if (currentIndex < geometry.Count)
             {
@@ -660,8 +658,6 @@ public class MapboxTileReaderWM
                     sequenceIndex++;
                 }
             }
-
-
 
             Debug.Assert(sequenceIndex == sequence.Count);
 
