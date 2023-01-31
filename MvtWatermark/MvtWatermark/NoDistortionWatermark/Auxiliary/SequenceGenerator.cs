@@ -15,6 +15,7 @@ internal static class SequenceGenerator
     /// <returns></returns>
     internal static int[] GenerateSequence(int key, int Nb, int D, int M)
     {
+        // Возможно, алгоритм стоит переделать. Например, с использованием упорядоченного множества
         var rand = new Random(key);
 
         var maxBitArray = new BitArray(Nb, true);

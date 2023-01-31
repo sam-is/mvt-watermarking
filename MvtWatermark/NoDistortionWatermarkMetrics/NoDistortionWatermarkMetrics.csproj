@@ -8,12 +8,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DebugClasses\MapboxTileReader.cs" />
+    <Compile Remove="DebugClasses\MapboxTileWriter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.2" />
+    <PackageReference Include="NetTopologySuite" Version="2.5.0" />
+    <PackageReference Include="NetTopologySuite.Features" Version="2.1.0" />
     <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MvtWatermark\MvtWatermark.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NetTopologySuite.IO.VectorTiles">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
+      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

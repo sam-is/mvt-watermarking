@@ -2,7 +2,7 @@
 
 namespace NetTopologySuite.IO.VectorTiles.Mapbox;
 
-internal static class DictionaryExtensions
+public static class DictionaryExtensions
 {
     /// <summary>
     /// Adds a new key with a new id or returns the existing one.
