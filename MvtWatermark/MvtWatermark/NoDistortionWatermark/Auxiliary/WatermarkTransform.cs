@@ -43,14 +43,14 @@ public static class WatermarkTransform
     /// <param name="A"></param>
     /// <param name="B"></param>
     /// <returns></returns>
-    public static bool AreEqual(this BitArray A, BitArray B)
+    public static bool AreEqual(this BitArray aArr, BitArray bArr)
     {
-        if (A.Count != B.Count)
+        if (aArr.Count != bArr.Count)
             return false; // возможно, так не стоит делать
 
-        for (var i = 0; i < A.Count; i++)
+        for (var i = 0; i < aArr.Count; i++)
         {
-            if (A[i] != B[i])
+            if (aArr[i] != bArr[i])
                 return false;
         }
 

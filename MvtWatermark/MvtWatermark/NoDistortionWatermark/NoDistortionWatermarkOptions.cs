@@ -54,15 +54,15 @@ public class NoDistortionWatermarkOptions
     /// </summary>
     public bool SecondHalfOfLineStringIsUsed { get; set; } = false;
 
-    public NoDistortionWatermarkOptions(int m, int Nb, int Ls, int Lf, 
-        AtypicalEncodingTypes AtypicalEncodingType = AtypicalEncodingTypes.MtLtLt, bool SecondHalfOfLineStringIsUsed = false)
+    public NoDistortionWatermarkOptions(int m, int nb, int ls, int lf, 
+        AtypicalEncodingTypes atypicalEncodingType = AtypicalEncodingTypes.MtLtLt, bool secondHalfOfLineStringIsUsed = false)
     {
-        this.M = m;
-        this.Nb = Nb;
-        this.Ls = Ls;
-        this.Lf = Lf;
-        this.AtypicalEncodingType = AtypicalEncodingType;
-        this.SecondHalfOfLineStringIsUsed = SecondHalfOfLineStringIsUsed;
+        M = m;
+        Nb = nb;
+        Ls = ls;
+        Lf = lf;
+        AtypicalEncodingType = atypicalEncodingType;
+        SecondHalfOfLineStringIsUsed = secondHalfOfLineStringIsUsed;
         D = Convert.ToInt32(2 * m * Math.Pow(2, Nb));
     }
 }

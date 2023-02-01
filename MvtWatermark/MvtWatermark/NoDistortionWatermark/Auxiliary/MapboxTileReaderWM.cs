@@ -28,10 +28,10 @@ public class MapboxTileReaderWM
     /// </summary>
     /// <param name="TileDict"></param>
     /// <returns></returns>
-    public VectorTileTree Read(Dictionary<ulong, Tile> TileDict)
+    public VectorTileTree Read(Dictionary<ulong, Tile> tileDict)
     {
         var resultTree = new VectorTileTree();
-        foreach (var tilePair in TileDict)
+        foreach (var tilePair in tileDict)
         {
             resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null);
         }

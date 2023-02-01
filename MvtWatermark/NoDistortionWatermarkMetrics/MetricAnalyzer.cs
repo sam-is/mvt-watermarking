@@ -433,11 +433,11 @@ public static class MetricAnalyzer
     /// <param name="options"></param>
     /// <param name="key"></param>
     /// <returns></returns>
-    private static BitArray ExtractFromVectorTileTree(VectorTileTree tiles, NoDistortionWatermarkOptions options, int key, out int? WatermarkInt)
+    private static BitArray ExtractFromVectorTileTree(VectorTileTree tiles, NoDistortionWatermarkOptions options, int key, out int? watermarkInt)
     {
         var ndWm = new NoDistortionWatermark(options);
         var message = ndWm.Extract(tiles, key);
-        WatermarkInt = WatermarkTransform.GetIntFromBitArrayNullable(message);
+        watermarkInt = WatermarkTransform.GetIntFromBitArrayNullable(message);
         return message;
     }
 

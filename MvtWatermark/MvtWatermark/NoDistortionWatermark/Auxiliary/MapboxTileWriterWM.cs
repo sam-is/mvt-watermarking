@@ -79,10 +79,10 @@ public static class MapboxTileWriterWM
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-    public static Tile WriteWM(this VectorTile vectorTile, BitArray WatermarkString, short firstHalfOfTheKey,
+    public static Tile WriteWM(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
         ulong tileId, NoDistortionWatermarkOptions options, uint extent = 4096, string idAttributeName = "id")
     {
-        var watermarkInt = WatermarkTransform.GetIntFromBitArray(WatermarkString); // Фрагмент ЦВЗ в int
+        var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
 
         int key = firstHalfOfTheKey;
         key = (key << 16) + (short)vectorTile.TileId;
@@ -345,7 +345,7 @@ public static class MapboxTileWriterWM
     /// <param name="KeySequence"></param>
     /// <returns></returns>
     private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
-        NoDistortionWatermarkOptions options, int[] KeySequence)
+        NoDistortionWatermarkOptions options, int[] keySequence)
     // фрагмент ЦВЗ для каждого тайла надо определять как-то
     {
         var geometry = (Geometry)lineal;
@@ -358,7 +358,7 @@ public static class MapboxTileWriterWM
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
                     foreach (var encoded in EncodeWithWatermarkMtLtLt(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, watermarkInt,
-                        options, KeySequence))
+                        options, keySequence))
                         yield return encoded;
                 }
                 break;
@@ -367,7 +367,7 @@ public static class MapboxTileWriterWM
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
                     foreach (var encoded in EncodeWithWatermarkMtLtMt(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, watermarkInt,
-                        options, KeySequence))
+                        options, keySequence))
                         yield return encoded;
                 }
                 break;
@@ -376,7 +376,7 @@ public static class MapboxTileWriterWM
                 {
                     var lineString = (LineString)geometry.GetGeometryN(i);
                     foreach (var encoded in EncodeWithWatermarkNLt(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, watermarkInt,
-                        options, KeySequence))
+                        options, keySequence))
                         yield return encoded;
                 }
                 break;
