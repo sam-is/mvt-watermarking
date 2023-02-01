@@ -5,14 +5,14 @@ using NetTopologySuite.GeometriesGraph;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]
-namespace NetTopologySuite.IO.VectorTiles.Mapbox;
+namespace MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
 
 /// <summary>
 /// A transformation utility from WGS84 coordinates to a local tile coordinate system in pixel
 /// </summary>
 public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
 {
-    private Tiles.Tile _tile;
+    private NetTopologySuite.IO.VectorTiles.Tiles.Tile _tile;
     private uint _extent;
     private long _top;
     private long _left;
@@ -22,7 +22,7 @@ public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
     /// </summary>
     /// <param name="tile">The tile's bounds</param>
     /// <param name="extent">The tile's extent in pixel. Tiles are always square.</param>
-    public TileGeometryTransform(Tiles.Tile tile, uint extent) : this()
+    public TileGeometryTransform(NetTopologySuite.IO.VectorTiles.Tiles.Tile tile, uint extent) : this()
     {
         _tile = tile;
         _extent = extent;

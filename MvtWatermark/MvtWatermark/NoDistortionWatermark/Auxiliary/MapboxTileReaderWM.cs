@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using MvtWatermark.NoDistortionWatermark;
-using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO.VectorTiles;
+using NetTopologySuite.IO.VectorTiles.Mapbox;
 
-namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
+namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 public class MapboxTileReaderWM
 {
@@ -48,13 +48,13 @@ public class MapboxTileReaderWM
     /// <returns></returns>
     public VectorTile Read(Tile tile, ulong tileId, string idAttributeName)
     {
-        var tileDefinition = new Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
         var vectorTile = new VectorTile { TileId = tileDefinition.Id };
         foreach (var mbTileLayer in tile.Layers)
         {
             Debug.Assert(mbTileLayer.Version == 2U);
 
-            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            var tgs = new NtsArtefacts.TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
             var layer = new Layer {Name = mbTileLayer.Name};
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
@@ -75,12 +75,12 @@ public class MapboxTileReaderWM
         var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
         var extractedWatermarkIntegers = new List<int>(); // в скобочках будет Lf видимо
-        var tileDefinition = new Tiles.Tile(tileId); 
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId); 
         foreach (var mbTileLayer in tile.Layers)
         {
             Debug.Assert(mbTileLayer.Version == 2U);
 
-            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            var tgs = new NtsArtefacts.TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
 
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
@@ -109,7 +109,7 @@ public class MapboxTileReaderWM
         return mostFrequestWatermarkInt;
     }
 
-    private IFeature ReadFeature(TileGeometryTransform tgs, Tile.Layer mbTileLayer, Tile.Feature mbTileFeature, string idAttributeName)
+    private IFeature ReadFeature(NtsArtefacts.TileGeometryTransform tgs, Tile.Layer mbTileLayer, Tile.Feature mbTileFeature, string idAttributeName)
     {
         var geometry = ReadGeometry(tgs, mbTileFeature.Type, mbTileFeature.Geometry);
         var attributes = ReadAttributeTable(mbTileFeature, mbTileLayer.Keys, mbTileLayer.Values);
@@ -124,7 +124,7 @@ public class MapboxTileReaderWM
         return new Feature(geometry, attributes);
     }
 
-    private Geometry ReadGeometry(TileGeometryTransform tgs, Tile.GeomType type, IList<uint> geometry)
+    private Geometry ReadGeometry(NtsArtefacts.TileGeometryTransform tgs, Tile.GeomType type, IList<uint> geometry)
     {
         switch (type)
         {
@@ -149,7 +149,7 @@ public class MapboxTileReaderWM
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private int? ExtractFromFeature(TileGeometryTransform tgs, Tile.Feature mbTileFeature, 
+    private int? ExtractFromFeature(NtsArtefacts.TileGeometryTransform tgs, Tile.Feature mbTileFeature, 
         NoDistortionWatermarkOptions options, int[] keySequence)
     {
         if (mbTileFeature.Type == Tile.GeomType.LineString)
@@ -169,7 +169,7 @@ public class MapboxTileReaderWM
     /// <param name="keySequence"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    private int? ReadLineStringWM(TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
+    private int? ReadLineStringWM(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         var currentIndex = 0; var currentX = 0; var currentY = 0;
         //int watermarkInt = -1; 
@@ -188,21 +188,21 @@ public class MapboxTileReaderWM
         return watermarkInt;
     }
 
-    private Geometry ReadPoint(TileGeometryTransform tgs, IList<uint> geometry)
+    private Geometry ReadPoint(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry)
     {
         var currentIndex = 0; var currentX = 0; var currentY = 0;
         var sequences = ReadCoordinateSequences(tgs, geometry, ref currentIndex, ref currentX, ref currentY, forPoint:true);
         return CreatePuntal(sequences);
     }
 
-    private Geometry ReadLineString(TileGeometryTransform tgs, IList<uint> geometry)
+    private Geometry ReadLineString(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry)
     {
         var currentIndex = 0; var currentX = 0; var currentY = 0;
         var sequences = ReadCoordinateSequences(tgs, geometry, ref currentIndex, ref currentX, ref currentY);
         return CreateLineal(sequences);
     }
 
-    private Geometry ReadPolygon(TileGeometryTransform tgs, IList<uint> geometry)
+    private Geometry ReadPolygon(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry)
     {
         var currentIndex = 0; var currentX = 0; var currentY = 0;
         var sequences = ReadCoordinateSequences(tgs, geometry, ref currentIndex, ref currentX, ref currentY, 1);
@@ -305,7 +305,7 @@ public class MapboxTileReaderWM
     /// <param name="keySequence"></param>
     /// <returns></returns>
     private int? ExtractWMFromSingleLinestringMtLtLt(
-        TileGeometryTransform tgs, IList<uint> geometry,
+        NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
         ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         // сюда запишем индексы сегментов с нетипичной геометрией
@@ -486,7 +486,7 @@ public class MapboxTileReaderWM
     }
 
     private int? ExtractWMFromSingleLinestringNLt(
-        TileGeometryTransform tgs, IList<uint> geometry,
+        NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
         ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         // сюда запишем индексы сегментов с нетипичной геометрией
@@ -595,7 +595,7 @@ public class MapboxTileReaderWM
     }
 
     private CoordinateSequence[] ReadCoordinateSequences(
-        TileGeometryTransform tgs, IList<uint> geometry,
+        NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
         ref int currentIndex, ref int currentX, ref int currentY, int buffer = 0, bool forPoint = false)
     {
 
@@ -671,7 +671,7 @@ public class MapboxTileReaderWM
         return sequences.ToArray();
     }
 
-    private CoordinateSequence[] ReadSinglePointSequences(TileGeometryTransform tgs, IList<uint> geometry,
+    private CoordinateSequence[] ReadSinglePointSequences(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
         int numSequences, ref int currentIndex, ref int currentX, ref int currentY)
     {
         var res = new CoordinateSequence[numSequences];
@@ -689,7 +689,7 @@ public class MapboxTileReaderWM
         return res;
     }
 
-    private void TransformOffsetAndAddToSequence(TileGeometryTransform tgs, (int x, int y) localPosition, CoordinateSequence sequence, int index)
+    private void TransformOffsetAndAddToSequence(NtsArtefacts.TileGeometryTransform tgs, (int x, int y) localPosition, CoordinateSequence sequence, int index)
     {
         var (longitude, latitude) = tgs.TransformInverse(localPosition.x, localPosition.y);
         sequence.SetOrdinate(index, Ordinate.X, longitude);

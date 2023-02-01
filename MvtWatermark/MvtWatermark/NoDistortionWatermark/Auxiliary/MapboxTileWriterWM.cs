@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using MvtWatermark.NoDistortionWatermark;
-using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO.VectorTiles;
+using Mapbox = NetTopologySuite.IO.VectorTiles.Mapbox;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
+using MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
 
-namespace NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
+namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
 public static class MapboxTileWriterWM
@@ -16,7 +17,7 @@ public static class MapboxTileWriterWM
     {
         public int Index { get; set; }
 
-        public MapboxCommandType Type { get; set; }
+        public Mapbox.MapboxCommandType Type { get; set; }
     }
 
     private static bool _hasSuccessfullyEmbeded = false;
@@ -30,10 +31,10 @@ public static class MapboxTileWriterWM
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
-    public static Dictionary<ulong, Tile> WriteWM(this VectorTileTree tree, BitArray watermarkString, 
+    public static Dictionary<ulong, Mapbox.Tile> WriteWM(this VectorTileTree tree, BitArray watermarkString, 
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
-        var result = new Dictionary<ulong, Tile>();
+        var result = new Dictionary<ulong, Mapbox.Tile>();
 
         // !!! Разделение ещё не реализовано, это только начало
         // Сортированного словаря здесь не будет (скорее всего)
@@ -79,7 +80,7 @@ public static class MapboxTileWriterWM
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-    public static Tile WriteWM(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
+    public static Mapbox.Tile WriteWM(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
         ulong tileId, NoDistortionWatermarkOptions options, uint extent = 4096, string idAttributeName = "id")
     {
         var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
@@ -89,8 +90,8 @@ public static class MapboxTileWriterWM
 
         var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
-        var tile = new Tiles.Tile(vectorTile.TileId);
-        var tgt = new TileGeometryTransform(tile, extent);
+        var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
+        var tgt = new NtsArtefacts.TileGeometryTransform(tile, extent);
 
         var mapboxTile = new Mapbox.Tile();
         foreach (var localLayer in vectorTile.Layers)
@@ -98,7 +99,7 @@ public static class MapboxTileWriterWM
             var layer = new Mapbox.Tile.Layer { Version = 2, Name = localLayer.Name, Extent = extent };
 
             var keys = new Dictionary<string, uint>();
-            var values = new Dictionary<Tile.Value, uint>();
+            var values = new Dictionary<Mapbox.Tile.Value, uint>();
 
             var embedingIndex = 0; // для работы с Lf
 
@@ -110,11 +111,11 @@ public static class MapboxTileWriterWM
                 switch (localLayerFeature.Geometry)
                 {
                     case IPuntal puntal:
-                        feature.Type = Tile.GeomType.Point;
+                        feature.Type = Mapbox.Tile.GeomType.Point;
                         feature.Geometry.AddRange(Encode(puntal, tgt));
                         break;
                     case ILineal lineal:
-                        feature.Type = Tile.GeomType.LineString;
+                        feature.Type = Mapbox.Tile.GeomType.LineString;
 
                         // для реализации параметра Lf
                         if (embedingIndex < options.Lf) 
@@ -129,11 +130,11 @@ public static class MapboxTileWriterWM
                         }
                         break;
                     case IPolygonal polygonal:
-                        feature.Type = Tile.GeomType.Polygon;
+                        feature.Type = Mapbox.Tile.GeomType.Polygon;
                         feature.Geometry.AddRange(Encode(polygonal, tgt, tile.Zoom));
                         break;
                     default:
-                        feature.Type = Tile.GeomType.Unknown;
+                        feature.Type = Mapbox.Tile.GeomType.Unknown;
                         break;
                 }
 
@@ -175,8 +176,8 @@ public static class MapboxTileWriterWM
     /// <returns></returns>
     public static Mapbox.Tile GetMapboxTileFromVectorTile(this VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
     {
-        var tile = new Tiles.Tile(vectorTile.TileId);
-        var tgt = new TileGeometryTransform(tile, extent);
+        var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
+        var tgt = new NtsArtefacts.TileGeometryTransform(tile, extent);
 
         var mapboxTile = new Mapbox.Tile();
         foreach (var localLayer in vectorTile.Layers)
@@ -184,7 +185,7 @@ public static class MapboxTileWriterWM
             var layer = new Mapbox.Tile.Layer { Version = 2, Name = localLayer.Name, Extent = extent };
 
             var keys = new Dictionary<string, uint>();
-            var values = new Dictionary<Tile.Value, uint>();
+            var values = new Dictionary<Mapbox.Tile.Value, uint>();
 
             foreach (var localLayerFeature in localLayer.Features)
             {
@@ -194,19 +195,19 @@ public static class MapboxTileWriterWM
                 switch (localLayerFeature.Geometry)
                 {
                     case IPuntal puntal:
-                        feature.Type = Tile.GeomType.Point;
+                        feature.Type = Mapbox.Tile.GeomType.Point;
                         feature.Geometry.AddRange(Encode(puntal, tgt));
                         break;
                     case ILineal lineal:
-                        feature.Type = Tile.GeomType.LineString;
+                        feature.Type = Mapbox.Tile.GeomType.LineString;
                         feature.Geometry.AddRange(Encode(lineal, tgt));
                         break;
                     case IPolygonal polygonal:
-                        feature.Type = Tile.GeomType.Polygon;
+                        feature.Type = Mapbox.Tile.GeomType.Polygon;
                         feature.Geometry.AddRange(Encode(polygonal, tgt, tile.Zoom));
                         break;
                     default:
-                        feature.Type = Tile.GeomType.Unknown;
+                        feature.Type = Mapbox.Tile.GeomType.Unknown;
                         break;
                 }
 
@@ -239,7 +240,7 @@ public static class MapboxTileWriterWM
     }
 
     private static void AddAttributes(List<uint> tags, Dictionary<string, uint> keys,
-        Dictionary<Tile.Value, uint> values, IAttributesTable attributes)
+        Dictionary<Mapbox.Tile.Value, uint> values, IAttributesTable attributes)
     {
         if (attributes == null || attributes.Count == 0)
             return;
@@ -260,44 +261,44 @@ public static class MapboxTileWriterWM
         }
     }
 
-    private static Tile.Value ToTileValue(object value)
+    private static Mapbox.Tile.Value ToTileValue(object value)
     {
         switch (value)
         {
             case bool boolValue:
-                return new Tile.Value { BoolValue = boolValue };
+                return new Mapbox.Tile.Value { BoolValue = boolValue };
 
             case sbyte sbyteValue:
-                return new Tile.Value { IntValue = sbyteValue };
+                return new Mapbox.Tile.Value { IntValue = sbyteValue };
             case short shortValue:
-                return new Tile.Value { IntValue = shortValue };
+                return new Mapbox.Tile.Value { IntValue = shortValue };
             case int intValue:
-                return new Tile.Value { IntValue = intValue };
+                return new Mapbox.Tile.Value { IntValue = intValue };
             case long longValue:
-                return new Tile.Value { IntValue = longValue };
+                return new Mapbox.Tile.Value { IntValue = longValue };
 
             case byte byteValue:
-                return new Tile.Value { UintValue = byteValue };
+                return new Mapbox.Tile.Value { UintValue = byteValue };
             case ushort ushortValue:
-                return new Tile.Value { UintValue = ushortValue };
+                return new Mapbox.Tile.Value { UintValue = ushortValue };
             case uint uintValue:
-                return new Tile.Value { UintValue = uintValue };
+                return new Mapbox.Tile.Value { UintValue = uintValue };
             case ulong ulongValue:
-                return new Tile.Value { UintValue = ulongValue };
+                return new Mapbox.Tile.Value { UintValue = ulongValue };
 
             case double doubleValue:
-                return new Tile.Value { DoubleValue = doubleValue };
+                return new Mapbox.Tile.Value { DoubleValue = doubleValue };
             case float floatValue:
-                return new Tile.Value { FloatValue = floatValue };
+                return new Mapbox.Tile.Value { FloatValue = floatValue };
 
             case string stringValue:
-                return new Tile.Value { StringValue = stringValue };
+                return new Mapbox.Tile.Value { StringValue = stringValue };
         }
 
         return null;
     }
 
-    private static IEnumerable<uint> Encode(IPuntal puntal, TileGeometryTransform tgt)
+    private static IEnumerable<uint> Encode(IPuntal puntal, NtsArtefacts.TileGeometryTransform tgt)
     {
         const int coordinateIndex = 0;
 
@@ -317,13 +318,13 @@ public static class MapboxTileWriterWM
         }
 
         // Return result
-        yield return GenerateCommandInteger(MapboxCommandType.MoveTo, parameters.Count / 2);
+        yield return GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, parameters.Count / 2);
         foreach (var parameter in parameters)
             yield return parameter;
 
     }
 
-    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt)
+    private static IEnumerable<uint> Encode(ILineal lineal, NtsArtefacts.TileGeometryTransform tgt)
     {
         var geometry = (Geometry)lineal;
         int currentX = 0, currentY = 0;
@@ -344,7 +345,7 @@ public static class MapboxTileWriterWM
     /// <param name="options"></param>
     /// <param name="KeySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
+    private static IEnumerable<uint> Encode(ILineal lineal, NtsArtefacts.TileGeometryTransform tgt, int watermarkInt,
         NoDistortionWatermarkOptions options, int[] keySequence)
     // фрагмент ЦВЗ для каждого тайла надо определять как-то
     {
@@ -383,7 +384,7 @@ public static class MapboxTileWriterWM
         }
     }
 
-    private static IEnumerable<uint> Encode(IPolygonal polygonal, TileGeometryTransform tgt, int zoom)
+    private static IEnumerable<uint> Encode(IPolygonal polygonal, NtsArtefacts.TileGeometryTransform tgt, int zoom)
     {
         var geometry = (Geometry)polygonal;
 
@@ -413,7 +414,7 @@ public static class MapboxTileWriterWM
     /// <summary>
     /// Encodes geometry with watermark (Стойкий ЦВЗ, алгоритм встраивания в половину )
     /// </summary>
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private static IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         // how many parameters for LineTo command
@@ -460,14 +461,14 @@ public static class MapboxTileWriterWM
         int lastLineToCommand; // индекс последнего LineTo CommandInteger
 
         // Стартовая команда: первый MoveTo
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         encoded.Add(GenerateParameterInteger(position.x));
         encoded.Add(GenerateParameterInteger(position.y));
 
         var encodedIndex = 2; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
         encodedIndex++; // encodedIndex = 3
         lastLineToCommand = encodedIndex;
 
@@ -486,10 +487,10 @@ public static class MapboxTileWriterWM
                     && lsArray[realSegmentIndexInElementary] == 1) 
                 {
                     lastLineToCount = 1;
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
                     position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
@@ -503,7 +504,7 @@ public static class MapboxTileWriterWM
                 encodedIndex += 2;
 
                 lastLineToCount++;
-                encoded[lastLineToCommand] = GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount);
+                encoded[lastLineToCommand] = GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount);
 
                 currentRealSegment++;
             }
@@ -522,7 +523,7 @@ public static class MapboxTileWriterWM
     }
 
     // Не работает нормально, пока не используем
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         // how many parameters for LineTo command
@@ -562,23 +563,23 @@ public static class MapboxTileWriterWM
         var currentRealSegment = 0;
         var currentElementarySegment = 0;
 
-        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = MapboxCommandType.MoveTo }; // индекс последней команды
+        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = Mapbox.MapboxCommandType.MoveTo }; // индекс последней команды
 
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         encoded.Add(GenerateParameterInteger(position.x));
         encoded.Add(GenerateParameterInteger(position.y));
 
         if (!(keySequence[currentElementarySegment] == watermarkInt && lsArray[0] == 1))
         {
-            encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+            encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
             encodedIndex = 3;
-            lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
+            lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.LineTo };
         }
         else
         {
             encodedIndex = 2;
-            lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.MoveTo };
+            lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.MoveTo };
         }
 
         // 0-й отсчёт - это первый MoveTo
@@ -599,41 +600,41 @@ public static class MapboxTileWriterWM
                 {
                     if (lastCommand.Index == encodedIndex)
                     {
-                        if (lastCommand.Type == MapboxCommandType.LineTo) {
-                            encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 1);
+                        if (lastCommand.Type == Mapbox.MapboxCommandType.LineTo) {
+                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
                         }
-                        else if (lastCommand.Type == MapboxCommandType.MoveTo)
+                        else if (lastCommand.Type == Mapbox.MapboxCommandType.MoveTo)
                         {
-                            encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 2);
+                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 2);
                         }
                         encodedIndex += 9;
                     }
                     else
                     {
-                        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
                         encodedIndex += 10;
                     }
 
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
 
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
                     position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
 
                     position = tgt.Transform(sequence, i, ref currentX, ref currentY);
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
                     encoded.Add(GenerateParameterInteger(position.x));
                     encoded.Add(GenerateParameterInteger(position.y));
 
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
 
                     lastLineToCount = 0; // Сколько параметров для последнего LineTo
 
                     
                     lastCommand.Index = encodedIndex;
-                    lastCommand.Type = MapboxCommandType.LineTo;
+                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                 }
                 else
                 {
@@ -642,7 +643,7 @@ public static class MapboxTileWriterWM
                     encodedIndex += 2;
 
                     lastLineToCount++;
-                    encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount); // это нужно делать 1 раз
+                    encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount); // это нужно делать 1 раз
                 }
 
                 currentRealSegment++;
@@ -676,7 +677,7 @@ public static class MapboxTileWriterWM
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         // how many parameters for LineTo command
@@ -723,16 +724,16 @@ public static class MapboxTileWriterWM
         var currentRealSegment = 0;
         var currentElementarySegment = 0;
 
-        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = MapboxCommandType.MoveTo }; // индекс последней команды
+        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = Mapbox.MapboxCommandType.MoveTo }; // индекс последней команды
 
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         encoded.Add(GenerateParameterInteger(position.x));
         encoded.Add(GenerateParameterInteger(position.y));
 
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
         encodedIndex = 3;
-        lastCommand = new LastCommandInfo { Index = encodedIndex, Type = MapboxCommandType.LineTo };
+        lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.LineTo };
 
         // 0-й отсчёт - это первый MoveTo
         for (var i = 1; i < count; i++)
@@ -752,31 +753,31 @@ public static class MapboxTileWriterWM
                 {
                     if (lastCommand.Index == encodedIndex)
                     {
-                        encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.MoveTo, 1);
+                        encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
                         encodedIndex += 3;
                     }
                     else
                     {
-                        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
                         encodedIndex += 4;
                     }
 
                     encoded.Add(GenerateParameterInteger(0));
                     encoded.Add(GenerateParameterInteger(0));
 
-                    encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, 1));
+                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
 
                     lastLineToCount = 0; // Сколько команд для последнего LineTo
 
                     lastCommand.Index = encodedIndex;
-                    lastCommand.Type = MapboxCommandType.LineTo;
+                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                 }
                 encoded.Add(GenerateParameterInteger(position.x));
                 encoded.Add(GenerateParameterInteger(position.y));
                 encodedIndex += 2;
 
                 lastLineToCount++;
-                encoded[lastCommand.Index] = GenerateCommandInteger(MapboxCommandType.LineTo, lastLineToCount); // это нужно делать 1 раз
+                encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount); // это нужно делать 1 раз
 
                 currentRealSegment++;
             }
@@ -795,7 +796,7 @@ public static class MapboxTileWriterWM
     }
 
 
-    private static IEnumerable<uint> Encode(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private static IEnumerable<uint> Encode(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
         ref int currentX, ref int currentY,
         bool ring = false, bool ccw = false)
     {
@@ -805,7 +806,7 @@ public static class MapboxTileWriterWM
         // if we have a ring we need to check orientation
         if (ring)
         {
-            if (ccw != Algorithm.Orientation.IsCCW(sequence))
+            if (ccw != NetTopologySuite.Algorithm.Orientation.IsCCW(sequence))
             {
                 sequence = sequence.Copy();
                 CoordinateSequences.Reverse(sequence);
@@ -814,14 +815,14 @@ public static class MapboxTileWriterWM
         var encoded = new List<uint>();
 
         // Start point
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         encoded.Add(GenerateParameterInteger(position.x));
         encoded.Add(GenerateParameterInteger(position.y));
 
         // Add LineTo command (stub)
         var lineToCount = 0;
-        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lineToCount));
+        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lineToCount));
         for (var i = 1; i < count; i++)
         {
             position = tgt.Transform(sequence, i, ref currentX, ref currentY);
@@ -834,7 +835,7 @@ public static class MapboxTileWriterWM
             }
         }
         if (lineToCount > 0)
-            encoded[3] = GenerateCommandInteger(MapboxCommandType.LineTo, lineToCount);
+            encoded[3] = GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lineToCount);
 
         // Validate encoded data
         if (ring)
@@ -842,7 +843,7 @@ public static class MapboxTileWriterWM
             // A ring has 1 MoveTo and 1 LineTo command.
             // A ring is only valid if we have at least 3 points, otherwise collapse
             if (encoded.Count - 2 >= 6)
-                encoded.Add(GenerateCommandInteger(MapboxCommandType.ClosePath, 1));
+                encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.ClosePath, 1));
             else
                 encoded.Clear();
         }
@@ -860,7 +861,7 @@ public static class MapboxTileWriterWM
     /// <summary>
     /// Generates a command integer.
     /// </summary>
-    private static uint GenerateCommandInteger(MapboxCommandType command, int count)
+    private static uint GenerateCommandInteger(Mapbox.MapboxCommandType command, int count)
     { // CommandInteger = (id & 0x7) | (count << 3)
         return (uint)(((int)command & 0x7) | (count << 3));
     }

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace NetTopologySuite.IO.VectorTiles.Mapbox;
+namespace MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
 
 public static class DictionaryExtensions
 {

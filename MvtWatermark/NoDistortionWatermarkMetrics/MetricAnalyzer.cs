@@ -486,7 +486,7 @@ public static class MetricAnalyzer
     /// <returns></returns>
     private static VectorTile CreateVectorTile(int x, int y, int zoom, out ulong tile_id)
     {
-        tile_id = NetTopologySuite.IO.VectorTiles.Tiles.Changed.Tile.CalculateTileId(zoom, x, y);
+        tile_id = MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
         var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
         var vt = new VectorTile { TileId = tileDefinition.Id };
         var lyr = new Layer { Name = "layer1" };

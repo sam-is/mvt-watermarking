@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace NoDistortionWatermarkMetrics.DebugClasses;
+﻿namespace NoDistortionWatermarkMetrics.DebugClasses;
 
 public static class ConsoleWriter
 {

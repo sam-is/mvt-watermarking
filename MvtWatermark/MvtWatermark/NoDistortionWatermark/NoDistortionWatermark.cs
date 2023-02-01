@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using NetTopologySuite.IO.VectorTiles;
-using NetTopologySuite.IO.VectorTiles.Mapbox.Watermarking;
+using MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 namespace MvtWatermark.NoDistortionWatermark;
 
