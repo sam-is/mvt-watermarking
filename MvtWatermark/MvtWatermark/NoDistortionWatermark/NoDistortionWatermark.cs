@@ -33,7 +33,7 @@ public class NoDistortionWatermark: IMvtWatermark
         // проблема со встраиванием: если в последовательности бит попадётся подпоследовательность,
         // состоящая из нулей, её не получится встроить. А такая наверняка попадётся.
         // Значит, нужно изменить алгоритм, подстроив его под возможность встраивания нуля
-        else if (message.Length == 1 && message[0] == false) 
+        if (message.Length == 1 && message[0] == false) 
         {
             throw new Exception("Встраивание ЦВЗ '0' невозможно из-за особенностей алгоритма");
         }
@@ -69,10 +69,10 @@ public class NoDistortionWatermark: IMvtWatermark
         }
 
         if (watermarkInts.Count == 0)
-            return new BitArray(new bool[] { false }); 
+            return new BitArray(new[] { false }); 
         // такой ЦВЗ не мог быть встроен, а значит, такой результат = "ничего не было извлечено"
 
-        return new BitArray(new int[] { watermarkInts[0] }); 
+        return new BitArray(new[] { watermarkInts[0] }); 
         // пока что просто возвращается первый элемент из списка вотермарок
     }
 }

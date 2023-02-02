@@ -345,7 +345,7 @@ public static class MapboxTileWriterWm
     /// <param name="keySequence"></param>
     /// <returns></returns>
     private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
-        NoDistortionWatermarkOptions options, int[] keySequence)
+        NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     // фрагмент ЦВЗ для каждого тайла надо определять как-то
     {
         var geometry = (Geometry)lineal;

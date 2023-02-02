@@ -16,9 +16,9 @@ internal class Program
 
         var singleParameterSet = new MetricAnalyzer.ZxySet(0, 0, 0);
 
-        //MetricAnalyzer.DisplayUsersTileMetric(parameterRangeSet, singleParameterSet);
+        MetricAnalyzer.DisplayUsersTileMetric(parameterRangeSet, singleParameterSet);
 
-        MetricAnalyzer.DisplayMetricForDBTileSet(parameterRangeSet, parameterSets);
+        //MetricAnalyzer.DisplayMetricForDBTileSet(parameterRangeSet, parameterSets);
 
         //Console.WriteLine(MetricAnalyzer.TestVectorTileIsCorrect(new MetricAnalyzer.ZxySet(10, 658, 338)));
     }

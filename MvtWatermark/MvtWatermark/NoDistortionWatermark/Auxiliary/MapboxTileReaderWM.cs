@@ -26,7 +26,7 @@ public class MapboxTileReaderWm
     /// <summary>
     /// Creates VectorTileTree from Dictionary(key = ulong tileId, value = Tile)
     /// </summary>
-    /// <param name="tileDict">Dictionary <ulong, Mapbox.Tile> that contains tile id as key and Mapbox vector tile as value</param>
+    /// <param name="tileDict">Dictionary (ulong, Mapbox.Tile) that contains tile id as key and Mapbox vector tile as value</param>
     /// <returns></returns>
     public VectorTileTree Read(Dictionary<ulong, Tile> tileDict)
     {
