@@ -11,7 +11,7 @@ using MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
-public static class MapboxTileWriterWm_
+public static class MapboxTileWriterWm
 {
     private struct LastCommandInfo
     {

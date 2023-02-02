@@ -42,7 +42,7 @@ public class NoDistortionWatermark: IMvtWatermark
 
         var tileDict = tiles.WriteWm(message, firstHalfOfTheKey, _options);
 
-        var readerWm = new MapboxTileReaderWm_();
+        var readerWm = new MapboxTileReaderWm();
 
         var toReturn = readerWm.Read(tileDict);
 
@@ -59,7 +59,7 @@ public class NoDistortionWatermark: IMvtWatermark
     {
         var shortenedKey = (short)key;
 
-        var readerWm = new MapboxTileReaderWm_();
+        var readerWm = new MapboxTileReaderWm();
         var watermarkInts = new List<int>();
         foreach (var tileIndex in tiles) 
         {

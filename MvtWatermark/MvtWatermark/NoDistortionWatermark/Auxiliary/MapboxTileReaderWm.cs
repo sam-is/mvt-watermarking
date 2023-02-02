@@ -9,16 +9,16 @@ using NetTopologySuite.IO.VectorTiles.Mapbox;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
-public class MapboxTileReaderWm_
+public class MapboxTileReaderWm
 {
     private readonly GeometryFactory _factory;
 
-    public MapboxTileReaderWm_()
+    public MapboxTileReaderWm()
         : this(new GeometryFactory(new PrecisionModel(), 4326))
     {
     }
 
-    public MapboxTileReaderWm_(GeometryFactory factory)
+    public MapboxTileReaderWm(GeometryFactory factory)
     {
         _factory = factory;
     }
