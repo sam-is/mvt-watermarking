@@ -147,7 +147,13 @@ dotnet_style_qualification_for_event = false:silent
 
 # For variables
 dotnet_naming_symbols.local_symbol.applicable_kinds = local
-dotnet_naming_style.local_style.capitalization = camel_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
 dotnet_naming_rule.variables_are_camel_case.severity = error
 dotnet_naming_rule.variables_are_camel_case.symbols = local_symbol
-dotnet_naming_rule.variables_are_camel_case.style = local_style
+dotnet_naming_rule.variables_are_camel_case.style = camel_case_style
+
+# For method parameters
+dotnet_naming_symbols.method_parameters.applicable_kinds = parameter
+dotnet_naming_rule.method_parameters_camelcase.severity = error
+dotnet_naming_rule.method_parameters_camelcase.symbols = method_parameters
+dotnet_naming_rule.method_parameters_camelcase.style = camel_case_style
