@@ -40,8 +40,8 @@ public static class WatermarkTransform
     /// <summary>
     /// Сравнивает два объекта класса BitArray. Расширяет класс BitArray
     /// </summary>
-    /// <param name="A"></param>
-    /// <param name="B"></param>
+    /// <param name="aArr"></param>
+    /// <param name="bArr"></param>
     /// <returns></returns>
     public static bool AreEqual(this BitArray aArr, BitArray bArr)
     {

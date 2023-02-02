@@ -9,16 +9,16 @@ using NetTopologySuite.IO.VectorTiles.Mapbox;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
-public class MapboxTileReaderWM
+public class MapboxTileReaderWm
 {
     private readonly GeometryFactory _factory;
 
-    public MapboxTileReaderWM()
+    public MapboxTileReaderWm()
         : this(new GeometryFactory(new PrecisionModel(), 4326))
     {
     }
 
-    public MapboxTileReaderWM(GeometryFactory factory)
+    public MapboxTileReaderWm(GeometryFactory factory)
     {
         _factory = factory;
     }
@@ -26,14 +26,14 @@ public class MapboxTileReaderWM
     /// <summary>
     /// Creates VectorTileTree from Dictionary(key = ulong tileId, value = Tile)
     /// </summary>
-    /// <param name="TileDict"></param>
+    /// <param name="tileDict">Dictionary <ulong, Mapbox.Tile> that contains tile id as key and Mapbox vector tile as value</param>
     /// <returns></returns>
     public VectorTileTree Read(Dictionary<ulong, Tile> tileDict)
     {
         var resultTree = new VectorTileTree();
         foreach (var tilePair in tileDict)
         {
-            resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null);
+            resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null!);
         }
 
         return resultTree;
@@ -42,8 +42,8 @@ public class MapboxTileReaderWM
     /// <summary>
     /// Reads a Vector Tile stream.
     /// </summary>
-    /// <param name="stream">Vector tile stream.</param>
-    /// <param name="tileDefinition">Tile information.</param>
+    /// <param name="tile">Mapbox vector tile</param>
+    /// <param name="tileId">Tile id</param>
     /// <param name="idAttributeName">Optional. Specifies the name of the attribute that the vector tile feature's ID should be stored in the NetTopologySuite Features AttributeTable.</param>
     /// <returns></returns>
     public VectorTile Read(Tile tile, ulong tileId, string idAttributeName)
@@ -67,7 +67,15 @@ public class MapboxTileReaderWM
         return vectorTile;
     }
 
-    public int? ExtractWM(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
+    /// <summary>
+    /// Extracts watermark from Mapbox tile as integer
+    /// </summary>
+    /// <param name="tile"></param>
+    /// <param name="tileId"></param>
+    /// <param name="options"></param>
+    /// <param name="firstHalfOfTheKey"></param>
+    /// <returns></returns>
+    public int? ExtractWm(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
     {
         int key = firstHalfOfTheKey;
         key = (key << 16) + (short)tileId;
@@ -154,7 +162,7 @@ public class MapboxTileReaderWM
     {
         if (mbTileFeature.Type == Tile.GeomType.LineString)
         {
-            var watermarkInt = ReadLineStringWM(tgs, mbTileFeature.Geometry, options, keySequence);
+            var watermarkInt = ReadLineStringWm(tgs, mbTileFeature.Geometry, options, keySequence);
             return watermarkInt;
         }
         return null;
@@ -169,23 +177,19 @@ public class MapboxTileReaderWM
     /// <param name="keySequence"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    private int? ReadLineStringWM(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
+    private int? ReadLineStringWm(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry, NoDistortionWatermarkOptions options, int[] keySequence)
     {
         var currentIndex = 0; var currentX = 0; var currentY = 0;
-        //int watermarkInt = -1; 
-        int? watermarkInt = null;
-        switch (options.AtypicalEncodingType){
-            case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt:
-                watermarkInt = ExtractWMFromSingleLinestringMtLtLt(tgs, geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence);
-                break;
-            case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt:
-                throw new NotImplementedException();
-            case NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands:
-                watermarkInt = ExtractWMFromSingleLinestringNLt(tgs, geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence);
-                break;
-        }
-         
-        return watermarkInt;
+        return options.AtypicalEncodingType switch
+        {
+            NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt =>
+                ExtractWatermarkFromSingleLinestringMtLtLt(geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence),
+            NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt =>
+                throw new NotImplementedException(),
+            NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands =>
+                ExtractWatermarkFromSingleLinestringNLt(geometry, ref currentIndex, ref currentX, ref currentY, options, keySequence),
+            _ => null
+        };
     }
 
     private Geometry ReadPoint(NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry)
@@ -304,9 +308,8 @@ public class MapboxTileReaderWM
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private int? ExtractWMFromSingleLinestringMtLtLt(
-        NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
-        ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
+    private int? ExtractWatermarkFromSingleLinestringMtLtLt(IList<uint> geometry,
+        ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // сюда запишем индексы сегментов с нетипичной геометрией
         var realSegments = new List<bool>();
@@ -343,7 +346,8 @@ public class MapboxTileReaderWM
                 {
                     return null;
                 }
-                else if (count < 2) // это условие, возможно, не нужно
+                // если количество LineTo меньше двух
+                if (count < 2) // это условие, возможно, не нужно
                 {
                     shouldTryReversed = true;
                     break;
@@ -391,7 +395,7 @@ public class MapboxTileReaderWM
             lastPosition1 = currentPosition;
             lastPosition2 = currentPosition;
 
-            var rNTGstart = false;
+            var rNtgStart = false;
 
             while (currentIndex < geometry.Count)
             {
@@ -401,7 +405,7 @@ public class MapboxTileReaderWM
                     Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
-                    if (lastPosition2 == currentPosition && rNTGstart)
+                    if (lastPosition2 == currentPosition && rNtgStart)
                     {
                         realSegmentsReversedLineString.Add(true);
                     }
@@ -436,8 +440,8 @@ public class MapboxTileReaderWM
 
                 if (currentPosition != lastPosition1)
                     return null;
-                else 
-                    rNTGstart = true;
+
+                rNtgStart = true;
             }
 
             realSegmentsReversedLineString.Reverse();
@@ -446,7 +450,7 @@ public class MapboxTileReaderWM
 
 
         var realSegmentsNum = realSegments.Count;
-        var realSegmentsInONEElemSegment = realSegmentsNum / options.D;
+        var realSegmentsInOneElementarySegmentNum = realSegmentsNum / options.D;
 
         // предусмотреть возможность отражения лайнстринга
         var extractedWatermarkInts = new List<int>();
@@ -456,9 +460,9 @@ public class MapboxTileReaderWM
 
         for (var i = 0; i < options.D/2; i++)
         {
-            for (var j = 0; j < realSegmentsInONEElemSegment; j++)
+            for (var j = 0; j < realSegmentsInOneElementarySegmentNum; j++)
             {
-                if (realSegments[realSegmentsInONEElemSegment * i + j])
+                if (realSegments[realSegmentsInOneElementarySegmentNum * i + j])
                 {
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
@@ -485,9 +489,8 @@ public class MapboxTileReaderWM
         return mostFrequestWatermarkInt;
     }
 
-    private int? ExtractWMFromSingleLinestringNLt(
-        NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry,
-        ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, int[] keySequence)
+    private int? ExtractWatermarkFromSingleLinestringNLt(IList<uint> geometry,
+        ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // сюда запишем индексы сегментов с нетипичной геометрией
         var realSegments = new List<bool>();
@@ -518,15 +521,8 @@ public class MapboxTileReaderWM
             Debug.Assert(count >= 1, $"Assertion: LineTo count = {count}");
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
-            if (!isFirstSegment) {
-                realSegments.Add(true);
-            }
-            else
-            {
-                realSegments.Add(false);
-            }
+            realSegments.Add(!isFirstSegment);
             isFirstSegment = false;
-
 
             for (var i = 1; i < count; i++)
             {
@@ -538,7 +534,7 @@ public class MapboxTileReaderWM
         }
 
         var realSegmentsNum = realSegments.Count;
-        var realSegmentsInONEElemSegment = realSegmentsNum / options.D;
+        var realSegmentsInOneElementarySegmentNum = realSegmentsNum / options.D;
 
         // предусмотреть возможность отражения лайнстринга
         var extractedWatermarkInts = new List<int>();
@@ -551,15 +547,15 @@ public class MapboxTileReaderWM
         // работает также с отражённым лайнстрингом
         for (var i = 0; i < options.D / 2; i++)
         {
-            for (var j = 0; j < realSegmentsInONEElemSegment; j++)
+            for (var j = 0; j < realSegmentsInOneElementarySegmentNum; j++)
             {
-                if (realSegments[realSegmentsInONEElemSegment * i + j]) 
+                if (realSegments[realSegmentsInOneElementarySegmentNum * i + j]) 
                 {
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
                 }
 
-                if (realSegments[realSegments.Count - 1 - (realSegmentsInONEElemSegment * i + j)])
+                if (realSegments[realSegments.Count - 1 - (realSegmentsInOneElementarySegmentNum * i + j)])
                 {
                     extractedWatermarkIntsSecondHalf.Add(keySequence[i]);
                     break;
@@ -571,9 +567,8 @@ public class MapboxTileReaderWM
         {
             if (extractedWatermarkIntsSecondHalf.Count == 0)
                 return null;
-            else
-                extractedWatermarkInts = extractedWatermarkIntsSecondHalf;
-                //wasReversed = true;
+            extractedWatermarkInts = extractedWatermarkIntsSecondHalf;
+            //wasReversed = true;
         }
 
 

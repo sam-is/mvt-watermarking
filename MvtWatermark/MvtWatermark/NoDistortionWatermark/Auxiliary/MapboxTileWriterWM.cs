@@ -11,7 +11,7 @@ using MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
-public static class MapboxTileWriterWM
+public static class MapboxTileWriterWm
 {
     private struct LastCommandInfo
     {
@@ -20,18 +20,18 @@ public static class MapboxTileWriterWM
         public Mapbox.MapboxCommandType Type { get; set; }
     }
 
-    private static bool _hasSuccessfullyEmbeded = false;
+    private static bool _hasSuccessfullyEmbeded;
 
     /// <summary>
     /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
     /// </summary>
     /// <param name="tree">The tree.</param>
-    /// <param name="WatermarkString">Watermark BitArray</param>
-    /// <param name="key">key for generating Sk</param>
+    /// <param name="watermarkString">Watermark BitArray</param>
+    /// <param name="firstHalfOfTheKey">(Int16) first half of the key for generating Sk</param>
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
-    public static Dictionary<ulong, Mapbox.Tile> WriteWM(this VectorTileTree tree, BitArray watermarkString, 
+    public static Dictionary<ulong, Mapbox.Tile> WriteWm(this VectorTileTree tree, BitArray watermarkString, 
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
         var result = new Dictionary<ulong, Mapbox.Tile>();
@@ -58,13 +58,13 @@ public static class MapboxTileWriterWM
             }
             watermarkString.RightShift(options.Nb);
 
-            result.Add(elem.Key, elem.Value.WriteWM(watermarkString, firstHalfOfTheKey, elem.Key, options, extent)); 
+            result.Add(elem.Key, elem.Value.WriteWm(watermarkString, firstHalfOfTheKey, elem.Key, options, extent)); 
         }
         */
 
         foreach (var tileIndex in tree)
         {
-            result.Add(tileIndex, tree[tileIndex].WriteWM(watermarkString, firstHalfOfTheKey, tileIndex, options, extent));
+            result.Add(tileIndex, tree[tileIndex].WriteWm(watermarkString, firstHalfOfTheKey, tileIndex, options, extent));
         }
 
         return result;
@@ -74,13 +74,13 @@ public static class MapboxTileWriterWM
     /// Возвращает мапбоксовый тайл для последующего добавления его в словарь (tileId : Mapbox.Tile)
     /// </summary>
     /// <param name="vectorTile">The vector tile.</param>
-    /// <param name="WatermarkString">Watermark BitArray</param>
-    /// <param name="key">key for generating Sk</param>
+    /// <param name="watermarkString">Watermark BitArray</param>
+    /// <param name="firstHalfOfTheKey">(Int16) first half of the key for generating Sk</param>
     /// <param name="tileId">а это наверное не надо передавать, tileId есть в свойствах vectorTile</param>
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-    public static Mapbox.Tile WriteWM(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
+    public static Mapbox.Tile WriteWm(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
         ulong tileId, NoDistortionWatermarkOptions options, uint extent = 4096, string idAttributeName = "id")
     {
         var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
@@ -91,7 +91,7 @@ public static class MapboxTileWriterWM
         var keySequence = SequenceGenerator.GenerateSequence(key, options.Nb, options.D, options.M);
 
         var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
-        var tgt = new NtsArtefacts.TileGeometryTransform(tile, extent);
+        var tgt = new TileGeometryTransform(tile, extent);
 
         var mapboxTile = new Mapbox.Tile();
         foreach (var localLayer in vectorTile.Layers)
@@ -170,14 +170,13 @@ public static class MapboxTileWriterWM
     /// Возвращает Mapbox Tile, полученный из VectorTile
     /// </summary>
     /// <param name="vectorTile"></param>
-    /// <param name="stream"></param>
     /// <param name="extent"></param>
     /// <param name="idAttributeName"></param>
     /// <returns></returns>
     public static Mapbox.Tile GetMapboxTileFromVectorTile(this VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
     {
         var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
-        var tgt = new NtsArtefacts.TileGeometryTransform(tile, extent);
+        var tgt = new TileGeometryTransform(tile, extent);
 
         var mapboxTile = new Mapbox.Tile();
         foreach (var localLayer in vectorTile.Layers)
@@ -298,7 +297,7 @@ public static class MapboxTileWriterWM
         return null;
     }
 
-    private static IEnumerable<uint> Encode(IPuntal puntal, NtsArtefacts.TileGeometryTransform tgt)
+    private static IEnumerable<uint> Encode(IPuntal puntal, TileGeometryTransform tgt)
     {
         const int coordinateIndex = 0;
 
@@ -324,7 +323,7 @@ public static class MapboxTileWriterWM
 
     }
 
-    private static IEnumerable<uint> Encode(ILineal lineal, NtsArtefacts.TileGeometryTransform tgt)
+    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt)
     {
         var geometry = (Geometry)lineal;
         int currentX = 0, currentY = 0;
@@ -343,9 +342,9 @@ public static class MapboxTileWriterWM
     /// <param name="tgt"></param>
     /// <param name="watermarkInt"></param>
     /// <param name="options"></param>
-    /// <param name="KeySequence"></param>
+    /// <param name="keySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> Encode(ILineal lineal, NtsArtefacts.TileGeometryTransform tgt, int watermarkInt,
+    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
         NoDistortionWatermarkOptions options, int[] keySequence)
     // фрагмент ЦВЗ для каждого тайла надо определять как-то
     {
@@ -384,7 +383,7 @@ public static class MapboxTileWriterWM
         }
     }
 
-    private static IEnumerable<uint> Encode(IPolygonal polygonal, NtsArtefacts.TileGeometryTransform tgt, int zoom)
+    private static IEnumerable<uint> Encode(IPolygonal polygonal, TileGeometryTransform tgt, int zoom)
     {
         var geometry = (Geometry)polygonal;
 
@@ -414,8 +413,8 @@ public static class MapboxTileWriterWM
     /// <summary>
     /// Encodes geometry with watermark (Стойкий ЦВЗ, алгоритм встраивания в половину )
     /// </summary>
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
-        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
+    private static IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
         var count = sequence.Count;
@@ -451,14 +450,12 @@ public static class MapboxTileWriterWM
             sequence = sequence.Reversed();
         }
 
-
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
         var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
 
         var lastLineToCount = 0;
         var currentRealSegment = 0;
-        int lastLineToCommand; // индекс последнего LineTo CommandInteger
 
         // Стартовая команда: первый MoveTo
         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
@@ -470,7 +467,7 @@ public static class MapboxTileWriterWM
 
         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
         encodedIndex++; // encodedIndex = 3
-        lastLineToCommand = encodedIndex;
+        var lastLineToCommand = encodedIndex; // индекс последнего LineTo CommandInteger
 
         for (var i = 1; i < count; i++)
         {
@@ -481,7 +478,7 @@ public static class MapboxTileWriterWM
                 var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
                 var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
-                if (currentElementarySegment < keySequence.Length
+                if (currentElementarySegment < keySequence.Count
                     // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
                     && keySequence[currentElementarySegment] == watermarkInt 
                     && lsArray[realSegmentIndexInElementary] == 1) 
@@ -523,8 +520,8 @@ public static class MapboxTileWriterWM
     }
 
     // Не работает нормально, пока не используем
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
-        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
+    private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, TileGeometryTransform tgt,
+        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
         var count = sequence.Count;
@@ -593,20 +590,21 @@ public static class MapboxTileWriterWM
 
                 var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
-                if (currentElementarySegment < keySequence.Length
+                if (currentElementarySegment < keySequence.Count
                     // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
                     && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
                     && lsArray[realSegmentIndexInElementary] == 1)
                 {
                     if (lastCommand.Index == encodedIndex)
                     {
-                        if (lastCommand.Type == Mapbox.MapboxCommandType.LineTo) {
-                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
-                        }
-                        else if (lastCommand.Type == Mapbox.MapboxCommandType.MoveTo)
+                        encoded[lastCommand.Index] = lastCommand.Type switch
                         {
-                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 2);
-                        }
+                            Mapbox.MapboxCommandType.LineTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                1),
+                            Mapbox.MapboxCommandType.MoveTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                2),
+                            _ => encoded[lastCommand.Index]
+                        };
                         encodedIndex += 9;
                     }
                     else
@@ -677,8 +675,8 @@ public static class MapboxTileWriterWM
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
-        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, int[] keySequence)
+    private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+        ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
         var count = sequence.Count;
@@ -722,7 +720,6 @@ public static class MapboxTileWriterWM
 
         var lastLineToCount = 0;
         var currentRealSegment = 0;
-        var currentElementarySegment = 0;
 
         LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = Mapbox.MapboxCommandType.MoveTo }; // индекс последней команды
 
@@ -742,11 +739,11 @@ public static class MapboxTileWriterWM
 
             if (position.x != 0 || position.y != 0)
             {
-                currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
+                var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
 
                 var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
-                if (currentElementarySegment < keySequence.Length
+                if (currentElementarySegment < keySequence.Count
                     // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
                     && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
                     && lsArray[realSegmentIndexInElementary] == 1)
@@ -796,7 +793,7 @@ public static class MapboxTileWriterWM
     }
 
 
-    private static IEnumerable<uint> Encode(CoordinateSequence sequence, NtsArtefacts.TileGeometryTransform tgt,
+    private static IEnumerable<uint> Encode(CoordinateSequence sequence, TileGeometryTransform tgt,
         ref int currentX, ref int currentY,
         bool ring = false, bool ccw = false)
     {

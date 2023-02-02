@@ -8,7 +8,7 @@ namespace MvtWatermark.NoDistortionWatermark;
 
 public class NoDistortionWatermark: IMvtWatermark
 {
-    private NoDistortionWatermarkOptions _options;
+    private readonly NoDistortionWatermarkOptions _options;
     
     public NoDistortionWatermark(NoDistortionWatermarkOptions options)
     {
@@ -40,11 +40,11 @@ public class NoDistortionWatermark: IMvtWatermark
 
         var firstHalfOfTheKey = (short)key;
 
-        var tileDict = tiles.WriteWM(message, firstHalfOfTheKey, _options);
+        var tileDict = tiles.WriteWm(message, firstHalfOfTheKey, _options);
 
-        var readerWM = new MapboxTileReaderWM();
+        var readerWm = new MapboxTileReaderWm();
 
-        var toReturn = readerWM.Read(tileDict);
+        var toReturn = readerWm.Read(tileDict);
 
         return toReturn;
     }
@@ -59,11 +59,11 @@ public class NoDistortionWatermark: IMvtWatermark
     {
         var shortenedKey = (short)key;
 
-        var readerWM = new MapboxTileReaderWM();
+        var readerWm = new MapboxTileReaderWm();
         var watermarkInts = new List<int>();
         foreach (var tileIndex in tiles) 
         {
-            var extractedInt = readerWM.ExtractWM(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, shortenedKey);
+            var extractedInt = readerWm.ExtractWm(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, shortenedKey);
             if (extractedInt != null)
                 watermarkInts.Add(Convert.ToInt32(extractedInt));
         }
