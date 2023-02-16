@@ -9,7 +9,7 @@ public class AddingNewGeometriesDistortion : IDistortion
 {
     private readonly int _count;
 
-    private Geometry GetRandomGeometry(Envelope envelope)
+    private static Geometry GetRandomGeometry(Envelope envelope)
     {
         Geometry geometry;
 
@@ -63,7 +63,7 @@ public class AddingNewGeometriesDistortion : IDistortion
             {
                 var copyLayer = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
-                    copyLayer.Features.Add(new Feature(feature.Geometry, feature.Attributes));
+                    copyLayer.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
 
                 for (var i = 0; i < _count; i++)
                     copyLayer.Features.Add(new Feature(GetRandomGeometry(envelopeTile), new AttributesTable()));

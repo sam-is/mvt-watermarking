@@ -32,10 +32,7 @@ public class DeletingByAreaDistortion : IDistortion
                 foreach (var feature in layer.Features)
                 {
                     if (feature.Geometry.Area > area)
-                    {
-                        var copyFeature = new Feature(feature.Geometry, feature.Attributes);
-                        l.Features.Add(copyFeature);
-                    }
+                        l.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
                 }
                 copyTile.Layers.Add(l);
             }

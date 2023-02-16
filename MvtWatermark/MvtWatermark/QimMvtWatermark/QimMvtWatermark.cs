@@ -394,10 +394,8 @@ public class QimMvtWatermark : IMvtWatermark
         {
             var l = new Layer { Name = layer.Name };
             foreach (var feature in layer.Features)
-            {
-                var f = new Feature(feature.Geometry, feature.Attributes);
-                l.Features.Add(f);
-            }
+                l.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
+
             copyTile.Layers.Add(l);
         }
 

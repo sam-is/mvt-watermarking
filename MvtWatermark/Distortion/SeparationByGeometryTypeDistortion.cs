@@ -34,7 +34,7 @@ public class SeparationByGeometryTypeDistortion : IDistortion
             {
                 foreach (var feature in layer.Features)
                 {
-                    var copyFeature = new Feature(feature.Geometry, feature.Attributes);
+                    var copyFeature = new Feature(feature.Geometry.Copy(), feature.Attributes);
 
                     switch (feature.Geometry.GeometryType)
                     {
