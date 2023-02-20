@@ -7,6 +7,7 @@ using NetTopologySuite.IO.VectorTiles;
 using Mapbox = NetTopologySuite.IO.VectorTiles.Mapbox;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 using MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
+using System.Linq;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
@@ -20,7 +21,7 @@ public static class MapboxTileWriterWm
         public Mapbox.MapboxCommandType Type { get; set; }
     }
 
-    private static bool _hasSuccessfullyEmbeded;
+    private static bool _hasSuccessfullyEmbeded; // это херня, так делать не надо!!!
 
     /// <summary>
     /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
@@ -31,12 +32,15 @@ public static class MapboxTileWriterWm
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     public static Dictionary<ulong, Mapbox.Tile> WriteWm(this VectorTileTree tree, BitArray watermarkString, 
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
         var result = new Dictionary<ulong, Mapbox.Tile>();
 
-        // !!! Разделение ещё не реализовано, это только начало
+        // !!! Реализация разделения ниже закомментированного (она ещё в процессе)
+
         // Сортированного словаря здесь не будет (скорее всего)
         /*
         var sortedTree = new SortedDictionary<ulong, VectorTile>();
@@ -62,10 +66,34 @@ public static class MapboxTileWriterWm
         }
         */
 
+        
+        if (watermarkString.Count < tree.Count() * options.Nb)
+        {
+            throw new ArgumentException("Not enough bits in the watermark message");
+        }
+
+        //var watermarkStringNumerator = watermarkString.GetEnumerator();
+        var watermarkStringFragment = new BitArray(options.Nb);
+        foreach (var tileIndex in tree)
+        {
+            for (var i = 0; i < options.Nb; i++)
+            {
+                //watermarkStringNumerator.MoveNext();
+                //watermarkStringFragment[i] = (bool)watermarkStringNumerator.Current;
+
+                watermarkStringFragment[i] = watermarkString[i];
+            }
+            result.Add(tileIndex, tree[tileIndex].WriteWm(watermarkStringFragment, firstHalfOfTheKey, tileIndex, options, extent));
+            watermarkString.RightShift(options.Nb);
+        }
+        
+
+        /*
         foreach (var tileIndex in tree)
         {
             result.Add(tileIndex, tree[tileIndex].WriteWm(watermarkString, firstHalfOfTheKey, tileIndex, options, extent));
         }
+        */
 
         return result;
     }
@@ -122,6 +150,7 @@ public static class MapboxTileWriterWm
                         {
                             feature.Geometry.AddRange(Encode(lineal, tgt, watermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
                             if (_hasSuccessfullyEmbeded) // для реализации параметра Lf
+                                // ПЕРЕДЕЛАТЬ!
                                 embedingIndex++;
                         }
                         else

@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParameterValues", "Paramete
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Distortion", "Distortion\Distortion.csproj", "{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistortionTry", "DistortionTry\DistortionTry.csproj", "{E12EF0C3-78F4-497B-8E01-6E8CE27EE296}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E12EF0C3-78F4-497B-8E01-6E8CE27EE296}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E12EF0C3-78F4-497B-8E01-6E8CE27EE296}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E12EF0C3-78F4-497B-8E01-6E8CE27EE296}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E12EF0C3-78F4-497B-8E01-6E8CE27EE296}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

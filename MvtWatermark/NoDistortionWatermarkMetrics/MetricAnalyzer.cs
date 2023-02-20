@@ -14,82 +14,12 @@ namespace NoDistortionWatermarkMetrics;
 public static class MetricAnalyzer
 {
     /// <summary>
-    /// Набор характеристик тайла: zoom (приближение), x (абсцисса), y (ордината)
-    /// </summary>
-    public struct ZxySet
-    {
-        public int Zoom { get; set; }
-        public int X { get; set; }
-        public int Y { get; set; }
-
-        public ZxySet(int zoom, int x, int y)
-        {
-            this.Zoom = zoom;
-            this.X = x;
-            this.Y = y;
-        }
-    }
-
-    /// <summary>
-    /// Набор диапазона параметров NoDistortionWatermarkOptions для проверки валидности встроенных/извлеченных ЦВЗ
-    /// </summary>
-    public struct ParameterRangeSet
-    {
-        public int Mmax { get; set; }
-        public int Nbmax { get; set; }
-        public int Lfmax { get; set; }
-        public int Lsmax { get; set; }
-        private int _wmMin;
-        private int _wmMax;
-        public int WmMin { 
-            get { return _wmMin; } 
-            set
-            {
-                if (value < 1)
-                    throw new Exception("WmMin cannot be smaller then 1");
-                else if (value > _wmMax)
-                    throw new Exception("WmMin cannot be bigger then WmMax");
-                _wmMin = value;
-            } 
-        }
-        public int WmMax
-        {
-            get { return _wmMax; }
-            set
-            {
-                if (value < 1)
-                    throw new Exception("WmMax cannot be smaller then 1");
-                else if(value < _wmMin)
-                    throw new Exception("WmMax cannot be smaller then WmMin");
-                _wmMax = value;
-            }
-        }
-
-        public ParameterRangeSet(int mMax, int nbMax, int lfMax, int lsMax, int wmMin, int wmMax)
-        {
-            if (wmMin > wmMax)
-                throw new Exception("WmMin cannot be bigger then WmMax");
-            else if (wmMin < 1 || wmMax < 1)
-            {
-                throw new Exception("WmMin and WmMax cannot be smaller then 1");
-            }
-
-            Mmax = mMax; 
-            Nbmax = nbMax; 
-            Lfmax = lfMax;
-            Lsmax = lsMax;
-            _wmMin = wmMin;
-            _wmMax = wmMax;
-        }
-    }
-
-    /// <summary>
     /// Проверка валидности извлеченных ЦВЗ для дерева тайлов из Базы данных
     /// </summary>
     /// <param name="parameterRangeSet">Диапазон параметров NoDistortionWatermarkOptions</param>
     /// <param name="parameterSets">Коллекция наборов параметров для тайлов, согласно которым тайлы будут браться из базы данных</param>
     /// <returns></returns>
-    public static bool DisplayMetricForDBTileSet(ParameterRangeSet parameterRangeSet, IEnumerable<ZxySet> parameterSets)
+    public static bool DisplayMetricForDBTileSet(Additional.ParameterRangeSet parameterRangeSet, IEnumerable<Additional.ZxySet> parameterSets)
     {
         var mainErrorsResultList = new List<int>();
         var resultExtractedIntsList = new List<int>();
@@ -118,6 +48,8 @@ public static class MetricAnalyzer
 
         if (!areAnyCorrectTilesHere)
             return false;
+
+        //Console.WriteLine($"Количество тайлов в дереве: {vtTree.Count()}");
 
         NoDistortionWatermarkOptions.AtypicalEncodingTypes aEtype;
 
@@ -181,7 +113,7 @@ public static class MetricAnalyzer
     /// <param name="parameterSet"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public static bool TestVectorTileIsCorrect(ZxySet parameterSet)
+    public static bool TestVectorTileIsCorrect(Additional.ZxySet parameterSet)
     {
         var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         var connectionString = $"Data Source = {dbPath}";
@@ -265,12 +197,10 @@ public static class MetricAnalyzer
     /// <param name="parameterRangeSet"></param>
     /// <param name="parameterSet"></param>
     /// <returns></returns>
-    public static bool DisplayUsersTileMetric(ParameterRangeSet parameterRangeSet, ZxySet parameterSet)
+    public static bool DisplayUsersTileMetric(Additional.ParameterRangeSet parameterRangeSet, Additional.ZxySet parameterSet)
     {
         var mainErrorsResultList = new List<int>();
         var resultExtractedIntsList = new List<int>();
-
-        var singleOptionsSetIntsList = new List<int>();
 
         var vtTree = new VectorTileTree();
         ulong tile_id;
@@ -287,6 +217,8 @@ public static class MetricAnalyzer
                 {
                     for (var ls = 1; ls <= parameterRangeSet.Lsmax; ls++)
                     {
+                        var singleOptionsSetIntsList = new List<int>();
+
                         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
                         var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, false);
 
@@ -337,7 +269,7 @@ public static class MetricAnalyzer
         out List<int> extractedIntsList)
     {
         if (begin < 1 || begin >= end) 
-            throw new Exception("Некорректные значения begin и end");
+            throw new ArgumentException("Некорректные значения begin и end");
         //var options = new NoDistortionWatermarkOptions(2, 3, 54321, 3, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, true);
         var key = 123;
 

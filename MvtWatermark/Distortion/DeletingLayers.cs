@@ -29,7 +29,7 @@ public class DeletingLayers : IDistortion
                 var num = random.Next(0, count - 1);
 
                 while (indexList.Contains(num))
-                    num = random.Next(0, count - 1);
+                    num = random.Next(0, count - 1); // ошибочка видимо, надо не count - 1, а просто count
 
                 indexList.Add(num);
             }
