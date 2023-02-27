@@ -4,11 +4,11 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class ShiftingPoints : IDistortion
+public class ShiftingPointsDistortion : IDistortion
 {
     private readonly double _relativeNumberPoints;
 
-    public ShiftingPoints(double relativeNumberPoints)
+    public ShiftingPointsDistortion(double relativeNumberPoints)
     {
         _relativeNumberPoints = relativeNumberPoints;
     }
@@ -22,15 +22,10 @@ public class ShiftingPoints : IDistortion
             var tile = new VectorTile { TileId = tileId };
             foreach (var layer in tiles[tileId].Layers)
             {
-                var l = new Layer
-                {
-                    Name = layer.Name
-                };
+                var l = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
-                {
-                    var f = new Feature(feature.Geometry, feature.Attributes);
-                    l.Features.Add(f);
-                }
+                    l.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
+
                 tile.Layers.Add(l);
             }
             copyTileTree[tileId] = tile;
@@ -45,7 +40,7 @@ public class ShiftingPoints : IDistortion
 
             var random = new Random();
 
-            foreach (var layer in tiles[tileId].Layers)
+            foreach (var layer in copyTileTree[tileId].Layers)
             {
                 foreach (var feature in layer.Features)
                 {
