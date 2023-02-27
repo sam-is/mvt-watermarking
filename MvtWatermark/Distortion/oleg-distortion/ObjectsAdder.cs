@@ -46,7 +46,7 @@ public class ObjectsAdder: IDistortion
         return copyTiletree;
     }
 
-    private Feature GenerateFeature(int number)
+    public Feature GenerateFeature(int number)
     {
         var random = new Random();
         var feature = new Feature();
