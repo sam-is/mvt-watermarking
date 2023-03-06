@@ -1,32 +1,31 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using DebugProj;
 using Distortion;
 using DistortionTry;
 using MvtWatermark.NoDistortionWatermark;
-using NetTopologySuite.Features;
-using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using System.Collections;
 
 Console.WriteLine("Hello, World!");
 
 var distortionLst = new List<IDistortion>() {
-    new DeletingByArea(0.1),
-    new RemoverByPerimeter(0.2),
-    new DeletingLayers(0.3),
-    new SeparationByGeometryType(SeparationByGeometryType.Mode.Lines),
-    new ShiftingPoints(0.2),
-    new ObjectsRemover(0.9),
-    new ObjectsAdder(0.9),
-    //new DeleterByBounds(60, 50, 50, 52)
-    //new DeleterByBounds(53, 52, 51.4, 51.5)
-    new DeleterByBounds(53, 52, 50, 52),
-    new CoordinateOrderChanger()
-};
+    new DeletingLayersDistortion(0.3),
+    new SeparationByGeometryTypeDistortion(SeparationByGeometryTypeDistortion.Mode.Lines),
+    new DeleterByBounds(60, 50, 50, 52),
 
-/*var distortion1 = new DeletingByArea(0.1);
-var distortion2 = new DeletingLayers(0.3);
-var distortion3 = new SeparationByGeometryType(SeparationByGeometryType.Mode.Lines);
-var distortion4 = new ShiftingPoints(0.2);*/
+    // new DeleterByBounds(53, 52, 51.4, 51.5),
+    // new DeleterByBounds(53, 52, 50, 52),
+
+    new DeletingByAreaDistortion(0.1),
+    new RemoverByPerimeter(0.05),
+    new ObjectsAdder(0.9),
+    new ObjectsRemover(0.1),
+    new CoordinateOrderChanger(false),
+
+    // new ShiftingPointsDistortion(0.2),
+    // new ReducingNumberOfPointsDistortion(0.8, false),
+    // new ReducingNumberOfPointsDistortion(0.8, true),
+};
 
 var parameterSets = new List<CoordinateSet>()
 {
@@ -38,8 +37,10 @@ var parameterSets = new List<CoordinateSet>()
     new CoordinateSet(10, 658, 337),
 };
 VectorTileTree vectorTileTree = TileSetCreator.GetVectorTileTree(parameterSets);
+//VectorTileTree vectorTileTree = TileSetCreator.CreateRandomVectorTileTree(parameterSets);
 
-var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+//var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
 var options = new NoDistortionWatermarkOptions(2, 3, 2, 5, aEtype, false);
 var key = 123;
 
@@ -48,10 +49,12 @@ var message = new BitArray(boolArr);
 
 foreach (var distortion in distortionLst)
 {
-    Console.WriteLine($"\nСообщение перед проверкой искажения: {DistortionTester.GetWatermarkString(message)}"); // отладка
-
     DistortionTester.TestDistortion(vectorTileTree, distortion, options, key, message);
 }
+
+//var ndwm = new NoDistortionWatermark(options);
+//var twwm = ndwm.Embed(vectorTileTree, key, message);
+//Console.WriteLine($"Что встроилось в дерево с тайлами: \t\t{ResultPrinter.GetWatermarkString(ndwm.Extract(twwm, key))}");
 
 /*VectorTile vt = new();
 Layer lyr = new();

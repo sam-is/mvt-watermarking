@@ -88,7 +88,7 @@ public class NonStaticMapboxTileWriterWm
             }
             else // отладка
             {
-                Console.WriteLine($"Не получилось встроить фрагмент ЦВЗ в тайл"); // отладка
+                Console.WriteLine($"Не получилось встроить фрагмент ЦВЗ в тайл: {tileIndex}"); // отладка
             }
 
             tileNumber++;
@@ -102,7 +102,7 @@ public class NonStaticMapboxTileWriterWm
         {
             embededMessageString += $"{elem} "; // отладка
         }
-        Console.WriteLine($"Встроили: {embededMessageString}"); // отладка
+        Console.WriteLine($"Встроили: {embededMessageString}\n"); // отладка
 
         return result;
     }

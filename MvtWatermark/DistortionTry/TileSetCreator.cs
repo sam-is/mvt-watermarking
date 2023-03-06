@@ -1,4 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
+using NetTopologySuite.Features;
+using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
 using System;
@@ -67,5 +69,144 @@ public class TileSetCreator
         var vt = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom));
 
         return vt;
+    }
+
+    public static VectorTileTree CreateRandomVectorTileTree(IEnumerable<CoordinateSet> parameterSets)
+    {
+        var vectorTileTree = new VectorTileTree();
+        foreach (var parameterSet in parameterSets)
+        {
+            ulong tileId;
+            VectorTile? vt = CreateRandomVectorTile(parameterSet.X, parameterSet.Y, parameterSet.Zoom, out tileId);
+            vectorTileTree[tileId] = vt!;
+        }
+
+        return vectorTileTree;
+    }
+
+    private static VectorTile? CreateRandomVectorTile(int x, int y, int zoom, out ulong tile_id)
+    {
+        tile_id = MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
+        var vt = new VectorTile { TileId = tileDefinition.Id };
+        Layer lyr = CreateRandomLayer(1); 
+
+        vt.Layers.Add(lyr);
+
+        Console.WriteLine("Возвращаем векторный тайл..."); // отладка
+        return vt;
+    }
+
+    private static Layer CreateRandomLayer(int layerNumber)
+    {
+        var rand = new Random(layerNumber);
+        var lyr = new Layer { Name = $"layer{layerNumber}" };
+
+        for (var i = 1; i < 20; i++)
+        {
+            var feature = CreateRandomFeature(i * i, i, 
+                Convert.ToBoolean(rand.Next(0, 2)), Convert.ToBoolean(rand.Next(0, 2)));
+            lyr.Features.Add(feature);
+        }
+
+        return lyr;
+    }
+
+    private static Feature CreateRandomFeature(int numOfDots, int id, bool isPolygon = false, bool isMultiLineString = false)
+    {
+        var rand = new Random(numOfDots);
+        string geometryType;
+        Geometry geometry;
+
+        if (numOfDots == 1)
+        {
+            geometry = CreateRandomPoint(rand);
+            geometryType = "Point";
+        }
+        else if (isPolygon)
+        {
+            geometry = CreateRandomPolygon(rand, numOfDots);
+            geometryType = "Polygon";
+        }
+        else if (isMultiLineString)
+        {
+            geometry = CreateRandomMultiLineString(rand, numOfDots, rand.Next(1, 10));
+            geometryType = "MultiLineString";
+        }
+        else 
+        {
+            geometry = CreateRandomLineString(rand, numOfDots);
+            geometryType = "LineString";
+            //Console.WriteLine("\nЛайнстринг: "); // отладка
+            //Console.WriteLine(geom.ToString()); // отладка
+            //Console.WriteLine("\n"); // отладка
+        }
+
+        return new Feature
+        {
+            Geometry = geometry,
+            Attributes = new AttributesTable(new Dictionary<string, object>()
+            {
+                ["LN_ID"] = id,
+                ["type"] = geometryType,
+            })
+        };
+    }
+
+    private static Point CreateRandomPoint(Random rand)
+    {
+        var xCoord = rand.Next(-179, 178) + 0.5;
+        var yCoord = rand.Next(-89, 88) + 0.5;
+        return new Point(new Coordinate(xCoord, yCoord));
+    }
+
+    private static LineString CreateRandomLineString(Random rand, int numOfDots)
+    {
+        var coordinateCollection = new List<Coordinate>();
+        for (var i = 0; i < numOfDots; i++)
+        {
+            var xCoord = rand.Next(-179, 179) + 0.5;
+            var yCoord = rand.Next(-89, 89) + 0.5;
+
+            coordinateCollection.Add(new Coordinate(xCoord, yCoord));
+        }
+        var coordinateArray = coordinateCollection.ToArray();
+
+        return new LineString(coordinateArray);
+    }
+
+    private static Polygon CreateRandomPolygon(Random rand, int numOfDots)
+    {
+        var coordinateCollection = new List<Coordinate>();
+
+        var startXCoord = rand.Next(-179, 179) + 0.5;
+        var startYCoord = rand.Next(-89, 89) + 0.5;
+        coordinateCollection.Add(new Coordinate(startXCoord, startYCoord));
+
+        for (var i = 1; i < numOfDots; i++)
+        {
+            var xCoord = rand.Next(-179, 179) + 0.5;
+            var yCoord = rand.Next(-89, 89) + 0.5;
+            coordinateCollection.Add(new Coordinate(xCoord, yCoord));
+        }
+        coordinateCollection.Add(new Coordinate(startXCoord, startYCoord));
+
+        var coordinateArray = coordinateCollection.ToArray();
+        var linearRing = new LinearRing(coordinateArray);
+        var emptyLinearRing = new LinearRing[0];
+
+        return new Polygon(linearRing, emptyLinearRing);
+    }
+
+    private static MultiLineString CreateRandomMultiLineString(Random rand, 
+        int numOfDotsInSingleLineString, int lineStringNum)
+    {
+        var lineStringArr = new LineString[lineStringNum];
+        for (var i = 0; i < lineStringNum; i++)
+        {
+            lineStringArr[i] = CreateRandomLineString(rand, rand.Next(2, numOfDotsInSingleLineString + 1));
+        }
+
+        return new MultiLineString(lineStringArr);
     }
 }

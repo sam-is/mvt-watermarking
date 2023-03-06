@@ -114,6 +114,8 @@ public class MapboxTileReaderWm
         var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
         var mostFrequestWatermarkInt = groupsSorted.First().Item;
 
+        Console.WriteLine($"Most frequent watermark in Vector tile: {mostFrequestWatermarkInt}\n\n"); // ОТЛАДКА
+
         return mostFrequestWatermarkInt;
     }
 
@@ -311,6 +313,9 @@ public class MapboxTileReaderWm
     private int? ExtractWatermarkFromSingleLinestringMtLtLt(IList<uint> geometry,
         ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
+        var mapboxCommandString = ""; // ОТЛАДКА
+
+
         // сюда запишем индексы сегментов с нетипичной геометрией
         var realSegments = new List<bool>();
         var realSegmentsReversedLineString = new List<bool>();
@@ -330,13 +335,28 @@ public class MapboxTileReaderWm
         var lastPosition1 = currentPosition;
         var lastPosition2 = currentPosition;
 
+
+        mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+        mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+        var firstMoveToCommandString = mapboxCommandString; // ОТЛАДКА
+
+
         while (currentIndex < geometry.Count)
         {
             (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+
+
+            mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+
+
             if (command == MapboxCommandType.MoveTo)
             {
                 Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
 
                 lastPosition2 = currentPosition;
 
@@ -355,6 +375,11 @@ public class MapboxTileReaderWm
 
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
+
+                mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
+
                 if (lastPosition1 != currentPosition)
                 {
                     shouldTryReversed = true;
@@ -362,6 +387,10 @@ public class MapboxTileReaderWm
                 }
 
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
 
                 if (lastPosition2 != currentPosition)
                     return null;
@@ -383,12 +412,21 @@ public class MapboxTileReaderWm
                 realSegments.Add(false);
 
                 lastPosition1 = currentPosition;
+
+
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
             }
         }
 
 
         if (shouldTryReversed)
         {
+            Console.BackgroundColor = ConsoleColor.DarkBlue; // ОТЛАДКА
+            Console.WriteLine("\n     REVERSED!"); // ОТЛАДКА
+            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+            mapboxCommandString = firstMoveToCommandString; // ОТЛАДКА
+
+
             currentIndex = 3;
             currentPosition = savedPosition;
 
@@ -400,10 +438,19 @@ public class MapboxTileReaderWm
             while (currentIndex < geometry.Count)
             {
                 (command, count) = ParseCommandInteger(geometry[currentIndex++]);
+
+
+                mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+
+
                 if (command == MapboxCommandType.MoveTo)
                 {
                     Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+
+
+                    mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
 
                     if (lastPosition2 == currentPosition && rNtgStart)
                     {
@@ -412,8 +459,16 @@ public class MapboxTileReaderWm
 
                     (command, count) = ParseCommandInteger(geometry[currentIndex++]);
 
+
+                    mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+
+
                     if (command != MapboxCommandType.LineTo)
                     {
+                        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                        Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
+
+
                         return null;
                     }
                 }
@@ -423,7 +478,13 @@ public class MapboxTileReaderWm
                 }
 
                 if (count < 1)
+                {
+                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
+
+
                     return null;
+                }
 
                 for (var i = 0; i < count - 1; i++)
                 {
@@ -431,6 +492,9 @@ public class MapboxTileReaderWm
 
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                     realSegmentsReversedLineString.Add(false);
+
+
+                    mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
                 }
 
                 lastPosition2 = currentPosition;
@@ -438,8 +502,19 @@ public class MapboxTileReaderWm
                 currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
                 realSegmentsReversedLineString.Add(false);
 
-                if (currentPosition != lastPosition1)
+
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
+
+                if (currentPosition != lastPosition1 && currentIndex != geometry.Count)
+                {
+                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
+                    Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
+
+
                     return null;
+                }
 
                 rNtgStart = true;
             }
@@ -447,10 +522,19 @@ public class MapboxTileReaderWm
             realSegmentsReversedLineString.Reverse();
             realSegments = realSegmentsReversedLineString;
         }
+        else // ОТЛАДКА
+        {
+            Console.BackgroundColor = ConsoleColor.Magenta; // ОТЛАДКА
+            Console.WriteLine("\nNOT reversed!"); // ОТЛАДКА
+            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+        }
 
 
-        var realSegmentsNum = realSegments.Count;
-        var realSegmentsInOneElementarySegmentNum = realSegmentsNum / options.D;
+        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+        Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
+
+
+        var realSegmentsInOneElementarySegmentNumber = realSegments.Count / options.D;
 
         // предусмотреть возможность отражения лайнстринга
         var extractedWatermarkInts = new List<int>();
@@ -460,9 +544,9 @@ public class MapboxTileReaderWm
 
         for (var i = 0; i < options.D/2; i++)
         {
-            for (var j = 0; j < realSegmentsInOneElementarySegmentNum; j++)
+            for (var j = 0; j < realSegmentsInOneElementarySegmentNumber; j++)
             {
-                if (realSegments[realSegmentsInOneElementarySegmentNum * i + j])
+                if (realSegments[realSegmentsInOneElementarySegmentNumber * i + j])
                 {
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
@@ -492,6 +576,9 @@ public class MapboxTileReaderWm
     private int? ExtractWatermarkFromSingleLinestringNLt(IList<uint> geometry,
         ref int currentIndex, ref int currentX, ref int currentY, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
+        var mapboxCommandString = ""; // ОТЛАДКА
+
+
         // сюда запишем индексы сегментов с нетипичной геометрией
         var realSegments = new List<bool>();
 
@@ -510,18 +597,39 @@ public class MapboxTileReaderWm
             Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
+
+            mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+            mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
+            
             if (!isFirstSegment && lastPosition != currentPosition)
             {
-                return null; 
+                //Console.WriteLine("\n[НЕ УДАЛОСЬ ИЗВЛЕЧЬ] LineString"); // ОТЛАДКА
+                //Console.WriteLine($"\t\tlastPosition ({lastPosition}) != currentPosition ({currentPosition})"); // ОТЛАДКА
+                //Console.WriteLine($"\t{mapboxCommandString}\n"); // ОТЛАДКА
+
+
+                return null;
                 // Если MoveTo не в ту же самую точку, то ЦВЗ больше не ищем и возвращаем
             }
+
 
             (command, count) = ParseCommandInteger(geometry[currentIndex++]);
             Debug.Assert(command == MapboxCommandType.LineTo, $"Assertion: MapboxCommandType = {command}");
             Debug.Assert(count >= 1, $"Assertion: LineTo count = {count}");
             currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
+            lastPosition = currentPosition;
+
+
+            mapboxCommandString += $" || Command: {command}, count: {count}; Coords: "; // ОТЛАДКА
+            mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
+
+
             realSegments.Add(!isFirstSegment);
+            // В первом сегменте не может быть нетипичной геометрии, поэтому добавляется false.
+            // В других же случаях новый MoveTo, прошедший проверки выше, означает наличие нетипичной геометрии, поэтому добавляется true. 
+            
             isFirstSegment = false;
 
             for (var i = 1; i < count; i++)
@@ -530,32 +638,56 @@ public class MapboxTileReaderWm
                 realSegments.Add(false);
 
                 lastPosition = currentPosition;
+
+
+                mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
             }
         }
 
-        var realSegmentsNum = realSegments.Count;
-        var realSegmentsInOneElementarySegmentNum = realSegmentsNum / options.D;
+        var realSegmentsInOneElementarySegmentNumber = realSegments.Count / options.D;
 
         // предусмотреть возможность отражения лайнстринга
         var extractedWatermarkInts = new List<int>();
-
         var extractedWatermarkIntsSecondHalf = new List<int>();
 
-        if (realSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
+        if (realSegments.Count < options.D)
+        {  // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
+            //Console.WriteLine("\n[НЕ УДАЛОСЬ ИЗВЛЕЧЬ] LineString"); // ОТЛАДКА
+            //Console.WriteLine($"\t\trealSegments.Count ({realSegments.Count}) < options.D ({options.D})"); // ОТЛАДКА
+            //Console.WriteLine($"\t{mapboxCommandString}\n"); // ОТЛАДКА
+
+
             return null;
+        }
 
         // работает также с отражённым лайнстрингом
         for (var i = 0; i < options.D / 2; i++)
         {
-            for (var j = 0; j < realSegmentsInOneElementarySegmentNum; j++)
+            for (var j = 0; j < realSegmentsInOneElementarySegmentNumber; j++)
             {
-                if (realSegments[realSegmentsInOneElementarySegmentNum * i + j]) 
+                if (realSegments[realSegmentsInOneElementarySegmentNumber * i + j]) 
                 {
                     extractedWatermarkInts.Add(keySequence[i]);
                     break;
                 }
 
-                if (realSegments[realSegments.Count - 1 - (realSegmentsInOneElementarySegmentNum * i + j)])
+                /*
+                if (realSegments[realSegments.Count - 1 - (realSegmentsInOneElementarySegmentNumber * i + j)])
+                {
+                    extractedWatermarkIntsSecondHalf.Add(keySequence[i]);
+                    break;
+                }
+                */
+            }
+        }
+
+        realSegments.RemoveAt(0);
+        realSegments.Add(false);
+        for (var i = 0; i < options.D / 2; i++)
+        {
+            for (var j = 0; j < realSegmentsInOneElementarySegmentNumber; j++)
+            {
+                if (realSegments[realSegments.Count - 1 - (realSegmentsInOneElementarySegmentNumber * i + j)])
                 {
                     extractedWatermarkIntsSecondHalf.Add(keySequence[i]);
                     break;
@@ -563,6 +695,7 @@ public class MapboxTileReaderWm
             }
         }
 
+        /*
         if (extractedWatermarkInts.Count == 0)
         {
             if (extractedWatermarkIntsSecondHalf.Count == 0)
@@ -570,7 +703,27 @@ public class MapboxTileReaderWm
             extractedWatermarkInts = extractedWatermarkIntsSecondHalf;
             //wasReversed = true;
         }
+        */
 
+        Console.WriteLine("\nLineString"); // ОТЛАДКА
+
+        if (extractedWatermarkInts.Count < extractedWatermarkIntsSecondHalf.Count)
+        {
+            extractedWatermarkInts = extractedWatermarkIntsSecondHalf;
+
+            //Console.WriteLine("     REVERSED!"); // ОТЛАДКА
+            realSegments.Reverse(); // ОТЛАДКА
+
+            // а может быть бахнуть вывод в консоль всех мапбоксовых команд?
+        }
+
+        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+        //Console.WriteLine($"realSegments: { ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
+
+
+        if (extractedWatermarkInts.Count == 0) return null;
+
+        Console.WriteLine($"Extracted Watermark Ints: {ConsoleWriter.GetIEnumerableStr(extractedWatermarkInts)}"); // ОТЛАДКА
 
         var groupsWithCounts = from s in extractedWatermarkInts
                                group s by s into g
@@ -581,6 +734,8 @@ public class MapboxTileReaderWm
                                };
         var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
         var mostFrequestWatermarkInt = groupsSorted.First().Item;
+
+        Console.WriteLine($"Most frequent watermark: {mostFrequestWatermarkInt}"); // ОТЛАДКА
 
         // update current position values
         currentX = currentPosition.currentX;

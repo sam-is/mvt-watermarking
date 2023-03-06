@@ -5,6 +5,11 @@ using NetTopologySuite.IO.VectorTiles;
 namespace Distortion;
 public class CoordinateOrderChanger: IDistortion
 {
+    private readonly bool _internalReverseOnly;
+    public CoordinateOrderChanger(bool internalReverseOnly = true)
+    {
+        _internalReverseOnly = internalReverseOnly;
+    }
     public VectorTileTree Distort(VectorTileTree tiles)
     {
         var copyTileTree = new VectorTileTree();
@@ -29,11 +34,26 @@ public class CoordinateOrderChanger: IDistortion
                     }
                     else if (ftr.Geometry is MultiLineString)
                     {
-                        // Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
+                        //Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
 
-                        newGeom = ftr.Geometry.Reverse();
+                        if (_internalReverseOnly)
+                        {
+                            newGeom = ftr.Geometry.Reverse();
+                        }
+                        else
+                        {
+                            var reversedMltlnstrngIenum = ((MultiLineString)ftr.Geometry.Reverse()).AsEnumerable().Reverse();
+                            var reversedMltlnstrngList = new List<Geometry>(reversedMltlnstrngIenum);
+                            var reversedMltlnstrngArr = new LineString[reversedMltlnstrngList.Count];
 
-                        // Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
+                            for (var i = 0; i < reversedMltlnstrngList.Count; i++)
+                            {
+                                reversedMltlnstrngArr[i] = (LineString)reversedMltlnstrngList[i];
+                            }
+                            newGeom = new MultiLineString(reversedMltlnstrngArr);
+                        }
+
+                        //Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
                     }
 
                     var copyFeature = new Feature(newGeom, ftr.Attributes);

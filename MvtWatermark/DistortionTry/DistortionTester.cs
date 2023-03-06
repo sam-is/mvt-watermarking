@@ -2,7 +2,8 @@
 using NetTopologySuite.IO.VectorTiles;
 using MvtWatermark.NoDistortionWatermark;
 using System.Collections;
-using MvtWatermark.NoDistortionWatermark.Auxiliary;
+using NetTopologySuite.IO.VectorTiles.Mapbox;
+using DebugProj;
 
 namespace DistortionTry;
 public class DistortionTester
@@ -10,32 +11,28 @@ public class DistortionTester
     public static void TestDistortion(VectorTileTree vectorTileTree, IDistortion distortion, NoDistortionWatermarkOptions options, int key, BitArray message)
     {
         var ndwm = new NoDistortionWatermark(options);
-        VectorTileTree treeWithWatermark = GetTreeWithWatermark(ndwm, vectorTileTree, key, message);
-        BitArray extractedMessageNoDistortion = ExtractWatermark(ndwm, treeWithWatermark, key);
+        //VectorTileTree treeWithWatermark = GetTreeWithWatermark(ndwm, vectorTileTree, key, message);
+        VectorTileTree treeWithWatermark = ndwm.Embed(vectorTileTree, key, message);
+        BitArray extractedMessageNoDistortion = ndwm.Extract(treeWithWatermark, key);
 
-        VectorTileTree distortedTree = distortion.Distort(treeWithWatermark);
-        BitArray extractedMessageWithDistortion = ExtractWatermark(ndwm, distortedTree, key);
 
-        Console.WriteLine($"Watermark from original tree: {GetWatermarkString(extractedMessageNoDistortion)}");
-        Console.WriteLine($"Watermark from distorted tree: {GetWatermarkString(extractedMessageWithDistortion)}");
+        Console.BackgroundColor = ConsoleColor.Cyan; // ОТЛАДКА
+        Console.ForegroundColor = ConsoleColor.Black; // ОТЛАДКА
+        Console.WriteLine("\nПЕРЕД ИСКАЖЕНИЕМ\n"); // ОТЛАДКА
+        Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+        Console.ForegroundColor = ConsoleColor.White; // ОТЛАДКА
 
-        Console.WriteLine($"Both extracted messages (with and without distortion) are equal? - " +
-            $"{extractedMessageNoDistortion.AreEqual(extractedMessageWithDistortion)}");
-    }
 
-    private static BitArray ExtractWatermark(NoDistortionWatermark ndwm, VectorTileTree treeWithWatermark, int key) 
-        => ndwm.Extract(treeWithWatermark, key);
+        VectorTileTree distortedTreeWithWatermark = distortion.Distort(treeWithWatermark);
+        BitArray extractedMessageWithDistortion = ndwm.Extract(distortedTreeWithWatermark, key);
 
-    private static VectorTileTree GetTreeWithWatermark(NoDistortionWatermark ndwm, VectorTileTree vectorTileTree, int key, BitArray message) 
-        => ndwm.Embed(vectorTileTree, key, message);
+        ResultPrinter.Print(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion);
 
-    public static string GetWatermarkString(BitArray message)
-    {
-        var messageStr = "";
-        foreach (var bit in message)
+        if (distortion is CoordinateOrderChanger)
         {
-            messageStr += $"{bit} ";
+            vectorTileTree.Write($"{Directory.GetCurrentDirectory()}\\VectorTileTree");
+            treeWithWatermark.Write($"{Directory.GetCurrentDirectory()}\\VectorTileTreeWithWatermark");
+            distortedTreeWithWatermark.Write($"{Directory.GetCurrentDirectory()}\\distortedTileTrees");
         }
-        return messageStr;
     }
 }
