@@ -421,9 +421,9 @@ public class MapboxTileReaderWm
 
         if (shouldTryReversed)
         {
-            Console.BackgroundColor = ConsoleColor.DarkBlue; // ОТЛАДКА
-            Console.WriteLine("\n     REVERSED!"); // ОТЛАДКА
-            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+            //Console.BackgroundColor = ConsoleColor.DarkBlue; // ОТЛАДКА
+            //Console.WriteLine("\n     REVERSED!"); // ОТЛАДКА
+            //Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
             mapboxCommandString = firstMoveToCommandString; // ОТЛАДКА
 
 
@@ -465,8 +465,8 @@ public class MapboxTileReaderWm
 
                     if (command != MapboxCommandType.LineTo)
                     {
-                        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                        Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
+                        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                        //Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
 
 
                         return null;
@@ -479,8 +479,8 @@ public class MapboxTileReaderWm
 
                 if (count < 1)
                 {
-                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
+                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
 
 
                     return null;
@@ -508,9 +508,9 @@ public class MapboxTileReaderWm
 
                 if (currentPosition != lastPosition1 && currentIndex != geometry.Count)
                 {
-                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
-                    Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
+                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
 
 
                     return null;
@@ -524,14 +524,14 @@ public class MapboxTileReaderWm
         }
         else // ОТЛАДКА
         {
-            Console.BackgroundColor = ConsoleColor.Magenta; // ОТЛАДКА
-            Console.WriteLine("\nNOT reversed!"); // ОТЛАДКА
-            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+            //Console.BackgroundColor = ConsoleColor.Magenta; // ОТЛАДКА
+            //Console.WriteLine("\nNOT reversed!"); // ОТЛАДКА
+            //Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
         }
 
 
-        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-        Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
+        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+        //Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
 
 
         var realSegmentsInOneElementarySegmentNumber = realSegments.Count / options.D;
@@ -705,7 +705,7 @@ public class MapboxTileReaderWm
         }
         */
 
-        Console.WriteLine("\nLineString"); // ОТЛАДКА
+        //Console.WriteLine("\nLineString"); // ОТЛАДКА
 
         if (extractedWatermarkInts.Count < extractedWatermarkIntsSecondHalf.Count)
         {

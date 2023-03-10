@@ -1,13 +1,23 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using DebugProj;
 using Distortion;
 using DistortionTry;
 using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.IO.VectorTiles;
 using System.Collections;
 
-Console.WriteLine("Hello, World!");
+var parameterSets = new List<CoordinateSet>()
+{
+    new CoordinateSet(10, 658, 332),
+    new CoordinateSet(10, 658, 333),
+    new CoordinateSet(10, 658, 334),
+    new CoordinateSet(10, 658, 338),
+            //new ZxySet(10, 658, 335), // кривой тайл, не считывается
+    new CoordinateSet(10, 658, 337),
+};
 
+DistortionTester.TestDistortionsWithDifferentParameters(parameterSets);
+
+/*
 var distortionLst = new List<IDistortion>() {
     new DeletingLayersDistortion(0.3),
     new SeparationByGeometryTypeDistortion(SeparationByGeometryTypeDistortion.Mode.Lines),
@@ -21,21 +31,13 @@ var distortionLst = new List<IDistortion>() {
     new ObjectsAdder(0.9),
     new ObjectsRemover(0.1),
     new CoordinateOrderChanger(false),
+    new ObjectsMagnifier(0.5),
 
     // new ShiftingPointsDistortion(0.2),
     // new ReducingNumberOfPointsDistortion(0.8, false),
     // new ReducingNumberOfPointsDistortion(0.8, true),
 };
 
-var parameterSets = new List<CoordinateSet>()
-{
-    new CoordinateSet(10, 658, 332),
-    new CoordinateSet(10, 658, 333),
-    new CoordinateSet(10, 658, 334),
-    new CoordinateSet(10, 658, 338),
-            //new ZxySet(10, 658, 335), // кривой тайл, не считывается
-    new CoordinateSet(10, 658, 337),
-};
 VectorTileTree vectorTileTree = TileSetCreator.GetVectorTileTree(parameterSets);
 //VectorTileTree vectorTileTree = TileSetCreator.CreateRandomVectorTileTree(parameterSets);
 
@@ -51,6 +53,7 @@ foreach (var distortion in distortionLst)
 {
     DistortionTester.TestDistortion(vectorTileTree, distortion, options, key, message);
 }
+*/
 
 //var ndwm = new NoDistortionWatermark(options);
 //var twwm = ndwm.Embed(vectorTileTree, key, message);
