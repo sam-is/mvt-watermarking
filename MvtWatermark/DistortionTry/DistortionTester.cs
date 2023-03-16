@@ -24,27 +24,20 @@ public static class DistortionTester
         double param = 0;
         while (param <= 1)
         {
-            var distortionLst = new List<IDistortion>() {
-                new DeletingLayersDistortion(param),
-                //new SeparationByGeometryTypeDistortion(SeparationByGeometryTypeDistortion.Mode.Lines),
-                //new DeleterByBounds(60, 50, 50, 52),
-
-                // new DeleterByBounds(53, 52, 51.4, 51.5),
-                // new DeleterByBounds(53, 52, 50, 52),
-
+            var distortionWithParameterList = new List<IDistortion>() {
+                /*new DeletingLayersDistortion(param),
                 new DeletingByAreaDistortion(param),
                 new RemoverByPerimeter(param),
                 new ObjectsAdder(param),
-                new ObjectsRemover(param),
-                //new CoordinateOrderChanger(false),
+                new ObjectsRemover(param),*/
                 new ObjectsMagnifier(param),
 
                 //new ShiftingPointsDistortion(param),
-                new ReducingNumberOfPointsDistortion(param, false),
-                new ReducingNumberOfPointsDistortion(param, true),
+                /*new ReducingNumberOfPointsDistortion(param, false),
+                new ReducingNumberOfPointsDistortion(param, true),*/
             };
 
-            foreach (var distortion in distortionLst)
+            foreach (var distortion in distortionWithParameterList)
             {
                 await TestDistortion(vectorTileTree, distortion, options, key, message, param);
             }
@@ -52,10 +45,23 @@ public static class DistortionTester
             param += 0.05;
         }
 
-        
+        var otherDistortionsList = new List<IDistortion>()
+        {
+            new SeparationByGeometryTypeDistortion(SeparationByGeometryTypeDistortion.Mode.Lines),
+            new DeleterByBounds(60, 50, 50, 52),
+
+            // new DeleterByBounds(53, 52, 51.4, 51.5),
+            // new DeleterByBounds(53, 52, 50, 52),
+            new CoordinateOrderChanger(false),
+        };
+
+        foreach (var distortion in otherDistortionsList)
+        {
+            await TestDistortion(vectorTileTree, distortion, options, key, message, param);
+        }
     }
     public static async Task TestDistortion(VectorTileTree vectorTileTree, IDistortion distortion, NoDistortionWatermarkOptions options, 
-        int key, BitArray message, double param)
+        int key, BitArray message, double? param)
     {
         var ndwm = new NoDistortionWatermark(options);
         //VectorTileTree treeWithWatermark = GetTreeWithWatermark(ndwm, vectorTileTree, key, message);

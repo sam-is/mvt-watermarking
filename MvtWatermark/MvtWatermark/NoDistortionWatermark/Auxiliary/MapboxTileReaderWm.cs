@@ -735,7 +735,7 @@ public class MapboxTileReaderWm
         var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
         var mostFrequestWatermarkInt = groupsSorted.First().Item;
 
-        Console.WriteLine($"Most frequent watermark: {mostFrequestWatermarkInt}"); // ОТЛАДКА
+        //Console.WriteLine($"Most frequent watermark: {mostFrequestWatermarkInt}"); // ОТЛАДКА
 
         // update current position values
         currentX = currentPosition.currentX;

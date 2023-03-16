@@ -36,7 +36,7 @@ public class NoDistortionWatermarkOptions
     public int Ls { get; init; }
 
     /// <summary>
-    /// Количество элементов LineString, в которые нужно встроить ЦВЗ, в каждом тайле.
+    /// Количество элементов LineString, в которые нужно встроить ЦВЗ, в каждом слое в тайле.
     /// Похоже, тоже лучше передавать ключ, а потом уже в самом тайле разбираться
     /// </summary>
     public int Lf { get; init; }

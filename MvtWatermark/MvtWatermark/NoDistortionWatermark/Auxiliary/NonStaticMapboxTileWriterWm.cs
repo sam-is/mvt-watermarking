@@ -36,6 +36,29 @@ public class NonStaticMapboxTileWriterWm
     public Dictionary<ulong, Mapbox.Tile> WriteWm(VectorTileTree tree, BitArray message,
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
+        // вот прям тут сортировку сделать
+        var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
+        var simpleDict = new Dictionary<ulong, VectorTile>();
+        foreach (var tileIndex in tree)
+        {
+            sortedTiles[tileIndex] = tree[tileIndex];
+            simpleDict[tileIndex] = tree[tileIndex];
+        }
+        var ststr = "";
+        foreach (var tileIndex in sortedTiles)
+        {
+            ststr += $"{tileIndex} ";
+        }
+        var sdstr = "";
+        foreach (var tileIndex in simpleDict)
+        {
+            sdstr += $"{tileIndex} ";
+        }
+        Console.WriteLine("sortedTiles = " + ststr);
+        Console.WriteLine("simpleDict = " + sdstr);
+        // и юзать уже сортированный словарь вместо tree
+
+
         var result = new Dictionary<ulong, Mapbox.Tile>();
 
         if (message.Count < tree.Count() * options.Nb)

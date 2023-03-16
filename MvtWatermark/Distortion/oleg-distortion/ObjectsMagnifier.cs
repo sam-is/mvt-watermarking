@@ -34,7 +34,11 @@ public class ObjectsMagnifier: IDistortion
                     //copyFeature.Geometry = MagnifyDotsNumber(feature.Geometry.Coordinates, feature.BoundingBox);
                     if (feature.Geometry is LineString)
                     {
-                        copyFeature.Geometry = MagnifyDotsNumber(feature);
+                        copyFeature.Geometry = MagnifyDotsNumberLineString(feature);
+                    }
+                    else if (feature.Geometry is MultiLineString)
+                    {
+                        copyFeature.Geometry = MagnifyDotsNumberMultiLineString(feature);
                     }
                     else
                     {
@@ -51,7 +55,7 @@ public class ObjectsMagnifier: IDistortion
     }
 
     //private Geometry MagnifyDotsNumber(Coordinate[] coordinates, Envelope boundingBox)
-    private Geometry MagnifyDotsNumber(IFeature feature)
+    private Geometry MagnifyDotsNumberLineString(IFeature feature)
     {
         Coordinate[] coordinates = feature.Geometry.Coordinates;
         //Envelope boundingBox = feature.BoundingBox;
@@ -83,5 +87,39 @@ public class ObjectsMagnifier: IDistortion
         //Console.WriteLine($"Дорастили {coordinatesToAddNum} точек к объекту"); // ОТЛАДКА
 
         return new LineString(resultCoords);
+    }
+
+    private Geometry MagnifyDotsNumberMultiLineString(IFeature feature)
+    {
+        //Envelope boundingBox = feature.BoundingBox;
+        //boundingBox = (Envelope)feature.Geometry.Envelope;
+        var boundingBox = new Envelope(feature.Geometry.Coordinates);
+
+        var coordinatesToAddNum = (int)Math.Ceiling(_relativeNewDotsNumber * feature.Geometry.Coordinates.Length);
+        var rand = new Random(coordinatesToAddNum);
+
+        var extraCoords = new Coordinate[coordinatesToAddNum];
+        for (var i = 0; i < coordinatesToAddNum; i++)
+        {
+            var x = rand.Next((int)Math.Floor(boundingBox.MinX), (int)Math.Ceiling(boundingBox.MaxX)) + (double)rand.Next(-10000, 10000) / 10000;
+            var y = rand.Next((int)Math.Floor(boundingBox.MinY), (int)Math.Ceiling(boundingBox.MaxY)) + (double)rand.Next(-10000, 10000) / 10000;
+            extraCoords[i] = new Coordinate(x, y);
+        }
+
+        Console.WriteLine($"///Дорастили {coordinatesToAddNum} точек к МУЛЬТИлайнстрингу"); // ОТЛАДКА
+
+        var lineStringList = new List<LineString>();
+        foreach(var lnstrngGeom in (MultiLineString)feature.Geometry)
+        {
+            lineStringList.Add((LineString)lnstrngGeom);
+        }
+        var lastLineStringCoords = lineStringList[lineStringList.Count - 1].Coordinates;
+        var lastLineStringCoordsNew = new Coordinate[lastLineStringCoords.Length + extraCoords.Length];
+        lastLineStringCoords.CopyTo(lastLineStringCoordsNew, 0);
+        extraCoords.CopyTo(lastLineStringCoordsNew, lastLineStringCoords.Length);
+        lineStringList[lineStringList.Count - 1] = new LineString(lastLineStringCoordsNew);
+
+        return new MultiLineString(lineStringList.ToArray());
+        //return new LineString(resultCoords);
     }
 }
