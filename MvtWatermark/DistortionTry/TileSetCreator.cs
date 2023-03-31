@@ -3,17 +3,12 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
-using System;
-using System.Collections.Generic;
 using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DistortionTry;
 public class TileSetCreator
 {
-    public static VectorTileTree GetVectorTileTree(IEnumerable<CoordinateSet> parameterSets)
+    public static VectorTileTree GetVectorTileTree(IEnumerable<CoordinateSet> parameterSetsStp, IEnumerable<CoordinateSet> parameterSetsTegola)
     {
         var path = Path.Combine(Directory.GetCurrentDirectory(), "stp10zoom.mbtiles");
         var connectionString = $"Data Source = {path}";
@@ -25,9 +20,19 @@ public class TileSetCreator
         var vectorTileTree = new VectorTileTree();
         var areAnyCorrectTilesHere = false;
 
-        foreach (var parameterSet in parameterSets)
+        foreach (var parameterSet in parameterSetsStp)
         {
-            var vt = GetSingleVectorTileFromDB(sqliteConnection, parameterSet.Zoom, parameterSet.X, parameterSet.Y);
+            var vt = GetSingleVectorTileFromDBStp(sqliteConnection, parameterSet.Zoom, parameterSet.X, parameterSet.Y);
+            if (vt != null)
+            {
+                areAnyCorrectTilesHere = true;
+                vectorTileTree[vt.TileId] = vt;
+            }
+        }
+
+        foreach (var parameterSet in parameterSetsTegola)
+        {
+            var vt = GetsingleVectorTileFromTegola(parameterSet.Zoom, parameterSet.X, parameterSet.Y);
             if (vt != null)
             {
                 areAnyCorrectTilesHere = true;
@@ -41,7 +46,7 @@ public class TileSetCreator
         return vectorTileTree;
     }
 
-    private static VectorTile? GetSingleVectorTileFromDB(SqliteConnection? sqliteConnection, int zoom, int x, int y)
+    private static VectorTile? GetSingleVectorTileFromDBStp(SqliteConnection? sqliteConnection, int zoom, int x, int y)
     {
         using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
         command.Parameters.AddWithValue("$z", zoom);
@@ -56,7 +61,7 @@ public class TileSetCreator
         }
         else
         {
-            Console.WriteLine("Successfully got the tile");
+            Console.WriteLine("Successfully got the tile from STP");
         }
 
         var bytes = (byte[])obj!;
@@ -69,6 +74,33 @@ public class TileSetCreator
         var vt = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom));
 
         return vt;
+    }
+
+    private static VectorTile? GetsingleVectorTileFromTegola(int zoom, int x, int y)
+    {
+        var reader = new MapboxTileReader();
+
+        using var sharedClient = new HttpClient()
+        {
+            BaseAddress = new Uri($"https://tegola-osm-demo.go-spatial.org/v1/maps/osm/{zoom}/{x}/{y}"),
+        };
+
+        sharedClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 QGIS/32210");
+        sharedClient.DefaultRequestHeaders.Add("accept-encoding", "gzip");
+
+        var response = sharedClient.GetByteArrayAsync("").Result;
+        using var memoryStream = new MemoryStream(response);
+
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom));
+
+        if (tile is null)
+            Console.WriteLine("obj = null");
+        else
+            Console.WriteLine("Successfully got the tile from Tegola");
+
+        return tile;
     }
 
     public static VectorTileTree CreateRandomVectorTileTree(IEnumerable<CoordinateSet> parameterSets)

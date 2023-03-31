@@ -29,17 +29,17 @@ public static class ResultPrinter
     public static async Task Log(IDistortion distortion, BitArray originalMessage, BitArray extractedMessageNoDistortion, 
         BitArray extractedMessageWithDistortion, string filePath, double? param)
     {
-        Console.WriteLine($"\n\n[Log to file] Искажение: {distortion.GetType()}");
-        var fileName = $"{distortion.GetType()}";
-        fileName = fileName.Replace('.', '_');
-        Console.WriteLine(fileName);
+        //Console.WriteLine($"\n\n[Log to file] Искажение: {distortion.GetType()}");
+        var fileName = $"{distortion.GetType()}".Replace('.', '_');
+        //fileName = fileName.Replace('.', '_');
+        //Console.WriteLine(fileName);
         if (param == 0 || param is null)
         {
-            Console.WriteLine($"\n\nИскажение: {distortion.GetType()}, param: {param}");
+            //Console.WriteLine($"\n\nИскажение: {distortion.GetType()}, param: {param}");
             using var writerStream = new FileStream($"{filePath}\\{fileName}.txt", FileMode.Create);
         }
 
-        Console.WriteLine($"\n\n[Log to file] Создаём writer...");
+        //Console.WriteLine($"\n\n[Log to file] Создаём writer...");
         using (var writer = new StreamWriter($"{filePath}\\{fileName}.txt", true)) {
             await writer.WriteLineAsync($"\n\tСообщение перед проверкой искажения: \t{GetWatermarkString(originalMessage)}"); // отладка
 

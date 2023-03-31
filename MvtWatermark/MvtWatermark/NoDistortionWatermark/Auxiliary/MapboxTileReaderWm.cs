@@ -30,11 +30,24 @@ public class MapboxTileReaderWm
     /// <returns></returns>
     public VectorTileTree Read(Dictionary<ulong, Tile> tileDict)
     {
+        var sortedTiles = new SortedDictionary<ulong, Tile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
+        foreach (var (tileIndex, tile) in tileDict)
+        {
+            sortedTiles[tileIndex] = tileDict[tileIndex];
+        }
+
         var resultTree = new VectorTileTree();
+        foreach (var tilePair in sortedTiles)
+        {
+            resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null!);
+        }
+
+        /*
         foreach (var tilePair in tileDict)
         {
             resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null!);
         }
+        */
 
         return resultTree;
     }
@@ -114,7 +127,7 @@ public class MapboxTileReaderWm
         var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
         var mostFrequestWatermarkInt = groupsSorted.First().Item;
 
-        Console.WriteLine($"Most frequent watermark in Vector tile: {mostFrequestWatermarkInt}\n\n"); // ОТЛАДКА
+        //Console.WriteLine($"Most frequent watermark in Vector tile: {mostFrequestWatermarkInt}\n\n"); // ОТЛАДКА
 
         return mostFrequestWatermarkInt;
     }
@@ -465,8 +478,8 @@ public class MapboxTileReaderWm
 
                     if (command != MapboxCommandType.LineTo)
                     {
-                        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                        //Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
+                        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                        Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
 
 
                         return null;
@@ -479,8 +492,8 @@ public class MapboxTileReaderWm
 
                 if (count < 1)
                 {
-                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    //Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
+                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
 
 
                     return null;
@@ -508,9 +521,9 @@ public class MapboxTileReaderWm
 
                 if (currentPosition != lastPosition1 && currentIndex != geometry.Count)
                 {
-                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    //Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
-                    //Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
+                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
+                    Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
 
 
                     return null;
@@ -530,8 +543,8 @@ public class MapboxTileReaderWm
         }
 
 
-        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-        //Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
+        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+        Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
 
 
         var realSegmentsInOneElementarySegmentNumber = realSegments.Count / options.D;
@@ -723,7 +736,7 @@ public class MapboxTileReaderWm
 
         if (extractedWatermarkInts.Count == 0) return null;
 
-        Console.WriteLine($"Extracted Watermark Ints: {ConsoleWriter.GetIEnumerableStr(extractedWatermarkInts)}"); // ОТЛАДКА
+        //Console.WriteLine($"Extracted Watermark Ints: {ConsoleWriter.GetIEnumerableStr(extractedWatermarkInts)}"); // ОТЛАДКА
 
         var groupsWithCounts = from s in extractedWatermarkInts
                                group s by s into g

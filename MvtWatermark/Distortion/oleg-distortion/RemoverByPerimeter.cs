@@ -14,18 +14,24 @@ public class RemoverByPerimeter : IDistortion
 
     public VectorTileTree Distort(VectorTileTree tiles)
     {
+        var maximumTilePerimeter = FindMaximumTilePerimeter(tiles);
         var copyTileTree = new VectorTileTree();
 
         foreach (var tileId in tiles)
         {
+            /*
             var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId);
             var envelopeTile = CoordinateConverter.TileBounds(tile.X, tile.Y, tile.Zoom);
             var tilePerimeter = 2 * (envelopeTile.Width + envelopeTile.Height);
-            var perimeter = tilePerimeter * _relativePerimeter;
+            */
 
+            var perimeter = maximumTilePerimeter * _relativePerimeter;
+
+            /*
             Console.WriteLine($"Периметр тайла: {tilePerimeter}");
             Console.WriteLine($"Площадь тайла: {envelopeTile.Area}");
             Console.WriteLine($"Относительный периметр: {perimeter}");
+            */
 
             var copyTile = new VectorTile { TileId = tileId };
 
@@ -49,5 +55,23 @@ public class RemoverByPerimeter : IDistortion
         }
 
         return copyTileTree;
+    }
+
+    private static double FindMaximumTilePerimeter(VectorTileTree tiles)
+    {
+        double maxPerimeter = 0;
+        foreach (var tileId in tiles)
+        {
+            var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId);
+            var envelopeTile = CoordinateConverter.TileBounds(tile.X, tile.Y, tile.Zoom);
+            var tilePerimeter = 2 * (envelopeTile.Width + envelopeTile.Height);
+
+            if (tilePerimeter > maxPerimeter)
+            {
+                maxPerimeter = tilePerimeter;
+            }
+        }
+
+        return maxPerimeter;
     }
 }

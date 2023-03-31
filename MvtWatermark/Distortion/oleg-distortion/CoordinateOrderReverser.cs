@@ -3,12 +3,14 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
-public class CoordinateOrderChanger: IDistortion
+public class CoordinateOrderReverser: IDistortion
 {
-    private readonly bool _internalReverseOnly;
-    public CoordinateOrderChanger(bool internalReverseOnly = true)
+    private readonly double _relativeObjectsToReverse;
+    public CoordinateOrderReverser(double relativeObjectsToReverse)
     {
-        _internalReverseOnly = internalReverseOnly;
+        if (relativeObjectsToReverse < 0 || relativeObjectsToReverse > 1)
+            throw new ArgumentException("relativeObjectsToReverse should be inside the [0, 1] interval");
+        _relativeObjectsToReverse = relativeObjectsToReverse;
     }
     public VectorTileTree Distort(VectorTileTree tiles)
     {
@@ -21,27 +23,26 @@ public class CoordinateOrderChanger: IDistortion
             {
                 var copyLayer = new Layer { Name = lyr.Name };
 
+                var featuresNum = (int)Math.Floor(_relativeObjectsToReverse * lyr.Features.Count);
+                var counter = 0;
                 foreach (var ftr in lyr.Features)
                 {
                     var newGeom = ftr.Geometry.Copy();
-                    if (ftr.Geometry is LineString)
+                    if (counter < featuresNum)
                     {
-                        // Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
-
-                        newGeom = ftr.Geometry.Reverse();
-
-                        // Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
-                    }
-                    else if (ftr.Geometry is MultiLineString)
-                    {
-                        //Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
-
-                        if (_internalReverseOnly)
+                        if (ftr.Geometry is LineString)
                         {
+                            // Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
+
                             newGeom = ftr.Geometry.Reverse();
+                            counter++;
+
+                            // Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
                         }
-                        else
+                        else if (ftr.Geometry is MultiLineString)
                         {
+                            //Console.WriteLine($"\n\nfeature type: {ftr.Geometry.GetType().Name}; feature geometry: {ftr.Geometry}");
+
                             var reversedMltlnstrngIenum = ((MultiLineString)ftr.Geometry.Reverse()).AsEnumerable().Reverse();
                             var reversedMltlnstrngList = new List<Geometry>(reversedMltlnstrngIenum);
                             var reversedMltlnstrngArr = new LineString[reversedMltlnstrngList.Count];
@@ -51,9 +52,10 @@ public class CoordinateOrderChanger: IDistortion
                                 reversedMltlnstrngArr[i] = (LineString)reversedMltlnstrngList[i];
                             }
                             newGeom = new MultiLineString(reversedMltlnstrngArr);
-                        }
+                            counter++;
 
-                        //Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
+                            //Console.WriteLine($"\nREVERSED feature type: {ftr.Geometry.GetType().Name}; feature geometry: {newGeom}");
+                        }
                     }
 
                     var copyFeature = new Feature(newGeom, ftr.Attributes);

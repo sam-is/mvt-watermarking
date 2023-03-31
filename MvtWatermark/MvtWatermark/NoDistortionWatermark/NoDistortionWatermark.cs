@@ -52,9 +52,9 @@ public class NoDistortionWatermark: IMvtWatermark
         var tileDict = nonStaticMapboxTileWriterWm.WriteWm(tiles, message, firstHalfOfTheKey, _options);
 
         var readerWm = new MapboxTileReaderWm();
-        var toReturn = readerWm.Read(tileDict);
+        var tilesWithWatermark = readerWm.Read(tileDict);
 
-        return toReturn;
+        return tilesWithWatermark;
     }
 
     /// <summary>
@@ -71,6 +71,7 @@ public class NoDistortionWatermark: IMvtWatermark
         //var watermarkInts = new List<int>();
         var extractedWatermarkString = new BitArray(_options.Nb * tiles.Count());
         //var extractedWatermarkList = new List<bool>();
+        var correctWatermarkTilesCounter = 0;
         var index = 0;
         foreach (var tileIndex in tiles) 
         {
@@ -82,8 +83,12 @@ public class NoDistortionWatermark: IMvtWatermark
                 var bitArr = new BitArray(new int[] { Convert.ToInt32(extractedInt) });
                 bitArr.CopyNbBitsTo(extractedWatermarkString, index, _options.Nb);
                 index += _options.Nb;
+                correctWatermarkTilesCounter++;
             }
         }
+
+        var resultWatermarkString = new BitArray(_options.Nb * correctWatermarkTilesCounter);
+        extractedWatermarkString.CopyNbBitsTo(resultWatermarkString, 0, resultWatermarkString.Count);
 
         /*
         if (watermarkInts.Count == 0)
@@ -94,6 +99,7 @@ public class NoDistortionWatermark: IMvtWatermark
         //return new BitArray(new[] { watermarkInts[0] }); 
         // пока что просто возвращается первый элемент из списка вотермарок
 
-        return extractedWatermarkString;
+        //return extractedWatermarkString;
+        return resultWatermarkString;
     }
 }

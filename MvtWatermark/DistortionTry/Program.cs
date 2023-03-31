@@ -5,7 +5,8 @@ using MvtWatermark.NoDistortionWatermark;
 using NetTopologySuite.IO.VectorTiles;
 using System.Collections;
 
-var parameterSets = new List<CoordinateSet>()
+/*
+var parameterSetsStp = new List<CoordinateSet>()
 {
     new CoordinateSet(10, 658, 332),
     new CoordinateSet(10, 658, 333),
@@ -14,8 +15,38 @@ var parameterSets = new List<CoordinateSet>()
             //new ZxySet(10, 658, 335), // кривой тайл, не считывается
     new CoordinateSet(10, 658, 337),
 };
+var parameterSetsTegola = new List<CoordinateSet>();
+*/
 
-DistortionTester.TestDistortionsWithDifferentParameters(parameterSets);
+
+var parameterSetsStp = new List<CoordinateSet>()
+{
+    new CoordinateSet(10, 653, 333),
+    new CoordinateSet(10, 653, 334)
+};
+var parameterSetsTegola = new List<CoordinateSet>()
+{
+    new CoordinateSet(10, 292, 385),
+    new CoordinateSet(10, 293, 385)
+};
+
+var boolArr = new bool[] { true, false, true, false, true, true, false, true, false, true, true, false, false, true, false, false, true, false, false,
+        true, false, true, false, true, true, false, true, false, true, true, false, false, true, false, false, true, false, false, true, true, true, false};
+var message = new BitArray(boolArr);
+
+//var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmax = 5, Nbmax = 4, Lfmax = 10, Lsmax = 5 };
+var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 2, Mmax = 2, Nbmin = 3, Nbmax = 3, Lfmin = 1, Lfmax = 10, Lsmin = 1, Lsmax = 5 };
+DistortionTester.DiffWatermarkParametersTest(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_Lf_Ls\\");
+
+optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 1, Mmax = 6, Nbmin = 3, Nbmax = 3, Lfmin = 15, Lfmax = 15, Lsmin = 3, Lsmax = 3 };
+DistortionTester.DiffWatermarkParametersTest(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_M\\");
+
+boolArr = new bool[] { true, false, true, false, true, true, false, true, false, true, true, false, true, true, false, true, true, false, true,
+        true, false, true, false, true, true, false, true, false, true, true, false, true, true, false, true, false, true, false, true, true, true, false};
+message = new BitArray(boolArr);
+
+optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 2, Mmax = 2, Nbmin = 2, Nbmax = 10, Lfmin = 15, Lfmax = 15, Lsmin = 3, Lsmax = 3 };
+DistortionTester.DiffWatermarkParametersTest(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_Nb\\");
 
 /*
 var distortionLst = new List<IDistortion>() {

@@ -106,7 +106,7 @@ public class ObjectsMagnifier: IDistortion
             extraCoords[i] = new Coordinate(x, y);
         }
 
-        Console.WriteLine($"///Дорастили {coordinatesToAddNum} точек к МУЛЬТИлайнстрингу"); // ОТЛАДКА
+        //Console.WriteLine($"///Дорастили {coordinatesToAddNum} точек к МУЛЬТИлайнстрингу"); // ОТЛАДКА
 
         var lineStringList = new List<LineString>();
         foreach(var lnstrngGeom in (MultiLineString)feature.Geometry)

@@ -36,35 +36,33 @@ public class NonStaticMapboxTileWriterWm
     public Dictionary<ulong, Mapbox.Tile> WriteWm(VectorTileTree tree, BitArray message,
         short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
     {
-        // вот прям тут сортировку сделать
+        // здесь тайловый словарь сортируется
         var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
-        var simpleDict = new Dictionary<ulong, VectorTile>();
+        var simpleDict = new Dictionary<ulong, VectorTile>(); // ОТЛАДКА
         foreach (var tileIndex in tree)
         {
             sortedTiles[tileIndex] = tree[tileIndex];
-            simpleDict[tileIndex] = tree[tileIndex];
+            simpleDict[tileIndex] = tree[tileIndex]; // ОТЛАДКА
         }
-        var ststr = "";
-        foreach (var tileIndex in sortedTiles)
+        var ststr = ""; // ОТЛАДКА
+        foreach (var tileIndex in sortedTiles) // ОТЛАДКА
         {
-            ststr += $"{tileIndex} ";
+            ststr += $"{tileIndex} "; // ОТЛАДКА
         }
-        var sdstr = "";
-        foreach (var tileIndex in simpleDict)
+        var sdstr = ""; // ОТЛАДКА
+        foreach (var tileIndex in simpleDict) // ОТЛАДКА
         {
-            sdstr += $"{tileIndex} ";
+            sdstr += $"{tileIndex} "; // ОТЛАДКА
         }
-        Console.WriteLine("sortedTiles = " + ststr);
-        Console.WriteLine("simpleDict = " + sdstr);
-        // и юзать уже сортированный словарь вместо tree
-
+        //Console.WriteLine("sortedTiles = " + ststr); // ОТЛАДКА
+        //Console.WriteLine("simpleDict = " + sdstr); // ОТЛАДКА
 
         var result = new Dictionary<ulong, Mapbox.Tile>();
 
-        if (message.Count < tree.Count() * options.Nb)
+        if (message.Count < sortedTiles.Count() * options.Nb)
         {
             throw new ArgumentException("Not enough bits in the watermark message", 
-                $"Bits' number: {message.Count}, minimal required bits number: {tree.Count() * options.Nb}");
+                $"Bits' number: {message.Count}, minimal required bits number: {sortedTiles.Count() * options.Nb}");
         }
 
         _hasSuccessfullyEmbededIntoSingleTile = false;
@@ -72,7 +70,7 @@ public class NonStaticMapboxTileWriterWm
         var watermarkString = new BitArray(message);
         var watermarkStringFragment = new BitArray(options.Nb);
 
-        var embededMessageFiller = new BitArray(tree.Count() * options.Nb); // отладка
+        var embededMessageFiller = new BitArray(sortedTiles.Count() * options.Nb); // отладка
         var embededMessageIndex = 0; // отладка
 
         for (var i = 0; i < options.Nb; i++)
@@ -84,7 +82,7 @@ public class NonStaticMapboxTileWriterWm
         var tileNumber = 0; // текущий номер тайла в дереве (фактически это Dictionary, и тайлы хранятся в нём в порядке добавления)
         var currentFragmentStartIndex = 0; // индекс начала текущей подпоследовательности (фрагмента) ЦВЗ
 
-        foreach (var tileIndex in tree)
+        foreach (var (tileIndex, vectorTile) in sortedTiles)
         {
             if (_hasSuccessfullyEmbededIntoSingleTile)
             {
@@ -96,7 +94,7 @@ public class NonStaticMapboxTileWriterWm
             }
 
             _hasSuccessfullyEmbededIntoSingleTile = false;
-            Mapbox.Tile resultTile = WriteWm(tree[tileIndex], watermarkStringFragment, firstHalfOfTheKey, tileIndex, 
+            Mapbox.Tile resultTile = WriteWm(vectorTile, watermarkStringFragment, firstHalfOfTheKey, tileIndex, 
                 options, tileNumber, currentFragmentStartIndex, extent);
 
             result.Add(tileIndex, resultTile);
@@ -106,12 +104,12 @@ public class NonStaticMapboxTileWriterWm
                 watermarkString.RightShift(options.Nb);
 
                 watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, embededMessageIndex * options.Nb, options.Nb); // отладка
-                Console.WriteLine($"В тайл успешно встроен фрагмент ЦВЗ"); // отладка
+                //Console.WriteLine($"В тайл успешно встроен фрагмент ЦВЗ"); // отладка
                 embededMessageIndex++; // отладка
             }
             else // отладка
             {
-                Console.WriteLine($"Не получилось встроить фрагмент ЦВЗ в тайл: {tileIndex}"); // отладка
+                //Console.WriteLine($"Не получилось встроить фрагмент ЦВЗ в тайл: {tileIndex}"); // отладка
             }
 
             tileNumber++;
@@ -125,7 +123,7 @@ public class NonStaticMapboxTileWriterWm
         {
             embededMessageString += $"{elem} "; // отладка
         }
-        Console.WriteLine($"Встроили: {embededMessageString}\n"); // отладка
+        //Console.WriteLine($"Встроили: {embededMessageString}\n"); // отладка
 
         return result;
     }
@@ -145,7 +143,7 @@ public class NonStaticMapboxTileWriterWm
     {
         var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
         if (watermarkInt == 0)
-            throw new ArgumentException("Одна или несколько подпоследовательностей состоят целиком из нулей, их невозможно встроить", 
+            throw new ArgumentException("Одна или несколько подпоследовательностей ЦВЗ состоят целиком из нулей, их невозможно встроить", 
                 $"Индекс тайла в дереве: {tileNumber}; Индекс начала подпоследовательности: {currentFragmentStartIndex}");
 
         int key = firstHalfOfTheKey;
@@ -184,6 +182,7 @@ public class NonStaticMapboxTileWriterWm
                         if (embedingIndex < options.Lf)
                         {
                             feature.Geometry.AddRange(Encode(lineal, tgt, watermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
+                            // счётчик для Lf увеличивается на 1, даже когда в фиче лежит мультилайнстринг. Стоит ли это править?
                             if (_hasSuccessfullyEmbededIntoSingleLineString)
                             {
                                 _hasSuccessfullyEmbededIntoSingleTile = true;
