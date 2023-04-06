@@ -59,13 +59,15 @@ public class AddingNewGeometriesDistortion : IDistortion
             var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
 
+            var countForLayer = (int)Math.Ceiling((double)_count / tiles[tileId].Layers.Count);
+
             foreach (var layer in tiles[tileId].Layers)
             {
                 var copyLayer = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
                     copyLayer.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
 
-                for (var i = 0; i < _count; i++)
+                for (var i = 0; i < countForLayer; i++)
                     copyLayer.Features.Add(new Feature(GetRandomGeometry(envelopeTile), new AttributesTable()));
 
                 tile.Layers.Add(copyLayer);
