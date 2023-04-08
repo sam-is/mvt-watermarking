@@ -127,7 +127,7 @@ public class MapboxTileReaderWm
         var groupsSorted = groupsWithCounts.OrderByDescending(g => g.Count);
         var mostFrequestWatermarkInt = groupsSorted.First().Item;
 
-        //Console.WriteLine($"Most frequent watermark in Vector tile: {mostFrequestWatermarkInt}\n\n"); // ОТЛАДКА
+        Console.WriteLine($"\nMost frequent watermark in Vector tile: {mostFrequestWatermarkInt}\n\n"); // ОТЛАДКА
 
         return mostFrequestWatermarkInt;
     }
@@ -344,6 +344,8 @@ public class MapboxTileReaderWm
         currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
         var savedPosition = currentPosition;
 
+        //Console.WriteLine($"Saved position 1: {savedPosition}"); // ОТЛАДКА
+
         // для проверки, что новый MoveTo не смещает курсор (почти) относительно предыдущего положения
         var lastPosition1 = currentPosition;
         var lastPosition2 = currentPosition;
@@ -434,14 +436,12 @@ public class MapboxTileReaderWm
 
         if (shouldTryReversed)
         {
-            //Console.BackgroundColor = ConsoleColor.DarkBlue; // ОТЛАДКА
-            //Console.WriteLine("\n     REVERSED!"); // ОТЛАДКА
-            //Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
             mapboxCommandString = firstMoveToCommandString; // ОТЛАДКА
 
 
             currentIndex = 3;
             currentPosition = savedPosition;
+            //Console.WriteLine($"Saved position 2: {savedPosition}"); // ОТЛАДКА
 
             lastPosition1 = currentPosition;
             lastPosition2 = currentPosition;
@@ -461,12 +461,15 @@ public class MapboxTileReaderWm
                     Debug.Assert(count == 1, $"Assertion: MoveTo count = {count}");
                     currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
 
-
+                    //lastPosition2 = currentPosition;
+                    //оно не работает чтоли?
                     mapboxCommandString += $"{currentPosition} "; // ОТЛАДКА
 
 
                     if (lastPosition2 == currentPosition && rNtgStart)
                     {
+                        realSegmentsReversedLineString.RemoveAt(realSegmentsReversedLineString.Count - 1);
+                        realSegmentsReversedLineString.RemoveAt(realSegmentsReversedLineString.Count - 1);
                         realSegmentsReversedLineString.Add(true);
                     }
 
@@ -478,8 +481,8 @@ public class MapboxTileReaderWm
 
                     if (command != MapboxCommandType.LineTo)
                     {
-                        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                        Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
+                        //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                        //Console.WriteLine($"\t\t---command ({command}) != LineTo"); // ОТЛАДКА
 
 
                         return null;
@@ -490,10 +493,10 @@ public class MapboxTileReaderWm
                     Debug.Assert(command == MapboxCommandType.LineTo, "команда не MoveTo и не LineTo");
                 }
 
-                if (count < 1)
+                if (count <= 0)
                 {
-                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
+                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t+++count ({count}) < 1"); // ОТЛАДКА
 
 
                     return null;
@@ -521,9 +524,9 @@ public class MapboxTileReaderWm
 
                 if (currentPosition != lastPosition1 && currentIndex != geometry.Count)
                 {
-                    Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-                    Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
-                    Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
+                    //Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t===currentPosition ({currentPosition}) != lastPosition1 ({lastPosition1})"); // ОТЛАДКА
+                    //Console.WriteLine($"\t\t===current index: ({currentIndex}) ; count: ({geometry.Count})"); // ОТЛАДКА
 
 
                     return null;
@@ -535,16 +538,6 @@ public class MapboxTileReaderWm
             realSegmentsReversedLineString.Reverse();
             realSegments = realSegmentsReversedLineString;
         }
-        else // ОТЛАДКА
-        {
-            //Console.BackgroundColor = ConsoleColor.Magenta; // ОТЛАДКА
-            //Console.WriteLine("\nNOT reversed!"); // ОТЛАДКА
-            //Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
-        }
-
-
-        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
-        Console.WriteLine($"realSegments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
 
 
         var realSegmentsInOneElementarySegmentNumber = realSegments.Count / options.D;
@@ -554,6 +547,24 @@ public class MapboxTileReaderWm
 
         if (realSegments.Count < options.D) // если вотермарки не обнаружено (количество реальных сегментов меньше количества элементарных)
             return null;
+
+        if (shouldTryReversed) // ОТЛАДКА
+        {
+            Console.BackgroundColor = ConsoleColor.DarkBlue; // ОТЛАДКА
+            Console.WriteLine("\n     REVERSED!"); // ОТЛАДКА
+            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+        }
+        else // ОТЛАДКА
+        {
+            Console.BackgroundColor = ConsoleColor.Magenta; // ОТЛАДКА
+            Console.WriteLine("\nNOT reversed!"); // ОТЛАДКА
+            Console.BackgroundColor = ConsoleColor.Black; // ОТЛАДКА
+        }
+        Console.WriteLine(mapboxCommandString); // ОТЛАДКА
+        Console.WriteLine($"\tReal Segments: {ConsoleWriter.GetIEnumerableStr(realSegments)}"); // ОТЛАДКА
+        Console.WriteLine($"Real serments count: {realSegments.Count}"); // ОТЛАДКА
+        Console.WriteLine($"keySequence: {ConsoleWriter.GetIEnumerableStr(keySequence)}"); // ОТЛАДКА
+
 
         for (var i = 0; i < options.D/2; i++)
         {
@@ -566,6 +577,8 @@ public class MapboxTileReaderWm
                 }
             }
         }
+
+        Console.WriteLine($"extractedWatermarkInts: {ConsoleWriter.GetIEnumerableStr(extractedWatermarkInts)}"); // ОТЛАДКА
 
         if (extractedWatermarkInts.Count == 0) return null;
 
@@ -582,6 +595,10 @@ public class MapboxTileReaderWm
         // update current position values
         currentX = currentPosition.currentX;
         currentY = currentPosition.currentY;
+
+        Console.BackgroundColor = ConsoleColor.DarkGreen;
+        Console.WriteLine($"Most frequent watermark in LineString: {mostFrequestWatermarkInt}"); // ОТЛАДКА
+        Console.BackgroundColor = ConsoleColor.Black;
 
         return mostFrequestWatermarkInt;
     }

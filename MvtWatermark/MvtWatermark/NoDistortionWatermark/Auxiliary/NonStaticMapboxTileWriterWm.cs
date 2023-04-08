@@ -34,7 +34,7 @@ public class NonStaticMapboxTileWriterWm
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
     public Dictionary<ulong, Mapbox.Tile> WriteWm(VectorTileTree tree, BitArray message,
-        short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
+        short firstHalfOfTheKey, NoDistortionWatermarkOptions options, out BitArray embededMessage, uint extent = 4096)
     {
         // здесь тайловый словарь сортируется
         var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
@@ -115,7 +115,7 @@ public class NonStaticMapboxTileWriterWm
             tileNumber++;
         }
 
-        var embededMessage = new BitArray(embededMessageIndex * options.Nb); // отладка
+        embededMessage = new BitArray(embededMessageIndex * options.Nb); // отладка
         embededMessageFiller.CopyNbBitsTo(embededMessage, 0, embededMessage.Count); // отладка
 
         var embededMessageString = ""; // отладка

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using NetTopologySuite.IO.VectorTiles;
 using MvtWatermark.NoDistortionWatermark.Auxiliary;
 using System.Linq;
@@ -14,6 +13,13 @@ public class NoDistortionWatermark: IMvtWatermark
     public NoDistortionWatermark(NoDistortionWatermarkOptions options)
     {
         _options = options;
+        _embededMessage = null;
+    }
+
+    private BitArray? _embededMessage;
+    public BitArray? EmbededMessage
+    {
+        get => _embededMessage;
     }
 
     /// <summary>
@@ -49,7 +55,7 @@ public class NoDistortionWatermark: IMvtWatermark
         //var tileDict = tiles.WriteWm(message, firstHalfOfTheKey, _options);
 
         var nonStaticMapboxTileWriterWm = new NonStaticMapboxTileWriterWm();
-        var tileDict = nonStaticMapboxTileWriterWm.WriteWm(tiles, message, firstHalfOfTheKey, _options);
+        var tileDict = nonStaticMapboxTileWriterWm.WriteWm(tiles, message, firstHalfOfTheKey, _options, out _embededMessage);
 
         var readerWm = new MapboxTileReaderWm();
         var tilesWithWatermark = readerWm.Read(tileDict);
