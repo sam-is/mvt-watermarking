@@ -69,11 +69,6 @@ public static class WatermarkTransform
         if (destinationBitArr.Count < index + nb)
             throw new ArgumentException($"Cannot copy: destinationBitArr.Count ({destinationBitArr.Count}) < index + nb ({index + nb})");
 
-        /*
-        if (thisBitArr.Count != nb)
-            throw new Exception($"Cannot copy: thisBitArr.Count ({thisBitArr.Count}) != nb ({nb})");
-        */
-
         for (var i = 0; i < nb; i++)
         {
             destinationBitArr[i + index] = thisBitArr[i];

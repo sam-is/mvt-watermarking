@@ -38,24 +38,10 @@ public class NonStaticMapboxTileWriterWm
     {
         // здесь тайловый словарь сортируется
         var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
-        var simpleDict = new Dictionary<ulong, VectorTile>(); // ОТЛАДКА
         foreach (var tileIndex in tree)
         {
             sortedTiles[tileIndex] = tree[tileIndex];
-            simpleDict[tileIndex] = tree[tileIndex]; // ОТЛАДКА
         }
-        var ststr = ""; // ОТЛАДКА
-        foreach (var tileIndex in sortedTiles) // ОТЛАДКА
-        {
-            ststr += $"{tileIndex} "; // ОТЛАДКА
-        }
-        var sdstr = ""; // ОТЛАДКА
-        foreach (var tileIndex in simpleDict) // ОТЛАДКА
-        {
-            sdstr += $"{tileIndex} "; // ОТЛАДКА
-        }
-        //Console.WriteLine("sortedTiles = " + ststr); // ОТЛАДКА
-        //Console.WriteLine("simpleDict = " + sdstr); // ОТЛАДКА
 
         var result = new Dictionary<ulong, Mapbox.Tile>();
 
@@ -70,8 +56,8 @@ public class NonStaticMapboxTileWriterWm
         var watermarkString = new BitArray(message);
         var watermarkStringFragment = new BitArray(options.Nb);
 
-        var embededMessageFiller = new BitArray(sortedTiles.Count() * options.Nb); // отладка
-        var embededMessageIndex = 0; // отладка
+        var embededMessageFiller = new BitArray(sortedTiles.Count() * options.Nb);
+        var embededMessageIndex = 0;
 
         for (var i = 0; i < options.Nb; i++)
         {
@@ -103,27 +89,15 @@ public class NonStaticMapboxTileWriterWm
             {
                 watermarkString.RightShift(options.Nb);
 
-                watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, embededMessageIndex * options.Nb, options.Nb); // отладка
-                //Console.WriteLine($"В тайл успешно встроен фрагмент ЦВЗ"); // отладка
-                embededMessageIndex++; // отладка
-            }
-            else // отладка
-            {
-                //Console.WriteLine($"Не получилось встроить фрагмент ЦВЗ в тайл: {tileIndex}"); // отладка
+                watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, embededMessageIndex * options.Nb, options.Nb);
+                embededMessageIndex++;
             }
 
             tileNumber++;
         }
 
-        embededMessage = new BitArray(embededMessageIndex * options.Nb); // отладка
-        embededMessageFiller.CopyNbBitsTo(embededMessage, 0, embededMessage.Count); // отладка
-
-        var embededMessageString = ""; // отладка
-        foreach (var elem in embededMessage) // отладка
-        {
-            embededMessageString += $"{elem} "; // отладка
-        }
-        //Console.WriteLine($"Встроили: {embededMessageString}\n"); // отладка
+        embededMessage = new BitArray(embededMessageIndex * options.Nb);
+        embededMessageFiller.CopyNbBitsTo(embededMessage, 0, embededMessage.Count);
 
         return result;
     }

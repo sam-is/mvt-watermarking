@@ -5,7 +5,7 @@ using System.Collections;
 namespace DebugProj;
 public static class ResultPrinter
 {
-    public static void Print(IDistortion distortion, BitArray originalMessage, BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion)
+    public static void PrintDistortion(IDistortion distortion, BitArray originalMessage, BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion)
     {
         Console.BackgroundColor = ConsoleColor.DarkGray;
         //Console.ForegroundColor = ConsoleColor.White;
@@ -24,6 +24,38 @@ public static class ResultPrinter
 
         Console.BackgroundColor = ConsoleColor.Black;
         Console.ForegroundColor = ConsoleColor.White;
+    }
+
+    public static void PrintExtraction(BitArray originalMessage, BitArray embededMessage, BitArray extractedMessage)
+    {
+        Console.BackgroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"Сообщение перед проверкой искажения: \t{ResultPrinter.GetWatermarkString(originalMessage)}"); // отладка
+
+        Console.BackgroundColor = ConsoleColor.Gray;
+        Console.ForegroundColor = ConsoleColor.Black;
+        Console.WriteLine($"Embeded message: \t\t{GetWatermarkString(embededMessage)}");
+        Console.WriteLine($"Extracted message: \t\t{GetWatermarkString(extractedMessage)}");
+
+        var areEqual = embededMessage.AreEqual(extractedMessage);
+        Console.BackgroundColor = areEqual == true ? ConsoleColor.Green : ConsoleColor.Red;
+        Console.WriteLine($"Both extracted messages (with and without distortion) are equal? - " +
+            $"{areEqual}");
+
+        Console.BackgroundColor = ConsoleColor.Black;
+        Console.ForegroundColor = ConsoleColor.White;
+    }
+
+    public static string GetExtractionString(BitArray originalMessage, BitArray embededMessage, BitArray extractedMessage)
+    {
+        var resultString = "";
+        resultString += $"\nEmbeded message: \t\t{GetWatermarkString(embededMessage)}";
+        resultString += $"\nExtracted message: \t\t{GetWatermarkString(extractedMessage)}";
+
+        var areEqual = embededMessage.AreEqual(extractedMessage);
+        resultString += $"\nBoth extracted messages (with and without distortion) are equal? - " +
+            $"{areEqual}";
+
+        return resultString;
     }
 
     public static async Task Log(IDistortion distortion, BitArray originalMessage, BitArray extractedMessageNoDistortion, 
