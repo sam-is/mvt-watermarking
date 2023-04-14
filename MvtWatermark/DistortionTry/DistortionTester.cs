@@ -2,8 +2,6 @@
 using NetTopologySuite.IO.VectorTiles;
 using MvtWatermark.NoDistortionWatermark;
 using System.Collections;
-using NetTopologySuite.IO.VectorTiles.Mapbox;
-using DebugProj;
 
 namespace DistortionTry;
 public static class DistortionTester
@@ -43,48 +41,6 @@ public static class DistortionTester
         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
         secondHalfOfLineStringIsUsed = true;    
         await TestParametersInCycle(vectorTileTree, key, message, cataloguePath, "NLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
-
-        /*
-        for (var m = optionsParamRanges.Mmin; m <= optionsParamRanges.Mmax; m++)
-        {
-            for (var nb = optionsParamRanges.Nbmin; nb <= optionsParamRanges.Nbmax; nb++)
-            {
-                var logDirectory = $"..\\..\\..\\{startPath}distortionTestsMatrices";
-                var dirInfo = new DirectoryInfo(logDirectory);
-                if (!dirInfo.Exists)
-                {
-                    dirInfo.Create();
-                }
-                var fileName = logDirectory + $"\\Nb-{nb}_M-{m}_D-{Convert.ToInt32(2 * m * Math.Pow(2, nb))}.txt";
-                using (var fileStream = new FileStream(fileName, FileMode.Create)) {}
-
-                for (var lf = optionsParamRanges.Lfmin; lf <= optionsParamRanges.Lfmax; lf++)
-                {
-                    for (var ls = optionsParamRanges.Lsmin; ls <= optionsParamRanges.Lsmax; ls++)
-                    {
-                        
-
-                        var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, false);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, true);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-
-
-                        aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
-
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, false);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, true);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                    }
-                }
-            }
-        }
-        */
     }
 
     public static async Task TestParametersInCycle(VectorTileTree vectorTileTree, int key, BitArray message, 
@@ -95,7 +51,7 @@ public static class DistortionTester
         {
             for (var nb = optionsParamRanges.Nbmin; nb <= optionsParamRanges.Nbmax; nb++)
             {
-                var logDirectory = $"..\\..\\..\\{cataloguePath}\\distortionTestsMatrices\\{subPath}";
+                var logDirectory = $"..\\..\\..\\MatricesTests\\{cataloguePath}\\{subPath}";
                 var dirInfo = new DirectoryInfo(logDirectory);
                 if (!dirInfo.Exists)
                 {
@@ -110,23 +66,6 @@ public static class DistortionTester
                     {
                         var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, secondHalfOfLineStringIsUsed);
                         await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-
-                        /*
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, true);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-
-
-                        aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
-
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, false);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                        options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, true);
-                        await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
-                        //DiffDistortionParametersTest(vectorTileTree, options, key, message);
-                        */
                     }
                 }
             }
@@ -154,7 +93,8 @@ public static class DistortionTester
                     new ObjectsMagnifier(param),
                     new CoordinateOrderReverser(param),
 
-                    //new ShiftingPointsDistortion(param),
+                    new ShiftingPointsDistortion(param),
+
                     new ReducingNumberOfPointsDistortion(param, false),
                     new ReducingNumberOfPointsDistortion(param, true),
                 };
@@ -185,17 +125,6 @@ public static class DistortionTester
                 $"Metric: {Math.Round(metric, 3)}/{resultsCount} | Relative Metric: {relativeMetric}\n\n";
             var resultMatrixString = "";
 
-            /*
-            var vectorLength = resultMatrix[0].Count;
-            for (var i = 0; i < vectorLength; i++)
-            {
-                foreach (var vector in resultMatrix)
-                {
-                    resultMatrixString += $"{Math.Round(vector[i], 2)}\t";
-                }
-                resultMatrixString += "\n";
-            }
-            */
             foreach (var vector in resultMatrix)
             {
                 foreach(var value in vector)
@@ -215,7 +144,6 @@ public static class DistortionTester
         int key, BitArray message, double? distortParam)
     {
         var ndwm = new NoDistortionWatermark(options);
-        //VectorTileTree treeWithWatermark = GetTreeWithWatermark(ndwm, vectorTileTree, key, message);
         VectorTileTree treeWithWatermark = ndwm.Embed(vectorTileTree, key, message);
         BitArray extractedMessageNoDistortion = ndwm.Extract(treeWithWatermark, key);
 
@@ -224,14 +152,13 @@ public static class DistortionTester
 
         Console.WriteLine($"\n\n\toptions: Nb-{options.Nb}|M-{options.M}|D-{options.D}|Ls-{options.Ls}|Lf-{options.Lf}|" +
             $"encType-{options.AtypicalEncodingType}|sh-{options.SecondHalfOfLineStringIsUsed}|||param-{distortParam}\n");
-        ResultPrinter.Print(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion);
+        ResultPrinter.PrintDistortion(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion);
 
         return CompareMessages(extractedMessageNoDistortion, extractedMessageWithDistortion);
     }
 
     private static double CompareMessages(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion)
     {
-        //var comparisonList = new List<bool>(extractedMessageNoDistortion.Count);
         var bitArrayBitsToCompareCount = extractedMessageWithDistortion.Count < extractedMessageNoDistortion.Count 
             ? extractedMessageWithDistortion.Count : extractedMessageNoDistortion.Count;
 
@@ -241,7 +168,6 @@ public static class DistortionTester
         {
             if (extractedMessageNoDistortion[i] == extractedMessageWithDistortion[i])
             {
-                //comparisonList.Add(true);
                 matchesCount++;
                 if (extractedMessageNoDistortion[i] == true)
                     falseOnly = false;
@@ -256,7 +182,6 @@ public static class DistortionTester
 
     private static double CompareMessagesByFragments(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion, int nb)
     {
-        //var comparisonList = new List<bool>(extractedMessageNoDistortion.Count);
         var bitArrayBitsToCompareCount = extractedMessageWithDistortion.Count < extractedMessageNoDistortion.Count
             ? extractedMessageWithDistortion.Count : extractedMessageNoDistortion.Count;
 
@@ -296,7 +221,8 @@ public static class DistortionTester
                 new ObjectsMagnifier(param),
                 new CoordinateOrderReverser(param),
 
-                //new ShiftingPointsDistortion(param),
+                new ShiftingPointsDistortion(param),
+
                 new ReducingNumberOfPointsDistortion(param, false),
                 new ReducingNumberOfPointsDistortion(param, true),
             };
@@ -358,14 +284,5 @@ public static class DistortionTester
         }
         await ResultPrinter.Log(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion, logPath, distortParam);
         //Console.WriteLine("\nПосле лога\n"); // ОТЛАДКА
-
-        /*
-        if (distortion is CoordinateOrderChanger)
-        {
-            vectorTileTree.Write($"{Directory.GetCurrentDirectory()}\\VectorTileTree");
-            treeWithWatermark.Write($"{Directory.GetCurrentDirectory()}\\VectorTileTreeWithWatermark");
-            distortedTreeWithWatermark.Write($"{Directory.GetCurrentDirectory()}\\distortedTileTrees");
-        }
-        */
     }
 }

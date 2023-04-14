@@ -456,7 +456,7 @@ public class NonStaticMapboxTileWriterWm
         var xHolder = currentX;
         var yHolder = currentY;
 
-        // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
+        // подсчёт количества реальных сегментов
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         var realSegments = 0;
         for (var i = 1; i < count; i++)
@@ -512,7 +512,6 @@ public class NonStaticMapboxTileWriterWm
                 var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
-                    // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
                     && keySequence[currentElementarySegment] == watermarkInt
                     && lsArray[realSegmentIndexInElementary] == 1)
                 {
@@ -562,7 +561,7 @@ public class NonStaticMapboxTileWriterWm
 
         var xHolder = currentX; var yHolder = currentY;
 
-        // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
+        // подсчёт количества реальных сегментов
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         var realSegments = 0;
         for (var i = 1; i < count; i++)
@@ -580,7 +579,6 @@ public class NonStaticMapboxTileWriterWm
         if (realSegments < options.D)
         {
             return Encode(sequence, tgt, ref currentX, ref currentY);
-            //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
         }
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
@@ -662,7 +660,6 @@ public class NonStaticMapboxTileWriterWm
                     encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
 
                     lastLineToCount = 0; // Сколько параметров для последнего LineTo
-
 
                     lastCommand.Index = encodedIndex;
                     lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
@@ -754,7 +751,7 @@ public class NonStaticMapboxTileWriterWm
         var lastLineToCount = 0;
         var currentRealSegment = 0;
 
-        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = Mapbox.MapboxCommandType.MoveTo }; // индекс последней команды
+        LastCommandInfo lastCommand; // индекс последней команды
 
         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
@@ -777,8 +774,8 @@ public class NonStaticMapboxTileWriterWm
                 var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
-                    // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                    && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
+                    // currentRealSegment and currentElementarySegment on first step are both 0
+                    && keySequence[currentElementarySegment] == watermarkInt
                     && lsArray[realSegmentIndexInElementary] == 1)
                 {
                     if (lastCommand.Index == encodedIndex)
@@ -926,10 +923,7 @@ public class NonStaticMapboxTileWriterWm
 
     private List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int lsParameter)
     {
-        //var random = new Random(key);
-        var random = new Random(); // лучше передавать ключ
-
-        //var lsParameter = random.Next(1, realSegmentsInOneElemSegment);
+        var random = new Random();
 
         var resultArr = new List<int>(realSegmentsInOneElemSegment);
         int randomIndex;

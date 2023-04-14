@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DebugProj\DebugProj.csproj" />
     <ProjectReference Include="..\Distortion\Distortion.csproj" />
     <ProjectReference Include="..\MvtWatermark\MvtWatermark.csproj" />
   </ItemGroup>

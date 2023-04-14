@@ -31,12 +31,11 @@ public class NoDistortionWatermark: IMvtWatermark
     /// <returns></returns>
     public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
     {
-        /*
-        if (message.Count < _options.Nb)
+        if (message.Count < _options.Nb * tiles.Count())
         {
-            throw new ArgumentException("ЦВЗ меньше размера в options");
+            throw new ArgumentException("Message size is less than [options.Nb * tiles.Count]. " +
+                "The number of bits in the message is not enough to embed the watermark in the tile tree");
         }
-        */
 
         var firstHalfOfTheKey = (short)key;
 

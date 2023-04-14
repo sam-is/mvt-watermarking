@@ -103,6 +103,38 @@ public class TileSetCreator
         return tile;
     }
 
+    public static VectorTileTree CreateRandomVectorTileTreeOneLineString(IEnumerable<CoordinateSet> parameterSets, int dotsNumber)
+    {
+        var vectorTileTree = new VectorTileTree();
+        foreach (var parameterSet in parameterSets)
+        {
+            ulong tileId;
+            VectorTile? vt = CreateRandomVectorTileOneLineString(parameterSet.X, parameterSet.Y, parameterSet.Zoom, dotsNumber, out tileId);
+            vectorTileTree[tileId] = vt!;
+        }
+
+        return vectorTileTree;
+    }
+
+    private static VectorTile? CreateRandomVectorTileOneLineString(int x, int y, int zoom, int dotsNumber, out ulong tile_id)
+    {
+        tile_id = MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
+        var vt = new VectorTile { TileId = tileDefinition.Id };
+
+        var rand = new Random(1);
+        var lyr = new Layer { Name = $"layer{1}" };
+
+        var feature = CreateRandomFeature(dotsNumber, 1,
+                Convert.ToBoolean(rand.Next(0, 2)), Convert.ToBoolean(rand.Next(0, 2)));
+        lyr.Features.Add(feature);
+
+        vt.Layers.Add(lyr);
+
+        Console.WriteLine("Возвращаем векторный тайл..."); // отладка
+        return vt;
+    }
+
     public static VectorTileTree CreateRandomVectorTileTree(IEnumerable<CoordinateSet> parameterSets)
     {
         var vectorTileTree = new VectorTileTree();

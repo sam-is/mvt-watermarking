@@ -10,7 +10,7 @@ public class NoDistortionWatermarkOptions
     public enum AtypicalEncodingTypes
     {
         MtLtLt,
-        MtLtMt, // нормально не работает, от этого придётся отказаться, судя по всему
+        MtLtMt, // нормально не работает
         NLtCommands
     }
     /// <summary>
