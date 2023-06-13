@@ -1,5 +1,4 @@
-﻿using NetTopologySuite.Algorithm;
-using NetTopologySuite.Features;
+﻿using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 

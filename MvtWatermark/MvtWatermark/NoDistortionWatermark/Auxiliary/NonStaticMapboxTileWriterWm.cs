@@ -485,7 +485,7 @@ public class NonStaticMapboxTileWriterWm
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var lastLineToCount = 0;
         var currentRealSegment = 0;
@@ -502,6 +502,7 @@ public class NonStaticMapboxTileWriterWm
         encodedIndex++; // encodedIndex = 3
         var lastLineToCommand = encodedIndex; // индекс последнего LineTo CommandInteger
 
+        var realSegmentIndexInEmbedPositions = 0;
         for (var i = 1; i < count; i++)
         {
             position = tgt.Transform(sequence, i, ref currentX, ref currentY);
@@ -509,24 +510,26 @@ public class NonStaticMapboxTileWriterWm
             if (position.x != 0 || position.y != 0)
             {
                 var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //realSegmentIndexInEmbedPositions += currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
-                if (currentElementarySegment < keySequence.Count
-                    && keySequence[currentElementarySegment] == watermarkInt
-                    && lsArray[realSegmentIndexInElementary] == 1)
+                if (currentElementarySegment < keySequence.Count && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    lastLineToCount = 1;
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
-                    position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-                    position = tgt.Transform(sequence, i, ref currentX, ref currentY);
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
+                    {
+                        lastLineToCount = 1;
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
+                        position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+                        position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
-                    encodedIndex += 6;
-                    lastLineToCommand = encodedIndex - 2; // отнимаем два параметра
+                        encodedIndex += 6;
+                        lastLineToCommand = encodedIndex - 2; // отнимаем два параметра
+                    }
+                    realSegmentIndexInEmbedPositions++;
                 }
                 encoded.Add(GenerateParameterInteger(position.x));
                 encoded.Add(GenerateParameterInteger(position.y));
@@ -583,7 +586,7 @@ public class NonStaticMapboxTileWriterWm
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -610,6 +613,7 @@ public class NonStaticMapboxTileWriterWm
             lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.MoveTo };
         }
 
+        var realSegmentIndexInEmbedPositions = 0;
         // 0-й отсчёт - это первый MoveTo
         for (var i = 1; i < count; i++)
         {
@@ -619,50 +623,53 @@ public class NonStaticMapboxTileWriterWm
             {
                 currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
 
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
                     // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                    && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
-                    && lsArray[realSegmentIndexInElementary] == 1)
+                    && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    if (lastCommand.Index == encodedIndex)
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
                     {
-                        encoded[lastCommand.Index] = lastCommand.Type switch
+                        if (lastCommand.Index == encodedIndex)
                         {
-                            Mapbox.MapboxCommandType.LineTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
-                                1),
-                            Mapbox.MapboxCommandType.MoveTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
-                                2),
-                            _ => encoded[lastCommand.Index]
-                        };
-                        encodedIndex += 9;
-                    }
-                    else
-                    {
+                            encoded[lastCommand.Index] = lastCommand.Type switch
+                            {
+                                Mapbox.MapboxCommandType.LineTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                    1),
+                                Mapbox.MapboxCommandType.MoveTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                    2),
+                                _ => encoded[lastCommand.Index]
+                            };
+                            encodedIndex += 9;
+                        }
+                        else
+                        {
+                            encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                            encodedIndex += 10;
+                        }
+
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+                        position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        position = tgt.Transform(sequence, i, ref currentX, ref currentY);
                         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                        encodedIndex += 10;
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+
+                        lastLineToCount = 0; // Сколько параметров для последнего LineTo
+
+                        lastCommand.Index = encodedIndex;
+                        lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                     }
-
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-                    position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    position = tgt.Transform(sequence, i, ref currentX, ref currentY);
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-
-                    lastLineToCount = 0; // Сколько параметров для последнего LineTo
-
-                    lastCommand.Index = encodedIndex;
-                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
+                    realSegmentIndexInEmbedPositions++;
                 }
                 else
                 {
@@ -744,7 +751,7 @@ public class NonStaticMapboxTileWriterWm
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -762,6 +769,7 @@ public class NonStaticMapboxTileWriterWm
         encodedIndex = 3;
         lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.LineTo };
 
+        var realSegmentIndexInEmbedPositions = 0;
         // 0-й отсчёт - это первый MoveTo
         for (var i = 1; i < count; i++)
         {
@@ -771,33 +779,36 @@ public class NonStaticMapboxTileWriterWm
             {
                 var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
 
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
                     // currentRealSegment and currentElementarySegment on first step are both 0
-                    && keySequence[currentElementarySegment] == watermarkInt
-                    && lsArray[realSegmentIndexInElementary] == 1)
+                    && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    if (lastCommand.Index == encodedIndex)
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
                     {
-                        encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
-                        encodedIndex += 3;
+                        if (lastCommand.Index == encodedIndex)
+                        {
+                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
+                            encodedIndex += 3;
+                        }
+                        else
+                        {
+                            encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                            encodedIndex += 4;
+                        }
+
+                        encoded.Add(GenerateParameterInteger(0));
+                        encoded.Add(GenerateParameterInteger(0));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+
+                        lastLineToCount = 0; // Сколько команд для последнего LineTo
+
+                        lastCommand.Index = encodedIndex;
+                        lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                     }
-                    else
-                    {
-                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                        encodedIndex += 4;
-                    }
-
-                    encoded.Add(GenerateParameterInteger(0));
-                    encoded.Add(GenerateParameterInteger(0));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-
-                    lastLineToCount = 0; // Сколько команд для последнего LineTo
-
-                    lastCommand.Index = encodedIndex;
-                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
+                    realSegmentIndexInEmbedPositions++;
                 }
                 encoded.Add(GenerateParameterInteger(position.x));
                 encoded.Add(GenerateParameterInteger(position.y));
@@ -921,28 +932,29 @@ public class NonStaticMapboxTileWriterWm
         return dx > 0 && dy > 0 && (dx > 1 || dy > 1);
     }
 
-    private List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int lsParameter)
+    private List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int m, int lsParameter)
     {
         var random = new Random();
 
-        var resultArr = new List<int>(realSegmentsInOneElemSegment);
+        var lsSequenceSize = realSegmentsInOneElemSegment * m;
+        var resultArr = new List<int>(lsSequenceSize);
         int randomIndex;
 
-        for (var i = 0; i < realSegmentsInOneElemSegment; i++)
+        for (var i = 0; i < lsSequenceSize; i++)
         {
             resultArr.Add(0);
         }
 
         if (lsParameter < 1)
             lsParameter = 1;
-        else if (lsParameter > realSegmentsInOneElemSegment)
-            lsParameter = realSegmentsInOneElemSegment;
+        else if (lsParameter > lsSequenceSize)
+            lsParameter = lsSequenceSize;
 
         for (var i = 0; i < lsParameter; i++)
         {
             do
             {
-                randomIndex = random.Next(0, realSegmentsInOneElemSegment);
+                randomIndex = random.Next(0, lsSequenceSize);
             } while (resultArr[randomIndex] != 0);
             resultArr[randomIndex] = 1;
         }

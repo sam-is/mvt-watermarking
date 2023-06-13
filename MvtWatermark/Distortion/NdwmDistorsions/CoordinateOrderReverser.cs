@@ -8,7 +8,7 @@ public class CoordinateOrderReverser: IDistortion
     private readonly double _relativeObjectsToReverse;
     public CoordinateOrderReverser(double relativeObjectsToReverse)
     {
-        if (relativeObjectsToReverse < 0 || relativeObjectsToReverse > 1)
+        if (relativeObjectsToReverse is < 0 or > 1)
             throw new ArgumentException("relativeObjectsToReverse should be inside the [0, 1] interval");
         _relativeObjectsToReverse = relativeObjectsToReverse;
     }
@@ -37,15 +37,15 @@ public class CoordinateOrderReverser: IDistortion
                         }
                         else if (ftr.Geometry is MultiLineString)
                         {
-                            var reversedMltlnstrngIenum = ((MultiLineString)ftr.Geometry.Reverse()).AsEnumerable().Reverse();
-                            var reversedMltlnstrngList = new List<Geometry>(reversedMltlnstrngIenum);
-                            var reversedMltlnstrngArr = new LineString[reversedMltlnstrngList.Count];
+                            var reversedMultiLineStringIenum = ((MultiLineString)ftr.Geometry.Reverse()).AsEnumerable().Reverse();
+                            var reversedMultiLineStringList = new List<Geometry>(reversedMultiLineStringIenum);
+                            var reversedMultiLineStringArr = new LineString[reversedMultiLineStringList.Count];
 
-                            for (var i = 0; i < reversedMltlnstrngList.Count; i++)
+                            for (var i = 0; i < reversedMultiLineStringList.Count; i++)
                             {
-                                reversedMltlnstrngArr[i] = (LineString)reversedMltlnstrngList[i];
+                                reversedMultiLineStringArr[i] = (LineString)reversedMultiLineStringList[i];
                             }
-                            newGeom = new MultiLineString(reversedMltlnstrngArr);
+                            newGeom = new MultiLineString(reversedMultiLineStringArr);
                             counter++;
                         }
                     }

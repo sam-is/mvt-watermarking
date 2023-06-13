@@ -5,7 +5,7 @@ using NetTopologySuite.IO.VectorTiles;
 namespace Distortion;
 public class ObjectsMagnifier: IDistortion
 {
-    private double _relativeNewDotsNumber;
+    private readonly double _relativeNewDotsNumber;
     public ObjectsMagnifier(double relativeNewDotsNumber)
     {
         if (relativeNewDotsNumber < 0)
@@ -102,12 +102,8 @@ public class ObjectsMagnifier: IDistortion
             extraCoords[i] = new Coordinate(x, y);
         }
 
-        var lineStringList = new List<LineString>();
-        foreach(var lnstrngGeom in (MultiLineString)feature.Geometry)
-        {
-            lineStringList.Add((LineString)lnstrngGeom);
-        }
-        var lastLineStringCoords = lineStringList[lineStringList.Count - 1].Coordinates;
+        var lineStringList = ((MultiLineString)feature.Geometry).Cast<LineString>().ToList();
+        var lastLineStringCoords = lineStringList[^1].Coordinates;
         var lastLineStringCoordsNew = new Coordinate[lastLineStringCoords.Length + extraCoords.Length];
         lastLineStringCoords.CopyTo(lastLineStringCoordsNew, 0);
         extraCoords.CopyTo(lastLineStringCoordsNew, lastLineStringCoords.Length);

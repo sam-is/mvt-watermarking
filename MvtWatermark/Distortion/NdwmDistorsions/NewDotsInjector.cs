@@ -12,7 +12,7 @@ namespace Distortion;
 // НЕ ГОТОВО
 public class NewDotsInjector: IDistortion
 {
-    private double _relativeNewDotsNumber;
+    private readonly double _relativeNewDotsNumber;
     public NewDotsInjector(double relativeNewDotsNumber)
     {
         _relativeNewDotsNumber = relativeNewDotsNumber;

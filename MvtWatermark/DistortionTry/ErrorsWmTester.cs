@@ -11,7 +11,11 @@ public static class ErrorsWmTester
         var paramSetsStp = new List<CoordinateSet>()
         {
             new CoordinateSet(10, 653, 333),
-            //new CoordinateSet(10, 653, 334)
+            new CoordinateSet(10, 653, 334),
+            new CoordinateSet(10, 658, 332),
+            new CoordinateSet(10, 658, 333),
+            new CoordinateSet(10, 658, 334),
+            new CoordinateSet(10, 658, 338)
         };
         var paramSetsTegola = new List<CoordinateSet>()
         {
@@ -23,7 +27,9 @@ public static class ErrorsWmTester
         VectorTileTree tiles = TileSetCreator.GetVectorTileTree(paramSetsStp, paramSetsTegola);
         var key = 123;
         var m = 6;
-        var options = new NoDistortionWatermarkOptions(m, 3, 3, 15);
+        //var encodingType = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+        var encodingType = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
+        var options = new NoDistortionWatermarkOptions(m, 3, 3, 15, encodingType);
         var ndwm = new NoDistortionWatermark(options);
 
         var boolArr = new bool[] { true, false, true, false, true, true, false, true, false, true, true, false, false, true, false, false, true, false, false,

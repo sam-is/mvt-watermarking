@@ -4,7 +4,7 @@ using NetTopologySuite.IO.VectorTiles;
 namespace Distortion;
 public class ObjectsRemover: IDistortion
 {
-    private double _relativeNumberFeatures;
+    private readonly double _relativeNumberFeatures;
     public ObjectsRemover(double relativeNumberFeatures)
     {
         if (relativeNumberFeatures < 0 || relativeNumberFeatures > 1)

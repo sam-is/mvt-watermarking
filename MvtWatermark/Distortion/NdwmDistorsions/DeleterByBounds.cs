@@ -4,10 +4,10 @@ using NetTopologySuite.IO.VectorTiles;
 namespace Distortion;
 public class DeleterByBounds: IDistortion
 {
-    private double _top;
-    private double _bottom;
-    private double _left;
-    private double _right;
+    private readonly double _top;
+    private readonly double _bottom;
+    private readonly double _left;
+    private readonly double _right;
 
     public DeleterByBounds(double top, double bottom, double left, double right)
     {

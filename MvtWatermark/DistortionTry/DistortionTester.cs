@@ -4,7 +4,7 @@ using MvtWatermark.NoDistortionWatermark;
 using System.Collections;
 
 namespace DistortionTry;
-public static class DistortionTester
+public class DistortionTester
 {
     public struct OptionsParamRanges
     {
@@ -17,7 +17,9 @@ public static class DistortionTester
         public int Lsmin { get; set; }
         public int Lsmax { get; set; }
     }
-    public static async void DiffWatermarkParametersTest(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola, 
+
+    // Тут надо сразу среднеарифметическое считать по всем типам геометрии и использовании второй половины
+    public async void DiffWatermarkParametersTest_Ls_Lf(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola, 
         OptionsParamRanges optionsParamRanges, BitArray message, string cataloguePath = "")
     {
         VectorTileTree vectorTileTree = TileSetCreator.GetVectorTileTree(parameterSetsStp, parameterSetsTegola);
@@ -26,27 +28,106 @@ public static class DistortionTester
         //var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
         var key = 123;
 
-        var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
-        var secondHalfOfLineStringIsUsed = false;
-        await TestParametersInCycle(vectorTileTree, key, message, cataloguePath, "MtLtLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        //"average_Ls_Lf"
+        await TestParametersInCycle_LS_LF(vectorTileTree, key, message, cataloguePath, "", optionsParamRanges);
+
+        /*
+        //var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+        //var secondHalfOfLineStringIsUsed = false;
+        var taskMtLtLtFalse = new Task(async () => 
+        { 
+            await TestParametersInCycle_LS_LF(vectorTileTree, key, message, cataloguePath, "MtLtLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed); 
+        });
+        taskMtLtLtFalse.Start();
 
         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
         secondHalfOfLineStringIsUsed = true;
-        await TestParametersInCycle(vectorTileTree, key, message, cataloguePath, "MtLtLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        var taskMtLtLtTrue = new Task(async () =>
+        {
+            await TestParametersInCycle_LS_LF(vectorTileTree, key, message, cataloguePath, "MtLtLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskMtLtLtTrue.Start();
 
         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
         secondHalfOfLineStringIsUsed = false;
-        await TestParametersInCycle(vectorTileTree, key, message, cataloguePath, "NLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        var taskNLtFalse = new Task(async () =>
+        {
+            await TestParametersInCycle_LS_LF(vectorTileTree, key, message, cataloguePath, "NLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskNLtFalse.Start();
 
         aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
-        secondHalfOfLineStringIsUsed = true;    
-        await TestParametersInCycle(vectorTileTree, key, message, cataloguePath, "NLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        secondHalfOfLineStringIsUsed = true;
+        var taskNLtTrue = new Task(async () =>
+        {
+            await TestParametersInCycle_LS_LF(vectorTileTree, key, message, cataloguePath, "NLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskNLtTrue.Start();
+
+        taskMtLtLtFalse.Wait();
+        taskMtLtLtTrue.Wait();
+        taskNLtFalse.Wait();
+        taskNLtTrue.Wait();
+        */
     }
 
-    public static async Task TestParametersInCycle(VectorTileTree vectorTileTree, int key, BitArray message, 
-        string cataloguePath, string subPath, OptionsParamRanges optionsParamRanges, NoDistortionWatermarkOptions.AtypicalEncodingTypes aEtype, 
-        bool secondHalfOfLineStringIsUsed)
+    public async void DiffWatermarkParametersTest_M_Nb(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola,
+        OptionsParamRanges optionsParamRanges, BitArray message, string cataloguePath = "")
     {
+        VectorTileTree vectorTileTree = TileSetCreator.GetVectorTileTree(parameterSetsStp, parameterSetsTegola);
+        //VectorTileTree vectorTileTree = TileSetCreator.CreateRandomVectorTileTree(parameterSets);
+
+        //var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+        var key = 123;
+
+        //"average_M_Nb"
+        await TestParametersInCycle_M_Nb(vectorTileTree, key, message, cataloguePath, "", optionsParamRanges);
+        
+        /*
+        var aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+        var secondHalfOfLineStringIsUsed = false;
+        var taskMtLtLtFalse = new Task(async () =>
+        {
+            await TestParametersInCycle_M_Nb(vectorTileTree, key, message, cataloguePath, "MtLtLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskMtLtLtFalse.Start();
+
+        
+        aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt;
+        secondHalfOfLineStringIsUsed = true;
+        var taskMtLtLtTrue = new Task(async () =>
+        {
+            await TestParametersInCycle_M_Nb(vectorTileTree, key, message, cataloguePath, "MtLtLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskMtLtLtTrue.Start();
+
+        aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
+        secondHalfOfLineStringIsUsed = false;
+        var taskNLtFalse = new Task(async () =>
+        {
+            await TestParametersInCycle_M_Nb(vectorTileTree, key, message, cataloguePath, "NLt_false", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskNLtFalse.Start();
+
+        aEtype = NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands;
+        secondHalfOfLineStringIsUsed = true;
+        var taskNLtTrue = new Task(async () =>
+        {
+            await TestParametersInCycle_M_Nb(vectorTileTree, key, message, cataloguePath, "NLt_true", optionsParamRanges, aEtype, secondHalfOfLineStringIsUsed);
+        });
+        taskNLtTrue.Start();
+
+        taskMtLtLtFalse.Wait();
+        taskMtLtLtTrue.Wait();
+        taskNLtFalse.Wait();
+        taskNLtTrue.Wait();
+        */
+    }
+
+    public async Task TestParametersInCycle_LS_LF(VectorTileTree vectorTileTree, int key, BitArray message, 
+        string cataloguePath, string subPath, OptionsParamRanges optionsParamRanges)
+    {
+        //, NoDistortionWatermarkOptions.AtypicalEncodingTypes aEtype, bool secondHalfOfLineStringIsUsed
         for (var m = optionsParamRanges.Mmin; m <= optionsParamRanges.Mmax; m++)
         {
             for (var nb = optionsParamRanges.Nbmin; nb <= optionsParamRanges.Nbmax; nb++)
@@ -64,15 +145,223 @@ public static class DistortionTester
                 {
                     for (var ls = optionsParamRanges.Lsmin; ls <= optionsParamRanges.Lsmax; ls++)
                     {
+                        /*
                         var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, secondHalfOfLineStringIsUsed);
                         await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                        */
+
+                        using (var streamWriter = new StreamWriter(fileName, true))
+                        {
+                            /*var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, secondHalfOfLineStringIsUsed);
+                            await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);*/
+
+                            var taskAuxiliary = new Task<(List<List<double>>, List<List<double>>)>((List<List<double>>, List<List<double>>) () =>
+                            {
+                                var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, false);
+                                var resultMatrix1 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                                options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, true);
+                                var resultMatrix2 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                                return (resultMatrix1, resultMatrix2);
+                            });
+                            taskAuxiliary.Start();
+
+                            
+                            var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands, false);
+                            var resultMatrix3 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                            options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands, true);
+                            var resultMatrix4 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+
+                            taskAuxiliary.Wait();
+                            (List<List<double>> resultMatrix1, List<List<double>> resultMatrix2) = taskAuxiliary.Result;
+
+                            var resultMatrix = new List<List<double>>();
+                            foreach (var resultVector in resultMatrix1)
+                            {
+                                resultMatrix.Add(new List<double>(resultVector));
+                            }
+                            for (var i = 0; i < resultMatrix.Count; i++)
+                            {
+                                for (var j = 0; j < resultMatrix[0].Count; j++)
+                                {
+                                    resultMatrix[i][j] += resultMatrix2[i][j];
+                                    resultMatrix[i][j] += resultMatrix3[i][j];
+                                    resultMatrix[i][j] += resultMatrix4[i][j];
+                                    resultMatrix[i][j] /= 4;
+                                }
+                            }
+
+                            double metric = 0;
+                            foreach (var vector in resultMatrix1)
+                            {
+                                foreach (var value in vector)
+                                    metric += value;
+                            }
+
+                            var resultsCount = resultMatrix1.Count * resultMatrix1[0].Count;
+                            var relativeMetric = Math.Round(metric / resultsCount, 4);
+
+                            var optionsString = $"\nAVERAGE | D: {options.D} | M: {options.M} " +
+                $"| Nb: {options.Nb} | Ls: {options.Ls} | Lf: {options.Lf}\n" +
+                $"Metric: {Math.Round(metric, 3)}/{resultsCount} | Relative Metric: {relativeMetric}\n\n";
+                            var resultMatrixString = "";
+
+                            foreach (var vector in resultMatrix)
+                            {
+                                foreach (var value in vector)
+                                {
+                                    resultMatrixString += $"{Math.Round(value, 2)}\t";
+                                }
+                                resultMatrixString += "\n";
+                            }
+
+
+                            await streamWriter.WriteAsync(optionsString);
+                            await streamWriter.WriteAsync(resultMatrixString);
+                        }
                     }
                 }
             }
         }
     }
 
-    public static async Task WriteMetricsMatrix(VectorTileTree vectorTileTree, NoDistortionWatermarkOptions options,
+    public async Task TestParametersInCycle_M_Nb(VectorTileTree vectorTileTree, int key, BitArray message,
+        string cataloguePath, string subPath, OptionsParamRanges optionsParamRanges)
+    {
+        for (var lf = optionsParamRanges.Lfmin; lf <= optionsParamRanges.Lfmax; lf++)
+        {
+            for (var ls = optionsParamRanges.Lsmin; ls <= optionsParamRanges.Lsmax; ls++)
+            {
+                var logDirectory = $"..\\..\\..\\MatricesTests\\{cataloguePath}\\{subPath}";
+                var dirInfo = new DirectoryInfo(logDirectory);
+                if (!dirInfo.Exists)
+                {
+                    dirInfo.Create();
+                }
+                var fileName = logDirectory + $"\\Ls-{ls}_Lf-{lf}.txt";
+                using (var fileStream = new FileStream(fileName, FileMode.Create)) { }
+
+                for (var m = optionsParamRanges.Mmin; m <= optionsParamRanges.Mmax; m++)
+                {
+                    for (var nb = optionsParamRanges.Nbmin; nb <= optionsParamRanges.Nbmax; nb++)
+                    {
+                        using (var streamWriter = new StreamWriter(fileName, true))
+                        {
+                            /*var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, aEtype, secondHalfOfLineStringIsUsed);
+                            await WriteMetricsMatrix(vectorTileTree, options, key, message, fileName);*/
+
+                            var taskAuxiliary = new Task<(List<List<double>>, List<List<double>>)>((List<List<double>>, List<List<double>>) () =>
+                            {
+                                var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, false);
+                                var resultMatrix1 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                                options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtLt, true);
+                                var resultMatrix2 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                                return (resultMatrix1, resultMatrix2);
+                            });
+                            taskAuxiliary.Start();
+
+                            
+                            var options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands, false);
+                            var resultMatrix3 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+                            options = new NoDistortionWatermarkOptions(m, nb, ls, lf, NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands, true);
+                            var resultMatrix4 = GetMetricsMatrix(vectorTileTree, options, key, message, fileName);
+
+                            taskAuxiliary.Wait();
+                            (List<List<double>> resultMatrix1, List<List<double>> resultMatrix2) = taskAuxiliary.Result;
+
+                            var resultMatrix = new List<List<double>>();
+                            foreach (var resultVector in resultMatrix1)
+                            {
+                                resultMatrix.Add(new List<double>(resultVector));
+                            }
+                            for (var i = 0; i < resultMatrix.Count; i++)
+                            {
+                                for (var j = 0; j < resultMatrix[0].Count; j++)
+                                {
+                                    resultMatrix[i][j] += resultMatrix2[i][j];
+                                    resultMatrix[i][j] += resultMatrix3[i][j];
+                                    resultMatrix[i][j] += resultMatrix4[i][j];
+                                    resultMatrix[i][j] /= 4;
+                                }
+                            }
+
+                            double metric = 0;
+                            foreach (var vector in resultMatrix1)
+                            {
+                                foreach (var value in vector)
+                                    metric += value;
+                            }
+
+                            var resultsCount = resultMatrix1.Count * resultMatrix1[0].Count;
+                            var relativeMetric = Math.Round(metric / resultsCount, 4);
+
+                            var optionsString = $"\nAVERAGE | D: {options.D} | M: {options.M} " +
+                $"| Nb: {options.Nb} | Ls: {options.Ls} | Lf: {options.Lf}\n" +
+                $"Metric: {Math.Round(metric, 3)}/{resultsCount} | Relative Metric: {relativeMetric}\n\n";
+                            var resultMatrixString = "";
+
+                            foreach (var vector in resultMatrix)
+                            {
+                                foreach (var value in vector)
+                                {
+                                    resultMatrixString += $"{Math.Round(value, 2)}\t";
+                                }
+                                resultMatrixString += "\n";
+                            }
+
+
+                            await streamWriter.WriteAsync(optionsString);
+                            await streamWriter.WriteAsync(resultMatrixString);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public List<List<double>> GetMetricsMatrix(VectorTileTree vectorTileTree, NoDistortionWatermarkOptions options,
+        int key, BitArray message, string fileName)
+    {
+        var resultMatrix = new List<List<double>>();
+
+        double param = 0;
+        while (param <= 1)
+        {
+            var oneParamResultVector = new List<double>();
+
+            var distortionWithParameterList = new List<IDistortion>() {
+                    //new DeletingLayersDistortion(param),
+                    /*
+                    new DeletingByAreaDistortion(param),
+                    new RemoverByPerimeter(param),
+                    new ObjectsAdder(param),
+                    new ObjectsRemover(param),
+                    new ObjectsMagnifier(param),
+                    new CoordinateOrderReverser(param),
+                    */
+
+                    //new ShiftingPointsDistortion(param),
+
+                    new ReducingNumberOfPointsDistortion(param, false),
+                    new ReducingNumberOfPointsDistortion(param, true),
+                };
+
+            foreach (var distortion in distortionWithParameterList)
+            {
+                var comparisonResult = TestSingleDistortion(vectorTileTree, distortion, options, key, message, param);
+                oneParamResultVector.Add(comparisonResult);
+            }
+
+            resultMatrix.Add(oneParamResultVector);
+
+            param += 0.05;
+        }
+
+        
+
+        return resultMatrix;
+    }
+
+    public async Task WriteMetricsMatrix(VectorTileTree vectorTileTree, NoDistortionWatermarkOptions options,
         int key, BitArray message, string fileName)
     {
         using (var streamWriter = new StreamWriter(fileName, true))
@@ -85,7 +374,7 @@ public static class DistortionTester
                 var oneParamResultVector = new List<double>();
 
                 var distortionWithParameterList = new List<IDistortion>() {
-                    new DeletingLayersDistortion(param),
+                    //new DeletingLayersDistortion(param),
                     new DeletingByAreaDistortion(param),
                     new RemoverByPerimeter(param),
                     new ObjectsAdder(param),
@@ -93,10 +382,10 @@ public static class DistortionTester
                     new ObjectsMagnifier(param),
                     new CoordinateOrderReverser(param),
 
-                    new ShiftingPointsDistortion(param),
+                    //new ShiftingPointsDistortion(param),
 
-                    new ReducingNumberOfPointsDistortion(param, false),
-                    new ReducingNumberOfPointsDistortion(param, true),
+                    //new ReducingNumberOfPointsDistortion(param, false),
+                    //new ReducingNumberOfPointsDistortion(param, true),
                 };
 
                 foreach (var distortion in distortionWithParameterList)
@@ -140,7 +429,7 @@ public static class DistortionTester
         }
     }
 
-    private static double TestSingleDistortion(VectorTileTree vectorTileTree, IDistortion distortion, NoDistortionWatermarkOptions options,
+    private double TestSingleDistortion(VectorTileTree vectorTileTree, IDistortion distortion, NoDistortionWatermarkOptions options,
         int key, BitArray message, double? distortParam)
     {
         var ndwm = new NoDistortionWatermark(options);
@@ -150,14 +439,14 @@ public static class DistortionTester
         VectorTileTree distortedTreeWithWatermark = distortion.Distort(treeWithWatermark);
         BitArray extractedMessageWithDistortion = ndwm.Extract(distortedTreeWithWatermark, key);
 
-        Console.WriteLine($"\n\n\toptions: Nb-{options.Nb}|M-{options.M}|D-{options.D}|Ls-{options.Ls}|Lf-{options.Lf}|" +
-            $"encType-{options.AtypicalEncodingType}|sh-{options.SecondHalfOfLineStringIsUsed}|||param-{distortParam}\n");
-        ResultPrinter.PrintDistortion(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion);
+        /*Console.WriteLine($"\n\n\toptions: Nb-{options.Nb}|M-{options.M}|D-{options.D}|Ls-{options.Ls}|Lf-{options.Lf}|" +
+            $"encType-{options.AtypicalEncodingType}|sh-{options.SecondHalfOfLineStringIsUsed}|||param-{distortParam}\n");*/
+        //ResultPrinter.PrintDistortion(distortion, message, extractedMessageNoDistortion, extractedMessageWithDistortion);
 
         return CompareMessages(extractedMessageNoDistortion, extractedMessageWithDistortion);
     }
 
-    private static double CompareMessages(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion)
+    private double CompareMessages(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion)
     {
         var bitArrayBitsToCompareCount = extractedMessageWithDistortion.Count < extractedMessageNoDistortion.Count 
             ? extractedMessageWithDistortion.Count : extractedMessageNoDistortion.Count;
@@ -180,7 +469,7 @@ public static class DistortionTester
         return ((double)matchesCount)/extractedMessageNoDistortion.Count;
     }
 
-    private static double CompareMessagesByFragments(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion, int nb)
+    private double CompareMessagesByFragments(BitArray extractedMessageNoDistortion, BitArray extractedMessageWithDistortion, int nb)
     {
         var bitArrayBitsToCompareCount = extractedMessageWithDistortion.Count < extractedMessageNoDistortion.Count
             ? extractedMessageWithDistortion.Count : extractedMessageNoDistortion.Count;

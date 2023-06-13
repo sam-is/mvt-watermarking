@@ -5,11 +5,11 @@ using NetTopologySuite.IO.VectorTiles;
 namespace Distortion;
 public class ObjectsAdder: IDistortion
 {
-    private double _relativeNumberFeatures;
+    private readonly double _relativeNumberFeatures;
 
     public ObjectsAdder(double relativeNumberFeatures)
     {
-        if (relativeNumberFeatures < 0 || relativeNumberFeatures > 1)
+        if (relativeNumberFeatures is < 0 or > 1)
             throw new ArgumentException("RelativeNumberFeatures must be within the interval [0, 1]", $"relativeNumberFeatures = {relativeNumberFeatures}");
 
         _relativeNumberFeatures = relativeNumberFeatures;
@@ -17,7 +17,7 @@ public class ObjectsAdder: IDistortion
 
     public VectorTileTree Distort(VectorTileTree tiles)
     {
-        var copyTiletree = new VectorTileTree();
+        var copyTileTree = new VectorTileTree();
 
         foreach (var tileId in tiles)
         {
@@ -41,12 +41,12 @@ public class ObjectsAdder: IDistortion
                 }
                 copyTile.Layers.Add(copyLayer);
             }
-            copyTiletree[tileId] = copyTile;
+            copyTileTree[tileId] = copyTile;
         }
-        return copyTiletree;
+        return copyTileTree;
     }
 
-    public Feature GenerateFeature(int number)
+    private static Feature GenerateFeature(int number)
     {
         var random = new Random();
         var feature = new Feature();
@@ -68,7 +68,7 @@ public class ObjectsAdder: IDistortion
         return feature;
     }
 
-    private Feature GeneratePoint(Random random, int number)
+    private static Feature GeneratePoint(Random random, int number)
     {
         var xCoord = random.Next(-179, 178) + 0.5;
         var yCoord = random.Next(-89, 88) + 0.5;
@@ -84,7 +84,7 @@ public class ObjectsAdder: IDistortion
         };
     }
 
-    private Feature GenerateLineString(Random random, int number)
+    private static Feature GenerateLineString(Random random, int number)
     {
         var coordinateCollection = new List<Coordinate>();
         for (var i = 0; i < random.Next(2, 60); i++)
@@ -109,7 +109,7 @@ public class ObjectsAdder: IDistortion
         };
     }
 
-    private Feature GeneratePolygon(Random random, int number)
+    private static Feature GeneratePolygon(Random random, int number)
     {
         var coordinateCollection = new List<Coordinate>();
 
