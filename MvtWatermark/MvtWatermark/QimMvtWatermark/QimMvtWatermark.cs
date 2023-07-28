@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MvtWatermark.QimMvtWatermark;
 
@@ -44,59 +45,6 @@ public class QimMvtWatermark : IMvtWatermark
         }
 
         return winx;
-    }
-
-    /// <summary>
-    /// Generates re-quantization matrix
-    /// </summary>
-    /// <param name="key">Secret key</param>
-    /// <returns>Re-quantization matrix</returns>
-    private bool[,] GenerateMap(int key)
-    {
-        var map = new bool[_options.Extent, _options.Extent];
-        var random = new Random(key);
-        for (var i = 0; i < _options.Extent; i++)
-            for (var j = 0; j < _options.Extent; j++)
-                map[i, j] = Convert.ToBoolean(random.Next() % 2);
-        map = ChangeMap(map);
-        return map;
-    }
-
-    /// <summary>
-    /// Modifies the re-quantization matrix so that each point has a point with the opposite value next to it
-    /// </summary>
-    /// <param name="map">Re-quantization matrix</param>
-    /// <returns>Modified re-quantization matrix</returns>
-    private bool[,] ChangeMap(bool[,] map)
-    {
-        for (var i = 0; i < _options.Extent; i++)
-            for (var j = 0; j < _options.Extent; j++)
-                if (!CheckMapPoint(map, i, j))
-                    map[i, j] = !map[i, j];
-        return map;
-    }
-
-    private bool CheckMapPoint(bool[,] map, int x, int y)
-    {
-        var value = map[x, y];
-
-        if (CheckNearestPoints(map, x, y, value))
-            return true;
-
-        for (var i = 1; i < _options.Distance; ++i)
-        {
-
-            if (CheckNearestPoints(map, x + i, y, value))
-                return true;
-            if (CheckNearestPoints(map, x - i, y, value))
-                return true;
-            if (CheckNearestPoints(map, x, y + i, value))
-                return true;
-            if (CheckNearestPoints(map, x, y - i, value))
-                return true;
-
-        }
-        return false;
     }
 
     /// <summary>
@@ -407,7 +355,7 @@ public class QimMvtWatermark : IMvtWatermark
         var extentDist = envelopeTile.Height / _options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = GenerateMap(key);
+        var map = Maps.GetMap(_options, key);
 
         for (var i = 0; i < _options.M; i++)
         {
@@ -480,7 +428,7 @@ public class QimMvtWatermark : IMvtWatermark
         var extentDist = envelopeTile.Height / _options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = GenerateMap(key);
+        var map = Maps.GetMap(_options, key);
 
         var bits = new BitArray(_options.Nb, false);
 
@@ -584,11 +532,9 @@ public class QimMvtWatermark : IMvtWatermark
         {
             var tile = tiles[tileId];
 
-            if (current >= message.Count)
-                break;
             var bits = new BitArray(_options.Nb);
-            for (var i = 0; i < _options.Nb && i < message.Count; i++)
-                bits[i] = message[i + current];
+            for (var i = 0; i < _options.Nb; i++)
+                bits[i] = message[(i + current) % message.Count];
 
             var copyTile = Embed(tile, key + (int)tileId, bits);
             if (copyTile == null)
@@ -602,6 +548,40 @@ public class QimMvtWatermark : IMvtWatermark
         }
         if (current < message.Count)
             throw new ArgumentException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.", nameof(message));
+        return copyTileTree;
+    }
+
+    public VectorTileTree EmbedParallel(VectorTileTree tiles, int key, BitArray message)
+    {
+        var copyTileTree = new VectorTileTree();
+
+        var messages = new bool[_options.Nb * tiles.Count()];
+
+        for (var i = 0; i < messages.Length; i++)
+        {
+            messages[i] = message[i % message.Count];
+        }
+
+        var dict = new Dictionary<ulong, bool[]>();
+        var iter = 0;
+        foreach (var tileId in tiles)
+        {
+            dict.Add(tileId, messages.Take(new Range(iter, iter + _options.Nb)).ToArray());
+            iter++;
+        }
+
+        Parallel.ForEach(tiles, tileId =>
+        {
+            var tile = tiles[tileId];
+            var bits = new BitArray(dict[tileId]);
+
+            var copyTile = Embed(tile, key + (int)tileId, bits);
+            if (copyTile == null)
+                copyTileTree[tileId] = tile;
+            else
+                copyTileTree[tileId] = copyTile;
+        });
+
         return copyTileTree;
     }
 
@@ -628,5 +608,30 @@ public class QimMvtWatermark : IMvtWatermark
             }
         }
         return new BitArray(message.Take(index).ToArray());
+    }
+
+    public BitArray ExtractParallel(VectorTileTree tiles, int key)
+    {
+        var message = new bool[_options.Nb * tiles.Count()];
+
+        var dict = new Dictionary<ulong, int>();
+        var iter = 0;
+        foreach (var tileId in tiles)
+        {
+            dict.Add(tileId, iter);
+            iter++;
+        }
+
+        Parallel.ForEach(tiles, tileId =>
+        {
+            var tile = tiles[tileId];
+            var bits = Extract(tile, key + (int)tileId);
+            if (bits != null)
+            {
+                bits.CopyTo(message, dict[tileId] * _options.Nb);
+            }
+        });
+
+        return new BitArray(message);
     }
 }
