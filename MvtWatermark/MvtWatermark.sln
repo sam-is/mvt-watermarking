@@ -12,12 +12,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParameterValues", "ParameterValues\ParameterValues.csproj", "{645B8188-FE49-4257-A6BF-2FFD20073FAE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Researches", "Researches\Researches.csproj", "{645B8188-FE49-4257-A6BF-2FFD20073FAE}"
 	ProjectSection(ProjectDependencies) = postProject
 		{20DD51F1-4547-4C98-A47A-45B4DE955E27} = {20DD51F1-4547-4C98-A47A-45B4DE955E27}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Distortion", "Distortion\Distortion.csproj", "{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Distortion", "Distortion\Distortion.csproj", "{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
