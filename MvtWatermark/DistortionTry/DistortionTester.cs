@@ -2,6 +2,7 @@
 using NetTopologySuite.IO.VectorTiles;
 using MvtWatermark.NoDistortionWatermark;
 using System.Collections;
+using Distortion.NdwmDistorsions;
 
 namespace DistortionTry;
 public class DistortionTester
@@ -323,8 +324,19 @@ public class DistortionTester
     {
         var resultMatrix = new List<List<double>>();
 
-        double param = 0;
-        while (param <= 1)
+        //var step = 0.05;
+        //var upperBorder = 1;
+        //double param = 0;
+
+        var step = 1;
+        var upperBorder = 3;
+        var param = 1;
+
+        //var step = 0.01;
+        //var upperBorder = 0.5;
+        //var param = 0.01;
+
+        while (param <= upperBorder)
         {
             var oneParamResultVector = new List<double>();
 
@@ -339,21 +351,27 @@ public class DistortionTester
                     new CoordinateOrderReverser(param),
                     */
 
+                    //new FixedObjectsMagnifier(Convert.ToInt32(Math.Ceiling(param * 10)))
+                    new FewPointsDeleter(param),
+
                     //new ShiftingPointsDistortion(param),
 
-                    new ReducingNumberOfPointsDistortion(param, false),
-                    new ReducingNumberOfPointsDistortion(param, true),
+                    /*new ReducingNumberOfPointsDistortion(param, false),
+                    new ReducingNumberOfPointsDistortion(param, true),*/
                 };
 
             foreach (var distortion in distortionWithParameterList)
             {
                 var comparisonResult = TestSingleDistortion(vectorTileTree, distortion, options, key, message, param);
+                //comparisonResult = comparisonResult < 1 ? 0 : 1; //!!! строка для проверки извлекаемости вида 1/0
+                /*if (comparisonResult < 1)
+                    comparisonResult = 0;*/
                 oneParamResultVector.Add(comparisonResult);
             }
 
             resultMatrix.Add(oneParamResultVector);
 
-            param += 0.05;
+            param += step;
         }
 
         

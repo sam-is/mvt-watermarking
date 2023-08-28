@@ -30,12 +30,12 @@ var taskMNb = new Task(() => {
 });
 
 taskLsLf.Start();
-taskMNb.Start();
+//taskMNb.Start();
 
 Console.WriteLine("tasks started");
 
 taskLsLf.Wait();
-taskMNb.Wait();
+//taskMNb.Wait();
 
 Console.WriteLine("tasks completed");
 
@@ -87,7 +87,7 @@ ExtractionTester.DiffWatermarkParametersTest(parameterSetsStp, parameterSetsTego
 
 void TestLsLf(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola, BitArray message)
 {
-    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 3, Mmax = 3, Nbmin = 3, Nbmax = 3, Lfmin = 1, Lfmax = 15, Lsmin = 1, Lsmax = 15 };
+    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 3, Mmax = 3, Nbmin = 3, Nbmax = 3, Lfmin = 1, Lfmax = 15, Lsmin = 1, Lsmax = 5 };
     var distortionTester = new DistortionTester();
     distortionTester.DiffWatermarkParametersTest_Ls_Lf(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_Lf_Ls\\");
 
