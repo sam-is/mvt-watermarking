@@ -12,7 +12,7 @@ using System.Linq;
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
-public static class MapboxTileWriterWm
+public class NonStaticMapboxTileWriterWm
 {
     private struct LastCommandInfo
     {
@@ -21,7 +21,8 @@ public static class MapboxTileWriterWm
         public Mapbox.MapboxCommandType Type { get; set; }
     }
 
-    private static bool _hasSuccessfullyEmbeded; // это херня, так делать не надо!!!
+    private bool _hasSuccessfullyEmbededIntoSingleLineString;
+    private bool _hasSuccessfullyEmbededIntoSingleTile;
 
     /// <summary>
     /// Creates and return Dictionary in format (tileId: TileWithEmbededWatermark) from VectorTileTree. 
@@ -32,68 +33,71 @@ public static class MapboxTileWriterWm
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <remarks>The "Embed" method in NoDistortionWatermark then transforms it into VectorTileTree</remarks>
-    /// <returns></returns>
-    /// <exception cref="ArgumentException"></exception>
-    public static Dictionary<ulong, Mapbox.Tile> WriteWm(this VectorTileTree tree, BitArray watermarkString, 
-        short firstHalfOfTheKey, NoDistortionWatermarkOptions options, uint extent = 4096)
+    public Dictionary<ulong, Mapbox.Tile> WriteWm(VectorTileTree tree, BitArray message,
+        short firstHalfOfTheKey, NoDistortionWatermarkOptions options, out BitArray embededMessage, uint extent = 4096)
     {
+        // здесь тайловый словарь сортируется
+        var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
+        foreach (var tileIndex in tree)
+        {
+            sortedTiles[tileIndex] = tree[tileIndex];
+        }
+
         var result = new Dictionary<ulong, Mapbox.Tile>();
 
-        // !!! Реализация разделения ниже закомментированного (она ещё в процессе)
-
-        // Сортированного словаря здесь не будет (скорее всего)
-        /*
-        var sortedTree = new SortedDictionary<ulong, VectorTile>();
-        foreach (var tileIndex in tree)
+        if (message.Count < sortedTiles.Count() * options.Nb)
         {
-            sortedTree.Add(tileIndex, tree[tileIndex]);
+            throw new ArgumentException("Not enough bits in the watermark message", 
+                $"Bits' number: {message.Count}, minimal required bits number: {sortedTiles.Count() * options.Nb}");
         }
 
-        // обходит в том же порядке, в котором пары были добавлены в дерево
-        var watermarkStringNumerator = watermarkString.GetEnumerator();
+        _hasSuccessfullyEmbededIntoSingleTile = false;
 
-        foreach (var elem in sortedTree) 
-        {
-            var watermarkStringFragment = new BitArray(options.Nb);
-            for (var i = 0; i < options.Nb; i++)
-            {
-                watermarkStringNumerator.MoveNext();
-                watermarkStringFragment[i] = (bool)watermarkStringNumerator.Current;
-            }
-            watermarkString.RightShift(options.Nb);
-
-            result.Add(elem.Key, elem.Value.WriteWm(watermarkString, firstHalfOfTheKey, elem.Key, options, extent)); 
-        }
-        */
-
-        
-        if (watermarkString.Count < tree.Count() * options.Nb)
-        {
-            throw new ArgumentException("Not enough bits in the watermark message");
-        }
-
-        //var watermarkStringNumerator = watermarkString.GetEnumerator();
+        var watermarkString = new BitArray(message);
         var watermarkStringFragment = new BitArray(options.Nb);
-        foreach (var tileIndex in tree)
+
+        var embededMessageFiller = new BitArray(sortedTiles.Count() * options.Nb);
+        var embededMessageIndex = 0;
+
+        for (var i = 0; i < options.Nb; i++)
         {
-            for (var i = 0; i < options.Nb; i++)
+            watermarkStringFragment[i] = watermarkString[i];
+        }
+
+        // переменные для норм сообщений в исключениях
+        var tileNumber = 0; // текущий номер тайла в дереве (фактически это Dictionary, и тайлы хранятся в нём в порядке добавления)
+        var currentFragmentStartIndex = 0; // индекс начала текущей подпоследовательности (фрагмента) ЦВЗ
+
+        foreach (var (tileIndex, vectorTile) in sortedTiles)
+        {
+            if (_hasSuccessfullyEmbededIntoSingleTile)
             {
-                //watermarkStringNumerator.MoveNext();
-                //watermarkStringFragment[i] = (bool)watermarkStringNumerator.Current;
-
-                watermarkStringFragment[i] = watermarkString[i];
+                for (var i = 0; i < options.Nb; i++)
+                {
+                    watermarkStringFragment[i] = watermarkString[i];
+                }
+                currentFragmentStartIndex += options.Nb;
             }
-            result.Add(tileIndex, tree[tileIndex].WriteWm(watermarkStringFragment, firstHalfOfTheKey, tileIndex, options, extent));
-            watermarkString.RightShift(options.Nb);
-        }
-        
 
-        /*
-        foreach (var tileIndex in tree)
-        {
-            result.Add(tileIndex, tree[tileIndex].WriteWm(watermarkString, firstHalfOfTheKey, tileIndex, options, extent));
+            _hasSuccessfullyEmbededIntoSingleTile = false;
+            Mapbox.Tile resultTile = WriteWm(vectorTile, watermarkStringFragment, firstHalfOfTheKey, tileIndex, 
+                options, tileNumber, currentFragmentStartIndex, extent);
+
+            result.Add(tileIndex, resultTile);
+
+            if (_hasSuccessfullyEmbededIntoSingleTile)
+            {
+                watermarkString.RightShift(options.Nb);
+
+                watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, embededMessageIndex * options.Nb, options.Nb);
+                embededMessageIndex++;
+            }
+
+            tileNumber++;
         }
-        */
+
+        embededMessage = new BitArray(embededMessageIndex * options.Nb);
+        embededMessageFiller.CopyNbBitsTo(embededMessage, 0, embededMessage.Count);
 
         return result;
     }
@@ -108,10 +112,13 @@ public static class MapboxTileWriterWm
     /// <param name="options">All the parameters to embed the watermark</param>
     /// <param name="extent">The extent.</param>
     /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-    public static Mapbox.Tile WriteWm(this VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
-        ulong tileId, NoDistortionWatermarkOptions options, uint extent = 4096, string idAttributeName = "id")
+    public Mapbox.Tile WriteWm(VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
+        ulong tileId, NoDistortionWatermarkOptions options, int tileNumber, int currentFragmentStartIndex, uint extent = 4096, string idAttributeName = "id")
     {
         var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
+        if (watermarkInt == 0)
+            throw new ArgumentException("Одна или несколько подпоследовательностей ЦВЗ состоят целиком из нулей, их невозможно встроить", 
+                $"Индекс тайла в дереве: {tileNumber}; Индекс начала подпоследовательности: {currentFragmentStartIndex}");
 
         int key = firstHalfOfTheKey;
         key = (key << 16) + (short)vectorTile.TileId;
@@ -146,12 +153,15 @@ public static class MapboxTileWriterWm
                         feature.Type = Mapbox.Tile.GeomType.LineString;
 
                         // для реализации параметра Lf
-                        if (embedingIndex < options.Lf) 
+                        if (embedingIndex < options.Lf)
                         {
                             feature.Geometry.AddRange(Encode(lineal, tgt, watermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
-                            if (_hasSuccessfullyEmbeded) // для реализации параметра Lf
-                                // ПЕРЕДЕЛАТЬ!
+                            // счётчик для Lf увеличивается на 1, даже когда в фиче лежит мультилайнстринг. Стоит ли это править?
+                            if (_hasSuccessfullyEmbededIntoSingleLineString)
+                            {
+                                _hasSuccessfullyEmbededIntoSingleTile = true;
                                 embedingIndex++;
+                            }// для реализации параметра Lf
                         }
                         else
                         {
@@ -192,6 +202,7 @@ public static class MapboxTileWriterWm
 
             mapboxTile.Layers.Add(layer);
         }
+
         return mapboxTile;
     }
 
@@ -202,7 +213,7 @@ public static class MapboxTileWriterWm
     /// <param name="extent"></param>
     /// <param name="idAttributeName"></param>
     /// <returns></returns>
-    public static Mapbox.Tile GetMapboxTileFromVectorTile(this VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
+    public Mapbox.Tile GetMapboxTileFromVectorTile(VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
     {
         var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
         var tgt = new TileGeometryTransform(tile, extent);
@@ -267,7 +278,7 @@ public static class MapboxTileWriterWm
         return mapboxTile;
     }
 
-    private static void AddAttributes(List<uint> tags, Dictionary<string, uint> keys,
+    private void AddAttributes(List<uint> tags, Dictionary<string, uint> keys,
         Dictionary<Mapbox.Tile.Value, uint> values, IAttributesTable attributes)
     {
         if (attributes == null || attributes.Count == 0)
@@ -289,7 +300,7 @@ public static class MapboxTileWriterWm
         }
     }
 
-    private static Mapbox.Tile.Value ToTileValue(object value)
+    private Mapbox.Tile.Value ToTileValue(object value)
     {
         switch (value)
         {
@@ -326,7 +337,7 @@ public static class MapboxTileWriterWm
         return null;
     }
 
-    private static IEnumerable<uint> Encode(IPuntal puntal, TileGeometryTransform tgt)
+    private IEnumerable<uint> Encode(IPuntal puntal, TileGeometryTransform tgt)
     {
         const int coordinateIndex = 0;
 
@@ -352,7 +363,7 @@ public static class MapboxTileWriterWm
 
     }
 
-    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt)
+    private IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt)
     {
         var geometry = (Geometry)lineal;
         int currentX = 0, currentY = 0;
@@ -373,7 +384,7 @@ public static class MapboxTileWriterWm
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
+    private IEnumerable<uint> Encode(ILineal lineal, TileGeometryTransform tgt, int watermarkInt,
         NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     // фрагмент ЦВЗ для каждого тайла надо определять как-то
     {
@@ -392,14 +403,7 @@ public static class MapboxTileWriterWm
                 }
                 break;
             case NoDistortionWatermarkOptions.AtypicalEncodingTypes.MtLtMt:
-                for (var i = 0; i < geometry.NumGeometries; i++)
-                {
-                    var lineString = (LineString)geometry.GetGeometryN(i);
-                    foreach (var encoded in EncodeWithWatermarkMtLtMt(lineString.CoordinateSequence, tgt, ref currentX, ref currentY, watermarkInt,
-                        options, keySequence))
-                        yield return encoded;
-                }
-                break;
+                throw new NotImplementedException();
             case NoDistortionWatermarkOptions.AtypicalEncodingTypes.NLtCommands:
                 for (var i = 0; i < geometry.NumGeometries; i++)
                 {
@@ -412,7 +416,7 @@ public static class MapboxTileWriterWm
         }
     }
 
-    private static IEnumerable<uint> Encode(IPolygonal polygonal, TileGeometryTransform tgt, int zoom)
+    private IEnumerable<uint> Encode(IPolygonal polygonal, TileGeometryTransform tgt, int zoom)
     {
         var geometry = (Geometry)polygonal;
 
@@ -442,17 +446,17 @@ public static class MapboxTileWriterWm
     /// <summary>
     /// Encodes geometry with watermark (Стойкий ЦВЗ, алгоритм встраивания в половину )
     /// </summary>
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private IEnumerable<uint> EncodeWithWatermarkMtLtLt(CoordinateSequence sequence, TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
         var count = sequence.Count;
         var encoded = new List<uint>();
 
-        var xHolder = currentX; 
+        var xHolder = currentX;
         var yHolder = currentY;
 
-        // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
+        // подсчёт количества реальных сегментов
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         var realSegments = 0;
         for (var i = 1; i < count; i++)
@@ -469,7 +473,7 @@ public static class MapboxTileWriterWm
 
         if (realSegments < options.D)
         {
-            _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+            _hasSuccessfullyEmbededIntoSingleLineString = false; // для реализации параметра Lf
 
             return Encode(sequence, tgt, ref currentX, ref currentY);
         }
@@ -481,7 +485,7 @@ public static class MapboxTileWriterWm
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var lastLineToCount = 0;
         var currentRealSegment = 0;
@@ -498,32 +502,34 @@ public static class MapboxTileWriterWm
         encodedIndex++; // encodedIndex = 3
         var lastLineToCommand = encodedIndex; // индекс последнего LineTo CommandInteger
 
+        var realSegmentIndexInEmbedPositions = 0;
         for (var i = 1; i < count; i++)
         {
             position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
-            if (position.x != 0 || position.y != 0) 
+            if (position.x != 0 || position.y != 0)
             {
                 var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //realSegmentIndexInEmbedPositions += currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
-                if (currentElementarySegment < keySequence.Count
-                    // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                    && keySequence[currentElementarySegment] == watermarkInt 
-                    && lsArray[realSegmentIndexInElementary] == 1) 
+                if (currentElementarySegment < keySequence.Count && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    lastLineToCount = 1;
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
-                    position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-                    position = tgt.Transform(sequence, i, ref currentX, ref currentY);
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
+                    {
+                        lastLineToCount = 1;
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, lastLineToCount));
+                        position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+                        position = tgt.Transform(sequence, i, ref currentX, ref currentY);
 
-                    encodedIndex += 6; 
-                    lastLineToCommand = encodedIndex - 2; // отнимаем два параметра
+                        encodedIndex += 6;
+                        lastLineToCommand = encodedIndex - 2; // отнимаем два параметра
+                    }
+                    realSegmentIndexInEmbedPositions++;
                 }
                 encoded.Add(GenerateParameterInteger(position.x));
                 encoded.Add(GenerateParameterInteger(position.y));
@@ -543,13 +549,13 @@ public static class MapboxTileWriterWm
             encoded.Clear();
         }
 
-        _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
+        _hasSuccessfullyEmbededIntoSingleLineString = true; // для реализации параметра Lf
 
         return encoded;
     }
 
     // Не работает нормально, пока не используем
-    private static IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private IEnumerable<uint> EncodeWithWatermarkMtLtMt(CoordinateSequence sequence, TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
@@ -558,7 +564,7 @@ public static class MapboxTileWriterWm
 
         var xHolder = currentX; var yHolder = currentY;
 
-        // весь этот кусок кода нужен для того, чтобы посчитать количество реальных сегментов
+        // подсчёт количества реальных сегментов
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
         var realSegments = 0;
         for (var i = 1; i < count; i++)
@@ -576,12 +582,11 @@ public static class MapboxTileWriterWm
         if (realSegments < options.D)
         {
             return Encode(sequence, tgt, ref currentX, ref currentY);
-            //throw new Exception("Элементарных сегментов больше, чем реальных. Встраивание невозможно.");
         }
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
@@ -608,6 +613,7 @@ public static class MapboxTileWriterWm
             lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.MoveTo };
         }
 
+        var realSegmentIndexInEmbedPositions = 0;
         // 0-й отсчёт - это первый MoveTo
         for (var i = 1; i < count; i++)
         {
@@ -617,51 +623,53 @@ public static class MapboxTileWriterWm
             {
                 currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
 
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
                     // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                    && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
-                    && lsArray[realSegmentIndexInElementary] == 1)
+                    && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    if (lastCommand.Index == encodedIndex)
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
                     {
-                        encoded[lastCommand.Index] = lastCommand.Type switch
+                        if (lastCommand.Index == encodedIndex)
                         {
-                            Mapbox.MapboxCommandType.LineTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
-                                1),
-                            Mapbox.MapboxCommandType.MoveTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
-                                2),
-                            _ => encoded[lastCommand.Index]
-                        };
-                        encodedIndex += 9;
-                    }
-                    else
-                    {
+                            encoded[lastCommand.Index] = lastCommand.Type switch
+                            {
+                                Mapbox.MapboxCommandType.LineTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                    1),
+                                Mapbox.MapboxCommandType.MoveTo => GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo,
+                                    2),
+                                _ => encoded[lastCommand.Index]
+                            };
+                            encodedIndex += 9;
+                        }
+                        else
+                        {
+                            encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                            encodedIndex += 10;
+                        }
+
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+                        position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        position = tgt.Transform(sequence, i, ref currentX, ref currentY);
                         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                        encodedIndex += 10;
+                        encoded.Add(GenerateParameterInteger(position.x));
+                        encoded.Add(GenerateParameterInteger(position.y));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+
+                        lastLineToCount = 0; // Сколько параметров для последнего LineTo
+
+                        lastCommand.Index = encodedIndex;
+                        lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                     }
-
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-                    position = tgt.Transform(sequence, i - 1, ref currentX, ref currentY);
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    position = tgt.Transform(sequence, i, ref currentX, ref currentY);
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                    encoded.Add(GenerateParameterInteger(position.x));
-                    encoded.Add(GenerateParameterInteger(position.y));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-
-                    lastLineToCount = 0; // Сколько параметров для последнего LineTo
-
-                    
-                    lastCommand.Index = encodedIndex;
-                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
+                    realSegmentIndexInEmbedPositions++;
                 }
                 else
                 {
@@ -704,14 +712,14 @@ public static class MapboxTileWriterWm
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private static IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private IEnumerable<uint> EncodeWithWatermarkNLt(CoordinateSequence sequence, TileGeometryTransform tgt,
         ref int currentX, ref int currentY, int watermarkInt, NoDistortionWatermarkOptions options, IReadOnlyList<int> keySequence)
     {
         // how many parameters for LineTo command
         var count = sequence.Count;
         var encoded = new List<uint>();
 
-        var xHolder = currentX; 
+        var xHolder = currentX;
         var yHolder = currentY;
 
         var position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
@@ -730,7 +738,7 @@ public static class MapboxTileWriterWm
 
         if (realSegments < options.D)
         {
-            _hasSuccessfullyEmbeded = false; // для реализации параметра Lf
+            _hasSuccessfullyEmbededIntoSingleLineString = false; // для реализации параметра Lf
 
             return Encode(sequence, tgt, ref currentX, ref currentY);
         }
@@ -743,14 +751,14 @@ public static class MapboxTileWriterWm
 
         var realSegmentsInOneElemSegment = realSegments / options.D;
 
-        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.Ls);
+        var lsArray = GenerateSequenceLs(realSegmentsInOneElemSegment, options.M, options.Ls);
 
         var encodedIndex = 0; // под индексами 0 - 2 добавили MoveTo и параметры, остановка на втором параметре MoveTo
 
         var lastLineToCount = 0;
         var currentRealSegment = 0;
 
-        LastCommandInfo lastCommand; // = new LastCommandInfo { Index = 0, Type = Mapbox.MapboxCommandType.MoveTo }; // индекс последней команды
+        LastCommandInfo lastCommand; // индекс последней команды
 
         encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
         position = tgt.Transform(sequence, 0, ref currentX, ref currentY);
@@ -761,6 +769,7 @@ public static class MapboxTileWriterWm
         encodedIndex = 3;
         lastCommand = new LastCommandInfo { Index = encodedIndex, Type = Mapbox.MapboxCommandType.LineTo };
 
+        var realSegmentIndexInEmbedPositions = 0;
         // 0-й отсчёт - это первый MoveTo
         for (var i = 1; i < count; i++)
         {
@@ -770,33 +779,36 @@ public static class MapboxTileWriterWm
             {
                 var currentElementarySegment = currentRealSegment / realSegmentsInOneElemSegment;
 
-                var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
+                //var realSegmentIndexInElementary = currentRealSegment - realSegmentsInOneElemSegment * currentElementarySegment;
 
                 if (currentElementarySegment < keySequence.Count
-                    // currentRealSegment на первом шаге = 0, currentElementarySegment тоже = 0
-                    && keySequence[currentElementarySegment] == watermarkInt // тут проблема с индексами (уже нет)
-                    && lsArray[realSegmentIndexInElementary] == 1)
+                    // currentRealSegment and currentElementarySegment on first step are both 0
+                    && keySequence[currentElementarySegment] == watermarkInt)
                 {
-                    if (lastCommand.Index == encodedIndex)
+                    if (lsArray[realSegmentIndexInEmbedPositions] == 1)
                     {
-                        encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
-                        encodedIndex += 3;
+                        if (lastCommand.Index == encodedIndex)
+                        {
+                            encoded[lastCommand.Index] = GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1);
+                            encodedIndex += 3;
+                        }
+                        else
+                        {
+                            encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
+                            encodedIndex += 4;
+                        }
+
+                        encoded.Add(GenerateParameterInteger(0));
+                        encoded.Add(GenerateParameterInteger(0));
+
+                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
+
+                        lastLineToCount = 0; // Сколько команд для последнего LineTo
+
+                        lastCommand.Index = encodedIndex;
+                        lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
                     }
-                    else
-                    {
-                        encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.MoveTo, 1));
-                        encodedIndex += 4;
-                    }
-
-                    encoded.Add(GenerateParameterInteger(0));
-                    encoded.Add(GenerateParameterInteger(0));
-
-                    encoded.Add(GenerateCommandInteger(Mapbox.MapboxCommandType.LineTo, 1));
-
-                    lastLineToCount = 0; // Сколько команд для последнего LineTo
-
-                    lastCommand.Index = encodedIndex;
-                    lastCommand.Type = Mapbox.MapboxCommandType.LineTo;
+                    realSegmentIndexInEmbedPositions++;
                 }
                 encoded.Add(GenerateParameterInteger(position.x));
                 encoded.Add(GenerateParameterInteger(position.y));
@@ -816,13 +828,13 @@ public static class MapboxTileWriterWm
             encoded.Clear();
         }
 
-        _hasSuccessfullyEmbeded = true; // для реализации параметра Lf
+        _hasSuccessfullyEmbededIntoSingleLineString = true; // для реализации параметра Lf
 
         return encoded;
     }
 
 
-    private static IEnumerable<uint> Encode(CoordinateSequence sequence, TileGeometryTransform tgt,
+    private IEnumerable<uint> Encode(CoordinateSequence sequence, TileGeometryTransform tgt,
         ref int currentX, ref int currentY,
         bool ring = false, bool ccw = false)
     {
@@ -887,7 +899,7 @@ public static class MapboxTileWriterWm
     /// <summary>
     /// Generates a command integer.
     /// </summary>
-    private static uint GenerateCommandInteger(Mapbox.MapboxCommandType command, int count)
+    private uint GenerateCommandInteger(Mapbox.MapboxCommandType command, int count)
     { // CommandInteger = (id & 0x7) | (count << 3)
         return (uint)(((int)command & 0x7) | (count << 3));
     }
@@ -897,7 +909,7 @@ public static class MapboxTileWriterWm
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
-    private static uint GenerateParameterInteger(int value)
+    private uint GenerateParameterInteger(int value)
     { // ParameterInteger = (value << 1) ^ (value >> 31)
         return (uint)((value << 1) ^ (value >> 31));
     }
@@ -908,7 +920,7 @@ public static class MapboxTileWriterWm
     /// <param name="polygon">Polygon to test.</param>
     /// <param name="zoom">Zoom level </param>
     /// <returns></returns>
-    private static bool IsGreaterThanOnePixelOfTile(Geometry polygon, int zoom)
+    private bool IsGreaterThanOnePixelOfTile(Geometry polygon, int zoom)
     {
         (var x1, var y1) = WebMercatorHandler.MetersToPixels(WebMercatorHandler.LatLonToMeters(polygon.EnvelopeInternal.MinY, polygon.EnvelopeInternal.MinX), zoom, 512);
         (var x2, var y2) = WebMercatorHandler.MetersToPixels(WebMercatorHandler.LatLonToMeters(polygon.EnvelopeInternal.MaxY, polygon.EnvelopeInternal.MaxX), zoom, 512);
@@ -920,31 +932,29 @@ public static class MapboxTileWriterWm
         return dx > 0 && dy > 0 && (dx > 1 || dy > 1);
     }
 
-    private static List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int lsParameter)
+    private List<int> GenerateSequenceLs(int realSegmentsInOneElemSegment, int m, int lsParameter)
     {
-        //var random = new Random(key);
-        var random = new Random(); // лучше передавать ключ
+        var random = new Random();
 
-        //var lsParameter = random.Next(1, realSegmentsInOneElemSegment);
-
-        var resultArr = new List<int>(realSegmentsInOneElemSegment);
+        var lsSequenceSize = realSegmentsInOneElemSegment * m;
+        var resultArr = new List<int>(lsSequenceSize);
         int randomIndex;
 
-        for (var i = 0; i < realSegmentsInOneElemSegment; i++)
+        for (var i = 0; i < lsSequenceSize; i++)
         {
             resultArr.Add(0);
         }
 
         if (lsParameter < 1)
             lsParameter = 1;
-        else if (lsParameter > realSegmentsInOneElemSegment)
-            lsParameter = realSegmentsInOneElemSegment;
+        else if (lsParameter > lsSequenceSize)
+            lsParameter = lsSequenceSize;
 
         for (var i = 0; i < lsParameter; i++)
         {
             do
             {
-                randomIndex = random.Next(0, realSegmentsInOneElemSegment);
+                randomIndex = random.Next(0, lsSequenceSize);
             } while (resultArr[randomIndex] != 0);
             resultArr[randomIndex] = 1;
         }

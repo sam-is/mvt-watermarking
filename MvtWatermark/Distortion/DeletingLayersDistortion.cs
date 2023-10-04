@@ -3,11 +3,11 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class DeletingLayers : IDistortion
+public class DeletingLayersDistortion : IDistortion
 {
     private readonly double _relativeNumberLayers;
 
-    public DeletingLayers(double relativeNumberLayers)
+    public DeletingLayersDistortion(double relativeNumberLayers)
     {
         _relativeNumberLayers = relativeNumberLayers;
     }
@@ -26,10 +26,11 @@ public class DeletingLayers : IDistortion
             var random = new Random();
             for (var i = 0; i < count - countDelete; i++)
             {
-                var num = random.Next(0, count - 1);
+                var num = random.Next(0, count);
 
                 while (indexList.Contains(num))
-                    num = random.Next(0, count - 1);
+                    num = random.Next(0, count); 
+                    //num = random.Next(0, count - 1); // ошибочка видимо, надо не count - 1, а просто count
 
                 indexList.Add(num);
             }
@@ -42,10 +43,8 @@ public class DeletingLayers : IDistortion
                 var layer = tile.Layers[index];
                 var l = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
-                {
-                    var copyFeature = new Feature(feature.Geometry, feature.Attributes);
-                    l.Features.Add(copyFeature);
-                }
+                    l.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
+
                 copyTile.Layers.Add(l);
             }
 

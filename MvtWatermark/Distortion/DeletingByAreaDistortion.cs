@@ -1,14 +1,15 @@
 ﻿using MvtWatermark.QimMvtWatermark;
 using NetTopologySuite.Features;
+using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class DeletingByArea : IDistortion
+public class DeletingByAreaDistortion : IDistortion
 {
     private readonly double _relativeArea;
 
-    public DeletingByArea(double relativeArea)
+    public DeletingByAreaDistortion(double relativeArea)
     {
         _relativeArea = relativeArea;
     }
@@ -31,7 +32,9 @@ public class DeletingByArea : IDistortion
                 var l = new Layer { Name = layer.Name };
                 foreach (var feature in layer.Features)
                 {
-                    if (feature.Geometry.Area > area)
+                    if (feature.Geometry.Area > area || feature.Geometry is not IPolygonal) 
+                        // моя поправочка, чтобы искажение не удаляло точки и лайнстринги, так как их площадь нулевая.
+                        // хотя, может лучше проверять bounding box лайнстрингов?
                     {
                         var copyFeature = new Feature(feature.Geometry, feature.Attributes);
                         l.Features.Add(copyFeature);

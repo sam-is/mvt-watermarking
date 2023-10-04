@@ -11,7 +11,6 @@ public static class WatermarkTransform
     /// </summary>
     /// <param name="bitArray"></param>
     /// <returns></returns>
-    /// <exception cref="ArgumentException"></exception>
     public static int? GetIntFromBitArrayNullable(BitArray? bitArray)
     {
         if (bitArray == null || bitArray.Count == 0)
@@ -55,5 +54,24 @@ public static class WatermarkTransform
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Копирует nb элементов (битов) из исходного BitArray в другой BitArray, начиная с передаваемого индекса
+    /// </summary>
+    /// <param name="thisBitArr"></param>
+    /// <param name="destinationBitArr"></param>
+    /// <param name="index"></param>
+    /// <param name="nb"></param>
+    /// <exception cref="ArgumentException"></exception>
+    public static void CopyNbBitsTo(this BitArray thisBitArr, BitArray destinationBitArr, int index, int nb)
+    {
+        if (destinationBitArr.Count < index + nb)
+            throw new ArgumentException($"Cannot copy: destinationBitArr.Count ({destinationBitArr.Count}) < index + nb ({index + nb})");
+
+        for (var i = 0; i < nb; i++)
+        {
+            destinationBitArr[i + index] = thisBitArr[i];
+        }
     }
 }

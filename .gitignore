@@ -348,3 +348,16 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+/MvtWatermark/MvtWatermark/NoDistortionWatermark/ConsoleWriterDebugToGitIgnore.cs
+/MvtWatermark/DistortionTry/distortionTests
+/MvtWatermark/DistortionTry/MatricesTests
+/MvtWatermark/DistortionTry/testing_Lf/distortionTestsMatrices
+/MvtWatermark/DistortionTry/testing_Lf_Ls/distortionTestsMatrices
+/MvtWatermark/DistortionTry/testing_Ls/distortionTestsMatrices
+/MvtWatermark/DistortionTry/testing_M/distortionTestsMatrices
+/MvtWatermark/DistortionTry/testing_Nb/distortionTestsMatrices
+/MvtWatermark/DistortionTry/ExtractionTests/testing_Nb
+/MvtWatermark/DistortionTry/ExtractionTests/testing_M
+/MvtWatermark/DistortionTry/ExtractionTests/testing_Ls
+/MvtWatermark/DistortionTry/ExtractionTests/testing_Lf
+/MvtWatermark/DistortionTry/distortionTestsMatrices
