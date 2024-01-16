@@ -1,17 +1,19 @@
 ﻿using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
+using NetTopologySuite.IO.VectorTiles.Mapbox;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace MvtWatermark.QimMvtWatermark;
 
-public class QimMvtWatermark : IMvtWatermark
+public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 {
-    private readonly QimMvtWatermarkOptions _options;
 
     /// <summary>
     /// Generates a matrix with embedded message indexes
@@ -21,23 +23,23 @@ public class QimMvtWatermark : IMvtWatermark
     private int[,] GenerateWinx(int key)
     {
         var random = new Random(key);
-        var winx = new int[_options.M, _options.M];
+        var winx = new int[options.M, options.M];
 
-        for (var i = 0; i < _options.M; i++)
-            for (var j = 0; j < _options.M; j++)
+        for (var i = 0; i < options.M; i++)
+            for (var j = 0; j < options.M; j++)
                 winx[i, j] = -1;
 
 
-        for (var i = 0; i < _options.Nb; i++)
+        for (var i = 0; i < options.Nb; i++)
         {
-            for (var j = 0; j < _options.R; j++)
+            for (var j = 0; j < options.R; j++)
             {
                 int x;
                 int y;
                 do
                 {
-                    x = random.Next() % _options.M;
-                    y = random.Next() % _options.M;
+                    x = random.Next() % options.M;
+                    y = random.Next() % options.M;
                 } while (winx[x, y] != -1);
 
                 winx[x, y] = i;
@@ -57,10 +59,10 @@ public class QimMvtWatermark : IMvtWatermark
     /// <returns>True if found opposite value, false otherwise</returns>
     private bool CheckNearestPoints(bool[,] map, int x, int y, bool value)
     {
-        if (x < 0 || x >= _options.Extent || y < 0 || y >= _options.Extent)
+        if (x < 0 || x >= options.Extent || y < 0 || y >= options.Extent)
             return false;
 
-        if (x + 1 < _options.Extent)
+        if (x + 1 < options.Extent)
             if (map[x + 1, y] != value)
                 return true;
 
@@ -68,7 +70,7 @@ public class QimMvtWatermark : IMvtWatermark
             if (map[x - 1, y] != value)
                 return true;
 
-        if (y + 1 < _options.Extent)
+        if (y + 1 < options.Extent)
             if (map[x, y + 1] != value)
                 return true;
 
@@ -107,7 +109,7 @@ public class QimMvtWatermark : IMvtWatermark
                     {
                         var x = Convert.ToInt32((coordinateMeters.X - tileEnvelope.MinX) / extentDist);
                         var y = Convert.ToInt32((coordinateMeters.Y - tileEnvelope.MinY) / extentDist);
-                        if (x == _options.Extent || y == _options.Extent)
+                        if (x == options.Extent || y == options.Extent)
                             continue;
                         var mapValue = Convert.ToInt32(map[x, y]);
 
@@ -119,7 +121,7 @@ public class QimMvtWatermark : IMvtWatermark
                 }
             }
 
-        if ((s0 == 0 && s1 == 0) || s0 + s1 < _options.T1)
+        if ((s0 == 0 && s1 == 0) || s0 + s1 < options.T1)
             return -1;
 
         return (double)Math.Abs(s0 - s1) / (s1 + s0);
@@ -127,11 +129,11 @@ public class QimMvtWatermark : IMvtWatermark
 
     private record IntPoint(int X, int Y);
 
-    private IEnumerable<IntPoint> GetOppositePoint(bool[,] map, int x, int y, bool value)
+    private List<IntPoint> GetOppositePoint(bool[,] map, int x, int y, bool value)
     {
         var listPoints = new List<IntPoint>();
 
-        if (x + 1 < _options.Extent)
+        if (x + 1 < options.Extent)
             if (map[x + 1, y] != value)
                 listPoints.Add(new IntPoint(x + 1, y));
 
@@ -139,7 +141,7 @@ public class QimMvtWatermark : IMvtWatermark
             if (map[x - 1, y] != value)
                 listPoints.Add(new IntPoint(x - 1, y));
 
-        if (y + 1 < _options.Extent)
+        if (y + 1 < options.Extent)
             if (map[x, y + 1] != value)
                 listPoints.Add(new IntPoint(x, y + 1));
 
@@ -168,7 +170,7 @@ public class QimMvtWatermark : IMvtWatermark
             listPoints.AddRange(l);
         }
 
-        for (var i = 1; i < _options.Distance; ++i)
+        for (var i = 1; i < options.Distance; ++i)
         {
 
             if (CheckNearestPoints(map, x + i, y, value))
@@ -236,7 +238,7 @@ public class QimMvtWatermark : IMvtWatermark
                         var x = Convert.ToInt32((coordinateMeters.X - tileEnvelope.MinX) / extentDist);
                         var y = Convert.ToInt32((coordinateMeters.Y - tileEnvelope.MinY) / extentDist);
 
-                        if (x == _options.Extent || y == _options.Extent)
+                        if (x == options.Extent || y == options.Extent)
                             continue;
 
                         var mapValue = map[x, y];
@@ -351,15 +353,15 @@ public class QimMvtWatermark : IMvtWatermark
         var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(copyTile.TileId);
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
-        var a = envelopeTile.Height / _options.M;
-        var extentDist = envelopeTile.Height / _options.Extent;
+        var a = envelopeTile.Height / options.M;
+        var extentDist = envelopeTile.Height / options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = Maps.GetMap(_options, key);
+        var map = Maps.GetMap(options, key);
 
-        for (var i = 0; i < _options.M; i++)
+        for (var i = 0; i < options.M; i++)
         {
-            for (var j = 0; j < _options.M; j++)
+            for (var j = 0; j < options.M; j++)
             {
                 var index = winx[i, j];
                 if (index == -1)
@@ -383,7 +385,7 @@ public class QimMvtWatermark : IMvtWatermark
                     continue;
 
                 embedded = true;
-                if (stat >= _options.T2 + _options.Delta2)
+                if (stat >= options.T2 + options.Delta2)
                 {
                     if (s1 - s0 > 0 && value == 1)
                         continue;
@@ -394,13 +396,13 @@ public class QimMvtWatermark : IMvtWatermark
 
                 if (value == 1)
                 {
-                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s0 - s1) / 2);
+                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (options.T2 + options.Delta2) + s0 - s1) / 2);
                     ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, true, countAdded, s0);
                 }
 
                 if (value == 0)
                 {
-                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (_options.T2 + _options.Delta2) + s1 - s0) / 2);
+                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (options.T2 + options.Delta2) + s1 - s0) / 2);
                     ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
                 }
             }
@@ -424,26 +426,26 @@ public class QimMvtWatermark : IMvtWatermark
         var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
         envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
 
-        var a = envelopeTile.Height / _options.M;
-        var extentDist = envelopeTile.Height / _options.Extent;
+        var a = envelopeTile.Height / options.M;
+        var extentDist = envelopeTile.Height / options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = Maps.GetMap(_options, key);
+        var map = Maps.GetMap(options, key);
 
-        var bits = new BitArray(_options.Nb, false);
+        var bits = new BitArray(options.Nb, false);
 
-        var dictGeneralExtractionMethod = new Dictionary<int, Tuple<int, int>>(_options.Nb);
-        var dict = new Dictionary<int, int>(_options.Nb);
+        var dictGeneralExtractionMethod = new Dictionary<int, Tuple<int, int>>(options.Nb);
+        var dict = new Dictionary<int, int>(options.Nb);
 
-        for (var i = 0; i < _options.Nb; i++)
+        for (var i = 0; i < options.Nb; i++)
         {
             dictGeneralExtractionMethod.Add(i, new(0, 0));
             dict.Add(i, 0);
         }
 
-        for (var i = 0; i < _options.M; i++)
+        for (var i = 0; i < options.M; i++)
         {
-            for (var j = 0; j < _options.M; j++)
+            for (var j = 0; j < options.M; j++)
             {
 
                 var index = winx[i, j];
@@ -469,7 +471,7 @@ public class QimMvtWatermark : IMvtWatermark
                 dictGeneralExtractionMethod[index] = new(dictGeneralExtractionMethod[index].Item1 + s0, dictGeneralExtractionMethod[index].Item2 + s1);
 
                 embedded = true;
-                if (stat >= _options.T2)
+                if (stat >= options.T2)
                 {
                     if (s0 > s1)
                         dict[index] -= 1;
@@ -480,13 +482,13 @@ public class QimMvtWatermark : IMvtWatermark
             }
         }
 
-        if (_options.IsGeneralExtractionMethod)
+        if (options.IsGeneralExtractionMethod)
         {
-            for (var i = 0; i < _options.Nb; i++)
+            for (var i = 0; i < options.Nb; i++)
             {
                 var s0 = dictGeneralExtractionMethod[i].Item1;
                 var s1 = dictGeneralExtractionMethod[i].Item2;
-                if ((double)Math.Abs(s0 - s1) / (s1 + s0) > _options.T2)
+                if ((double)Math.Abs(s0 - s1) / (s1 + s0) > options.T2)
                 {
                     if (s1 > s0)
                         bits[i] = true;
@@ -497,7 +499,7 @@ public class QimMvtWatermark : IMvtWatermark
         }
         else
         {
-            for (var i = 0; i < _options.Nb; i++)
+            for (var i = 0; i < options.Nb; i++)
             {
                 if (dict[i] > 0)
                     bits[i] = true;
@@ -511,76 +513,110 @@ public class QimMvtWatermark : IMvtWatermark
 
         return bits;
     }
-    public QimMvtWatermark(QimMvtWatermarkOptions options)
-    {
-        _options = options;
-    }
 
     /// <summary>
     /// Embeds a message into VectorTileTree
     /// </summary>
-    /// <param name="tiles">VectorTileTree for embedding message</param>
+    /// <param name="tileTree">VectorTileTree for embedding message</param>
     /// <param name="key">Secret key</param>
     /// <param name="message">The message to embed</param>
     /// <returns>VectorTileTree with an embedded message</returns>
-    public VectorTileTree Embed(VectorTileTree tiles, int key, BitArray message)
+    public VectorTileTree Embed(VectorTileTree tileTree, int key, BitArray message)
+    {
+        return options.Mode switch
+        {
+            Mode.WithTilesMajorityVote => EmbedWithMajorityVote(tileTree, key, message),
+            Mode.WithCheck => EmbedWithCheck(tileTree, key, message),
+            Mode.Repeat => EmbedRepeat(tileTree, key, message),
+            _ => throw new NotImplementedException(),
+        };
+    }
+
+    public VectorTileTree EmbedWithCheck(VectorTileTree tileTree, int key, BitArray message)
     {
         var current = 0;
         var copyTileTree = new VectorTileTree();
 
-        foreach (var tileId in tiles)
+        foreach (var tileId in tileTree)
         {
-            var tile = tiles[tileId];
+            var tile = tileTree[tileId];
 
-            var bits = new BitArray(_options.Nb);
-            for (var i = 0; i < _options.Nb; i++)
+            var bits = new BitArray(options.Nb);
+            for (var i = 0; i < options.Nb; i++)
                 bits[i] = message[(i + current) % message.Count];
 
-            var copyTile = Embed(tile, key + (int)tileId, bits);
-            if (copyTile == null)
+            var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
+            if (copyTile == null || !IsValidForRead(copyTile))
             {
                 copyTileTree[tileId] = tile;
                 continue;
             }
 
             copyTileTree[tileId] = copyTile;
-            current += _options.Nb;
+            current += options.Nb;
         }
         if (current < message.Count)
             throw new ArgumentException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.", nameof(message));
         return copyTileTree;
     }
 
-    public VectorTileTree EmbedParallel(VectorTileTree tiles, int key, BitArray message)
+    public VectorTileTree EmbedRepeat(VectorTileTree tileTree, int key, BitArray message)
     {
-        var copyTileTree = new VectorTileTree();
+        var concurrentDictionary = new ConcurrentDictionary<ulong, VectorTile>();
 
-        var messages = new bool[_options.Nb * tiles.Count()];
+        var messages = new bool[options.Nb * tileTree.Count()];
 
         for (var i = 0; i < messages.Length; i++)
-        {
             messages[i] = message[i % message.Count];
-        }
 
-        var dict = new Dictionary<ulong, bool[]>();
+        var dict = new ConcurrentDictionary<ulong, bool[]>();
         var iter = 0;
-        foreach (var tileId in tiles)
+        foreach (var tileId in tileTree)
         {
-            dict.Add(tileId, messages.Take(new Range(iter, iter + _options.Nb)).ToArray());
+            dict[tileId] = messages.Take(new Range(iter, iter + options.Nb)).ToArray();
             iter++;
         }
 
-        Parallel.ForEach(tiles, tileId =>
+        Parallel.ForEach(tileTree, tileId =>
         {
-            var tile = tiles[tileId];
+            var tile = tileTree[tileId];
             var bits = new BitArray(dict[tileId]);
 
-            var copyTile = Embed(tile, key + (int)tileId, bits);
-            if (copyTile == null)
-                copyTileTree[tileId] = tile;
+            var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
+            if (copyTile == null || !IsValidForRead(copyTile))
+                concurrentDictionary[tileId] = tile;
             else
-                copyTileTree[tileId] = copyTile;
+                concurrentDictionary[tileId] = copyTile;
         });
+
+        var copyTileTree = new VectorTileTree();
+
+        foreach (var tileId in concurrentDictionary.Keys)
+            copyTileTree[tileId] = concurrentDictionary[tileId];
+
+        return copyTileTree;
+    }
+
+    public VectorTileTree EmbedWithMajorityVote(VectorTileTree tileTree, int key, BitArray message)
+    {
+        var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
+
+        var dictionaryMessage = GetMessageDictonary(message, options.Nb);
+
+
+        Parallel.ForEach(tileTree, tileId =>
+        {
+            var tile = Embed(tileTree[tileId], key, dictionaryMessage, message.Length);
+            if (tile == null)
+                dictionaryTiles[tileId] = tileTree[tileId];
+            else
+                dictionaryTiles[tileId] = tile;
+        });
+
+        var copyTileTree = new VectorTileTree();
+
+        foreach (var tileId in dictionaryTiles.Keys)
+            copyTileTree[tileId] = dictionaryTiles[tileId];
 
         return copyTileTree;
     }
@@ -588,50 +624,142 @@ public class QimMvtWatermark : IMvtWatermark
     /// <summary>
     /// Extracts an embedded message from VectorTileTree
     /// </summary>
-    /// <param name="tiles">VectorTileTree to extract the message from</param>
+    /// <param name="tileTree">VectorTileTree to extract the message from</param>
     /// <param name="key">Secret key</param>
     /// <returns>Extracted message</returns>
-    public BitArray Extract(VectorTileTree tiles, int key)
+    public BitArray Extract(VectorTileTree tileTree, int key)
     {
-        var message = new bool[_options.Nb * tiles.Count()];
-        var index = 0;
-        foreach (var tileId in tiles)
+        return options.Mode switch
         {
-            if (tiles.TryGet(tileId, out var tile))
+            Mode.WithTilesMajorityVote => ExtractWithMajorityVote(tileTree, key, options.MessageLength),
+            Mode.WithCheck => ExtractWithCheck(tileTree, key),
+            Mode.Repeat => ExtractRepeat(tileTree, key),
+            _ => throw new NotImplementedException(),
+        };
+    }
+
+    public BitArray ExtractWithCheck(VectorTileTree tileTree, int key)
+    {
+        var message = new bool[options.Nb * tileTree.Count()];
+        var index = 0;
+        foreach (var tileId in tileTree)
+        {
+            var tile = tileTree[tileId];
+            var bits = Extract(tile, Math.Abs(key + (int)tileId));
+            if (bits != null)
             {
-                var bits = Extract(tile, key + (int)tileId);
-                if (bits != null)
-                {
-                    bits.CopyTo(message, index);
-                    index += bits.Count;
-                }
+                bits.CopyTo(message, index);
+                index += bits.Count;
             }
         }
         return new BitArray(message.Take(index).ToArray());
     }
 
-    public BitArray ExtractParallel(VectorTileTree tiles, int key)
+    public BitArray ExtractRepeat(VectorTileTree tileTree, int key)
     {
-        var message = new bool[_options.Nb * tiles.Count()];
+        var message = new bool[options.Nb * tileTree.Count()];
 
         var dict = new Dictionary<ulong, int>();
         var iter = 0;
-        foreach (var tileId in tiles)
+        foreach (var tileId in tileTree)
         {
             dict.Add(tileId, iter);
             iter++;
         }
 
-        Parallel.ForEach(tiles, tileId =>
+        Parallel.ForEach(tileTree, tileId =>
         {
-            var tile = tiles[tileId];
-            var bits = Extract(tile, key + (int)tileId);
-            if (bits != null)
-            {
-                bits.CopyTo(message, dict[tileId] * _options.Nb);
-            }
+            var tile = tileTree[tileId];
+            var bits = Extract(tile, Math.Abs(key + (int)tileId));
+            bits?.CopyTo(message, dict[tileId] * options.Nb);
         });
 
         return new BitArray(message);
+    }
+
+    public BitArray ExtractWithMajorityVote(VectorTileTree tileTree, int key, int? sizeMessage)
+    {
+        if (sizeMessage == null)
+            throw new ArgumentNullException(nameof(sizeMessage));
+
+        var dict = new ConcurrentDictionary<int, int[]>();
+        var indices = (int)Math.Floor((double)sizeMessage / options.Nb);
+        for (var i = 0; i < indices; i++)
+            dict[i] = new int[options.Nb];
+
+        Parallel.ForEach(tileTree, tileId =>
+        {
+            var tile = tileTree[tileId];
+
+            var index = Convert.ToInt32(tileId % (ulong)Math.Floor((double)sizeMessage / options.Nb));
+
+            var bitArray = Extract(tile, Math.Abs(key + (int)tileId));
+            if (bitArray == null)
+                return;
+            for (var i = 0; i < bitArray.Length; i++)
+                dict[index][i] += bitArray[i] == true ? 1 : -1;
+        });
+
+        var result = new bool[options.Nb * indices];
+
+        for (var i = 0; i < indices; i++)
+        {
+            for (var j = 0; j < dict[i].Length; j++)
+            {
+                if (dict[i][j] > 0)
+                    result[i * options.Nb + j] = true;
+                else
+                    result[i * options.Nb + j] = false;
+            }
+        }
+
+        return new BitArray(result);
+    }
+
+    public VectorTile? Embed(VectorTile tile, int key, IDictionary<int, bool[]> dictionaryMessage, int messageLength)
+    {
+        var tileId = tile.TileId;
+        var bits = new BitArray(dictionaryMessage[Convert.ToInt32(tileId % (ulong)Math.Floor((double)messageLength / options.Nb))]);
+
+        var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
+        if (copyTile == null || !IsValidForRead(copyTile))
+            return null;
+        else
+            return copyTile;
+    }
+
+    public static ConcurrentDictionary<int, bool[]> GetMessageDictonary(BitArray message, int Nb)
+    {
+        var dictionaryMessage = new ConcurrentDictionary<int, bool[]>();
+        var step = (double)message.Length / Nb;
+        var tmparray = new bool[message.Length];
+        message.CopyTo(tmparray, 0);
+        var iter = 0;
+        for (var i = 0; i < step; i++)
+        {
+            dictionaryMessage[i] = tmparray.Take(new Range(iter, iter + Nb)).ToArray();
+            iter += Nb;
+        }
+
+        return dictionaryMessage;
+    }
+
+    public static bool IsValidForRead(VectorTile tile)
+    {
+        var reader = new MapboxTileReader();
+        using var memoryStream = new MemoryStream();
+        tile.Write(memoryStream);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        try
+        {
+            var readTile = reader.Read(memoryStream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId));
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+
+        return true;
     }
 }
