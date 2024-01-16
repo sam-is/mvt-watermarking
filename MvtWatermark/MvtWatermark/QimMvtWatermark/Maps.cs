@@ -4,17 +4,15 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark;
 public class Maps
 {
-    static private List<bool[,]?> _maps = new() { null, null, null, null, null, null, null, null, null, null };
-    static private List<QimMvtWatermarkOptions?> _options = new() { null, null, null, null, null, null, null, null, null, null };
+    private static readonly List<bool[,]?> _maps = [null, null, null, null, null, null, null, null, null, null];
+    private static readonly List<QimMvtWatermarkOptions?> _options = [null, null, null, null, null, null, null, null, null, null];
 
     static public bool[,] GetMap(QimMvtWatermarkOptions options, int key)
     {
-        _options[key % 10] ??= options;
-
-        if (_options[key % 10]!.R == options.R && _options[key % 10]!.Extent == options.Extent && _maps[key % 10] != null)
+        if (_maps[key % 10] != null && _options[key % 10]!.Distance == options.Distance && _options[key % 10]!.Extent == options.Extent)
             return _maps[key % 10]!;
 
-        _options[key % 10] = options;
+        _options[key % 10] = new QimMvtWatermarkOptions(options);
         _maps[key % 10] = GenerateMap(key);
         return _maps[key % 10]!;
     }
