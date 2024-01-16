@@ -11,4 +11,12 @@ public class ReasearchParameters
 
         checkParameters.Run(tileTree, path);
     }
+
+    public static void StartMatrix(VectorTileTree tileTree, string path)
+    {
+        var options = new QimMvtWatermarkOptions(0.6, 0.3, 5, 4096, 2, 4, 16, null, false);
+        var matrixParametersResearch = new MatrixParametersResearch(options);
+
+        matrixParametersResearch.Run(tileTree, path);
+    }
 }

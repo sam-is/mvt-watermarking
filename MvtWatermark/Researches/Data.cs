@@ -13,30 +13,68 @@ public class Data
         var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
 
-        for (var x = minX; x <= maxX; x++)
+        using var command = new SqliteCommand(@"SELECT tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = $z AND tile_column >= $minx AND tile_column <= $maxx AND tile_row >= $miny AND tile_row <= $maxy", sqliteConnection);
+        command.Parameters.AddWithValue("$z", z);
+        command.Parameters.AddWithValue("$minx", minX);
+        command.Parameters.AddWithValue("$maxx", maxX);
+        command.Parameters.AddWithValue("$miny", (1 << z) - maxY - 1);
+        command.Parameters.AddWithValue("$maxy", (1 << z) - minY - 1);
+
+        var dbReader = command.ExecuteReader();
+
+        while (dbReader.Read())
         {
-            for (var y = minY; y <= maxY; y++)
+            var x = dbReader.GetInt32(0);
+            var y = (1 << z) - dbReader.GetInt32(1) - 1;
+
+            var stream = dbReader.GetStream(2);
+
+            if (stream.Length == 0)
+                continue;
+
+            using var decompressor = new GZipStream(stream, CompressionMode.Decompress, false);
+            var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+            tileTree[tile.TileId] = tile;
+        }
+
+        return tileTree;
+    }
+
+    static public VectorTileTree GetStpVectorTileTree(string path, int z)
+    {
+        using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
+        sqliteConnection.Open();
+        var reader = new MapboxTileReader();
+        var tileTree = new VectorTileTree();
+
+        using var command = new SqliteCommand(@"SELECT tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = $z" /*AND LENGTH(tile_data) > 50000*/, sqliteConnection);
+        command.Parameters.AddWithValue("$z", z);
+        using var dbReader = command.ExecuteReader();
+
+        var count = 0;
+        while (dbReader.Read())
+        {
+            try
             {
-                using var command = new SqliteCommand(@"SELECT tile_data FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y", sqliteConnection);
-                command.Parameters.AddWithValue("$z", z);
-                command.Parameters.AddWithValue("$x", x);
-                command.Parameters.AddWithValue("$y", (1 << z) - y - 1);
-                var obj = command.ExecuteScalar();
+                var x = dbReader.GetInt32(0);
+                var y = (1 << z) - dbReader.GetInt32(1) - 1;
 
-                if (obj == null)
-                    continue;
+                var stream = dbReader.GetStream(2);
 
-                var bytes = (byte[])obj!;
-
-                using var memoryStream = new MemoryStream(bytes);
-
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+                using var decompressor = new GZipStream(stream, CompressionMode.Decompress, false);
                 var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
 
                 tileTree[tile.TileId] = tile;
             }
+            catch
+            {
+                count++;
+            }
         }
+
+        Console.WriteLine(count);
+
         return tileTree;
     }
 
@@ -56,6 +94,7 @@ public class Data
             var maxX = sqlReader.GetInt32(1);
             var minY = sqlReader.GetInt32(2);
             var maxY = sqlReader.GetInt32(3);
+            Console.WriteLine($" From db: minX = {minX}, maxX = {maxX}, minY = {minY}, maxY = {maxY}");
             var tmpMinY = (1 << z) - maxY - 1;
             maxY = (1 << z) - minY - 1;
             minY = tmpMinY;
@@ -89,7 +128,7 @@ public class Data
                     using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
                     var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
 
-                    if(!tile.IsEmpty)
+                    if (!tile.IsEmpty)
                         tileTreeTegola[tile.TileId] = tile;
                 }
                 catch (Exception e)
@@ -100,5 +139,127 @@ public class Data
         });
 
         return tileTreeTegola;
+    }
+
+    static public VectorTileTree GetTegolaVectorTileTreeFromFiles(string path, int minX, int maxX, int minY, int maxY, int z)
+    {
+        var reader = new MapboxTileReader();
+        var tileTreeTegola = new VectorTileTree();
+        for (var x = minX; x <= maxX; x++)
+            for (var y = minY; y <= maxY; y++)
+            {
+                try
+                {
+                    using var memoryStream = new MemoryStream(File.ReadAllBytes(Path.Combine(path, z.ToString(), x.ToString(), $"{y}.mvt")));
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    //using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+                    var tile = reader.Read(memoryStream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+                    if (!tile.IsEmpty)
+                        tileTreeTegola[tile.TileId] = tile;
+                }
+                catch (Exception e)
+                {
+                    var id = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z);
+                    tileTreeTegola[id.Id] = new VectorTile();
+                    Console.WriteLine($"{z}, {x}, {y} throw exception: {e.Message}");
+                }
+            }
+
+        return tileTreeTegola;
+    }
+
+    static public VectorTileTree AddId(string path, int minX, int maxX, int minY, int maxY, int z)
+    {
+        var reader = new MapboxTileReader();
+        var tileTreeTegola = new VectorTileTree();
+        for (var x = minX; x <= maxX; x++)
+            for (var y = minY; y <= maxY; y++)
+            {
+                try
+                {
+                    using var memoryStream = new MemoryStream(File.ReadAllBytes(Path.Combine(path, z.ToString(), x.ToString(), y.ToString())));
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    //using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
+                    var tile = reader.Read(memoryStream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+
+                    if (!tile.IsEmpty)
+                        tileTreeTegola[tile.TileId] = tile;
+                }
+                catch (Exception e)
+                {
+                    var id = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z);
+                    tileTreeTegola[id.Id] = new VectorTile();
+                    Console.WriteLine($"{z}, {x}, {y} throw exception: {e.Message}");
+                }
+            }
+
+        foreach(var tileId in tileTreeTegola)
+        {
+            foreach(var layer in tileTreeTegola[tileId].Layers)
+            {
+                for (var i = 0; i < layer.Features.Count; i++)
+                {
+                    layer.Features[i].Attributes.Add("GLOBALID", $"{tileId}{layer.Name}{i}");
+                }
+            }
+        }
+
+        tileTreeTegola.Write("New Tegola");
+
+        return tileTreeTegola;
+    }
+
+    static public void WriteToFile(VectorTileTree tileTree, string path, uint extent = 4096)
+    {
+        foreach (var tileId in tileTree)
+        {
+            var tileInfo = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId);
+            var pathFile = Path.Combine(path, tileInfo.Zoom.ToString(), tileInfo.X.ToString());
+            if (!Directory.Exists(pathFile))
+                Directory.CreateDirectory(pathFile);
+
+            using var compressedStream = new MemoryStream();
+            using var compressor = new GZipStream(compressedStream, CompressionMode.Compress, true);
+
+            tileTree[tileId].Write(compressor, extent);
+            compressor.Flush();
+
+            File.WriteAllBytes(Path.Combine(pathFile, tileInfo.Y.ToString()), compressedStream.ToArray());
+        }
+    }
+
+    static public VectorTileTree ReadFromFiles(string path)
+    {
+        var reader = new MapboxTileReader();
+        var tileTree = new VectorTileTree();
+
+        var directoryInfo = new DirectoryInfo(path);
+        foreach (var z in directoryInfo.GetDirectories())
+        {
+            foreach (var x in z.GetDirectories())
+            {
+                foreach (var y in x.GetFiles())
+                {
+                    try
+                    {
+                        using var fileStream = y.Open(FileMode.Open);
+                        fileStream.Seek(0, SeekOrigin.Begin);
+                        using var decompressor = new GZipStream(fileStream, CompressionMode.Decompress, false);
+                        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(Convert.ToInt32(x.Name), Convert.ToInt32(y.Name), Convert.ToInt32(z.Name)));
+
+                        if (!tile.IsEmpty)
+                            tileTree[tile.TileId] = tile;
+                    }
+                    catch (Exception e)
+                    {
+                        var id = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(Convert.ToInt32(x.Name), Convert.ToInt32(y.Name), Convert.ToInt32(z.Name));
+                        tileTree[id.Id] = new VectorTile();
+                        Console.WriteLine($"{z.Name}, {x.Name}, {y.Name} throw exception: {e.Message}");
+                    }
+                }
+            }
+        }
+        return tileTree;
     }
 }

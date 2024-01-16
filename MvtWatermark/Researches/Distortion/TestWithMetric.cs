@@ -15,7 +15,11 @@ public class TestWithMetric
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var tileTreeWatermarked = watermark.Embed(tileTree, key, message);
+        var path = Path.Combine("TmpTiles", "TmpFolder");
+
+        Data.WriteToFile(watermark.Embed(tileTree, key, message), path);
+
+        var tileTreeWatermarked = Data.ReadFromFiles(path);
 
         var valuesRelativeDouble = new double[] { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1 };
         var valuesDeletingByArea = new double[] { 0.00001, 0.0001, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4 };
@@ -76,8 +80,12 @@ public class TestWithMetric
 
     private static double ComputeAccuracy(VectorTileTree tileTreeWatermarked, BitArray message, QimMvtWatermark watermark, IDistortion distortion, int key)
     {
-        var distortingTileTree = distortion.Distort(tileTreeWatermarked);
+        var path = Path.Combine("TmpTiles", "TmpFolderDistortion");
 
+        Data.WriteToFile(distortion.Distort(tileTreeWatermarked), path);
+
+        var distortingTileTree = Data.ReadFromFiles(path);
+        
         var m = watermark.Extract(distortingTileTree, key);
 
         double accuracy;
@@ -85,10 +93,12 @@ public class TestWithMetric
         if (m.Count != 0)
         {
             var countEqual = 0;
-            for (var i = 0; i < message.Count && i < m.Count; i++)
-                if (m[i] == message[i])
+            for (var i = 0; i < m.Count; i++)
+                if (m[i] == message[i % message.Count])
+                {
                     countEqual++;
-            accuracy = (double)countEqual / message.Count;
+                }
+            accuracy = (double)countEqual / m.Count;
         }
         else
             accuracy = 0;

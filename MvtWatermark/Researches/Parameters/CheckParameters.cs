@@ -5,9 +5,9 @@ using System.Collections;
 
 namespace Researches.Parameters;
 
-public class CheckParameters
+public class CheckParameters(QimMvtWatermarkOptions options)
 {
-    public QimMvtWatermarkOptions Options { get; set; }
+    public QimMvtWatermarkOptions Options { get; set; } = options;
 
     public enum ParamName
     {
@@ -17,11 +17,6 @@ public class CheckParameters
         T1,
         R,
         Extent
-    }
-
-    public CheckParameters(QimMvtWatermarkOptions options)
-    {
-        Options = options;
     }
 
     public void Run(VectorTileTree tileTree, string path)
@@ -118,7 +113,7 @@ public class CheckParameters
 
             var watermark = new QimMvtWatermark(options);
 
-            var bits = new bool[20];
+            var bits = new bool[1];
             for (var i = 0; i < bits.Length; i++)
                 bits[i] = true;
             var message = new BitArray(bits);
@@ -127,6 +122,7 @@ public class CheckParameters
             try
             {
                 tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
+                Data.WriteToFile(tileTreeWatermarked, "TmpTiles");
             }
             catch (Exception)
             {
@@ -136,14 +132,22 @@ public class CheckParameters
                 continue;
             }
 
-            var m = watermark.Extract(tileTreeWatermarked, 0);
+            var tileTreeFromFiles = Data.ReadFromFiles("TmpTiles");
+
+            var m = watermark.Extract(tileTreeFromFiles, 0);
 
             var countEqual = 0;
-            for (var i = 0; i < message.Count; i++)
-                if (m[i] == message[i])
-                    countEqual++;
+            //for (var i = 0; i < message.Count; i++)
+            //    if (m[i] == message[i])
+            //        countEqual++;
 
-            accuracy.Add((double)countEqual / message.Count);
+            for (var i = 0; i < m.Count; i++)
+                if (m[i] == message[i % message.Count])
+                {
+                    countEqual++;
+                }
+
+            accuracy.Add((double)countEqual / m.Count);
 
             var listH = new List<double>();
             var listF = new List<double>();
@@ -155,10 +159,24 @@ public class CheckParameters
                 for (var i = 0; i < tileTree[id].Layers.Count; i++)
                     for (var j = 0; j < tileTree[id].Layers[i].Features.Count; j++)
                     {
-                        var h = hausdorffSimilarityMeasure.Measure(tileTreeWatermarked[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
-                        var f = frechetSimilarityMeasure.Measure(tileTreeWatermarked[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
-                        listH.Add(double.IsNegativeInfinity(h) ? 0 : h);
-                        listF.Add(double.IsNegativeInfinity(f) ? 0 : f);
+                        var layer = tileTreeFromFiles[id].Layers[i];
+
+                        foreach(var feature in layer.Features)
+                        {
+                            if (feature.Attributes["GLOBALID"].ToString() == tileTree[id].Layers[i].Features[j].Attributes["GLOBALID"].ToString() && feature.Geometry.OgcGeometryType == tileTree[id].Layers[i].Features[j].Geometry.OgcGeometryType)
+                            {
+                                var h = hausdorffSimilarityMeasure.Measure(feature.Geometry, tileTree[id].Layers[i].Features[j].Geometry);
+                                var f = frechetSimilarityMeasure.Measure(feature.Geometry, tileTree[id].Layers[i].Features[j].Geometry);
+                                listH.Add(double.IsNegativeInfinity(h) ? 0 : h);
+                                listF.Add(double.IsNegativeInfinity(f) ? 0 : f);
+                                continue;
+                            }
+                        }
+                        //var h = hausdorffSimilarityMeasure.Measure(tileTreeFromFiles[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
+                        //var f = frechetSimilarityMeasure.Measure(tileTreeFromFiles[id].Layers[i].Features[j].Geometry, tileTree[id].Layers[i].Features[j].Geometry);
+                       
+                        //listH.Add(double.IsNegativeInfinity(h) ? 0 : h);
+                        //listF.Add(double.IsNegativeInfinity(f) ? 0 : f);
                     }
             }
 

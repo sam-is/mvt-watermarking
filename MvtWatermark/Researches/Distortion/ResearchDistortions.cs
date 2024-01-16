@@ -11,11 +11,11 @@ public class ResearchDistortions
         var valuesR = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30, 40, 50 };
         var valuesT2 = new double[] { 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99 };
         var valuesK = new double[] { 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99 };
-        var valuesNb = new int[] { 1, 2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100 };
+        var valuesNb = new int[] { /*1, 2, 3, 4, 5, 8, 10, 15, 20, 30, 50,*/ 100 };
 
         Compute(tileTree, valuesNb, valuesR, Path.Combine(path, "nb+r"), TestType.NbAndR);
-        Compute(tileTree, valuesK, valuesT2, Path.Combine(path, "k+t2"), TestType.KAndT2);
-        Compute(tileTree, valuesK, valuesExtent, Path.Combine(path, "k+extent"), TestType.KAndExtent);
+        //Compute(tileTree, valuesK, valuesT2, Path.Combine(path, "k+t2"), TestType.KAndT2);
+        //Compute(tileTree, valuesK, valuesExtent, Path.Combine(path, "k+extent"), TestType.KAndExtent);
     }
 
     static public void StartWithKey(VectorTileTree tileTree, string path)
@@ -69,7 +69,7 @@ public class ResearchDistortions
                     for (var dist = 0; dist < 5; dist++)
                         for (var s = 0; s < 10; s++)
                         {
-                            mean[i, j, dist] = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+                            mean[i, j, dist] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
                             mean[i, j, dist][s] += accuracy[key]![i, j, dist][s];
                         }
                 }
@@ -96,7 +96,7 @@ public class ResearchDistortions
                     for (var dist = 0; dist < 5; dist++)
                         for (var s = 0; s < 10; s++)
                         {
-                            dispersion[i, j, dist] = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+                            dispersion[i, j, dist] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
                             dispersion[i, j, dist][s] += Math.Pow(accuracy[key]![i, j, dist][s] - mean[i, j, dist][s], 2);
                         }
                 }
@@ -207,7 +207,7 @@ public class ResearchDistortions
                 {
                     case TestType.NbAndR:
                         {
-                            var options = new QimMvtWatermarkOptions(0.95, 0.2, 5, 4096, 2, (int)firstValue, (int)secondValue, null, false);
+                            var options = new QimMvtWatermarkOptions(0.8, 0.2, 5, 2048/*4096*/, 2, (int)firstValue, (int)secondValue, null, false);
                             var (metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding) = TestWithMetric.Run(tileTree, options, 0);
                             metrics.Add(metric);
                             WriteToFile(writer, options, tileTree.Count(), metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding);
@@ -215,7 +215,7 @@ public class ResearchDistortions
                         }
                     case TestType.KAndT2:
                         {
-                            var options = new QimMvtWatermarkOptions((double)firstValue, (double)secondValue, 5, 4096, 2, 5, 20, null, false);
+                            var options = new QimMvtWatermarkOptions((double)firstValue, (double)secondValue, 5, 2048/*4096*/, 2, 4, 16, null, false);
                             var (metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding) = TestWithMetric.Run(tileTree, options, 0);
                             metrics.Add(metric);
                             WriteToFile(writer, options, tileTree.Count(), metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding);
@@ -327,7 +327,7 @@ public class ResearchDistortions
                 break;
         }
 
-        var extrenalIteration = 0;
+        var externalIteration = 0;
         foreach (var firstValue in firstValues)
         {
             Console.WriteLine($"first value = {firstValue}");
@@ -347,11 +347,11 @@ public class ResearchDistortions
                             var options = new QimMvtWatermarkOptions(0.95, 0.2, 5, 4096, 2, (int)firstValue, (int)secondValue, null, false);
                             var (metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding) = TestWithMetric.Run(tileTree, options, key);
                             metrics.Add(metric);
-                            accuracyForAll[extrenalIteration, iteration, 0] = accuracyShifting;
-                            accuracyForAll[extrenalIteration, iteration, 1] = accuracyReducing;
-                            accuracyForAll[extrenalIteration, iteration, 2] = accuracyDeletingLayers;
-                            accuracyForAll[extrenalIteration, iteration, 3] = accuracyDeletingByArea;
-                            accuracyForAll[extrenalIteration, iteration, 4] = accuracyAdding;
+                            accuracyForAll[externalIteration, iteration, 0] = accuracyShifting;
+                            accuracyForAll[externalIteration, iteration, 1] = accuracyReducing;
+                            accuracyForAll[externalIteration, iteration, 2] = accuracyDeletingLayers;
+                            accuracyForAll[externalIteration, iteration, 3] = accuracyDeletingByArea;
+                            accuracyForAll[externalIteration, iteration, 4] = accuracyAdding;
                             WriteToFile(writer, options, tileTree.Count(), metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding);
                             break;
                         }
@@ -360,11 +360,11 @@ public class ResearchDistortions
                             var options = new QimMvtWatermarkOptions((double)firstValue, (double)secondValue, 5, 4096, 2, 5, 20, null, false);
                             var (metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding) = TestWithMetric.Run(tileTree, options, key);
                             metrics.Add(metric);
-                            accuracyForAll[extrenalIteration, iteration, 0] = accuracyShifting;
-                            accuracyForAll[extrenalIteration, iteration, 1] = accuracyReducing;
-                            accuracyForAll[extrenalIteration, iteration, 2] = accuracyDeletingLayers;
-                            accuracyForAll[extrenalIteration, iteration, 3] = accuracyDeletingByArea;
-                            accuracyForAll[extrenalIteration, iteration, 4] = accuracyAdding;
+                            accuracyForAll[externalIteration, iteration, 0] = accuracyShifting;
+                            accuracyForAll[externalIteration, iteration, 1] = accuracyReducing;
+                            accuracyForAll[externalIteration, iteration, 2] = accuracyDeletingLayers;
+                            accuracyForAll[externalIteration, iteration, 3] = accuracyDeletingByArea;
+                            accuracyForAll[externalIteration, iteration, 4] = accuracyAdding;
                             WriteToFile(writer, options, tileTree.Count(), metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding);
                             break;
                         }
@@ -373,11 +373,11 @@ public class ResearchDistortions
                             var options = new QimMvtWatermarkOptions((double)firstValue, 0.2, 5, (int)secondValue, 2, 5, 20, null, false);
                             var (metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding) = TestWithMetric.Run(tileTree, options, key);
                             metrics.Add(metric);
-                            accuracyForAll[extrenalIteration, iteration, 0] = accuracyShifting;
-                            accuracyForAll[extrenalIteration, iteration, 1] = accuracyReducing;
-                            accuracyForAll[extrenalIteration, iteration, 2] = accuracyDeletingLayers;
-                            accuracyForAll[extrenalIteration, iteration, 3] = accuracyDeletingByArea;
-                            accuracyForAll[extrenalIteration, iteration, 4] = accuracyAdding;
+                            accuracyForAll[externalIteration, iteration, 0] = accuracyShifting;
+                            accuracyForAll[externalIteration, iteration, 1] = accuracyReducing;
+                            accuracyForAll[externalIteration, iteration, 2] = accuracyDeletingLayers;
+                            accuracyForAll[externalIteration, iteration, 3] = accuracyDeletingByArea;
+                            accuracyForAll[externalIteration, iteration, 4] = accuracyAdding;
                             WriteToFile(writer, options, tileTree.Count(), metric, accuracyShifting, accuracyReducing, accuracyDeletingLayers, accuracyDeletingByArea, accuracyAdding);
                             break;
                         }
@@ -402,7 +402,7 @@ public class ResearchDistortions
             foreach (var metric in metrics)
                 metricsWriter.Write($"{metric,-6: 0.##}");
 
-            extrenalIteration++;
+            externalIteration++;
         }
 
         return accuracyForAll;

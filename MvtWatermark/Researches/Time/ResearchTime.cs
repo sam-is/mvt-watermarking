@@ -63,17 +63,18 @@ public class ResearchTime
             bits[i] = true;
         var message = new BitArray(bits);
 
+        options.Mode = Mode.Repeat;
         var watermark = new QimMvtWatermark(options);
 
         watch.Start();
-        var tileTreeWatermarked = watermark.EmbedParallel(tileTree, 0, message);
+        var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
         watch.Stop();
 
         Console.WriteLine("Embeded");
         writer.WriteLine($"Embeding: {watch.ElapsedMilliseconds} ms = {watch.Elapsed.TotalMinutes} min");
 
         watch.Restart();
-        var m = watermark.ExtractParallel(tileTreeWatermarked, 0);
+        var m = watermark.Extract(tileTreeWatermarked, 0);
         watch.Stop();
 
         Console.WriteLine("Extracted");
@@ -82,9 +83,7 @@ public class ResearchTime
         var count = 0;
         for (var i = 0; i < m.Count; i++)
             if (m[i] != message[i % message.Count])
-            {
                 count++;
-            }
 
         writer.WriteLine($"Length all messages: {m.Count}\nLength message: {message.Count}\nCount not correct bit: {count}");
     }
@@ -104,7 +103,7 @@ public class ResearchTime
                     count += feature.Geometry.NumPoints;
             listCount.Add(count);
         }
-        listCount = listCount.OrderBy(count => count).ToList();
+        listCount = [.. listCount.OrderBy(count => count)];
 
         var countGoodTile = tileTree.Count() - listCount.Where(count => count < 100).Count();
 
