@@ -4,15 +4,8 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class ShiftingPointsDistortion : IDistortion
+public class ShiftingPointsDistortion(double relativeNumberPoints) : IDistortion
 {
-    private readonly double _relativeNumberPoints;
-
-    public ShiftingPointsDistortion(double relativeNumberPoints)
-    {
-        _relativeNumberPoints = relativeNumberPoints;
-    }
-
     public VectorTileTree Distort(VectorTileTree tiles)
     {
         var copyTileTree = new VectorTileTree();
@@ -46,7 +39,7 @@ public class ShiftingPointsDistortion : IDistortion
                 {
                     var geometry = feature.Geometry;
                     var length = geometry.Coordinates.Length;
-                    var step = (int)Math.Ceiling(length / (length * _relativeNumberPoints));
+                    var step = (int)Math.Ceiling(length / (length * relativeNumberPoints));
 
                     for (var i = 0; i < length; i += step)
                     {

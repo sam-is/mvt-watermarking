@@ -4,17 +4,8 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
-public class ReducingNumberOfPointsDistortion : IDistortion
+public class ReducingNumberOfPointsDistortion(double relativeCount, bool isLttb) : IDistortion
 {
-    private readonly double _relativeCountOrDistance;
-    private readonly bool _isLttb;
-
-    public ReducingNumberOfPointsDistortion(double relativeCount, bool isLttb)
-    {
-        _relativeCountOrDistance = relativeCount;
-        _isLttb = isLttb;
-    }
-
     public static Coordinate[] LargestTriangleThreeBuckets(Coordinate[] data, int count)
     {
         var length = data.Length;
@@ -124,7 +115,7 @@ public class ReducingNumberOfPointsDistortion : IDistortion
         }
         else
         {
-            res = new Coordinate[] { data[0], data[^1] };
+            res = [data[0], data[^1]];
         }
 
         return res;
@@ -154,9 +145,9 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                             break;
                         case "LineString":
                             Coordinate[] coordinates;
-                            if (_isLttb)
+                            if (isLttb)
                             {
-                                var count = (int)Math.Ceiling(feature.Geometry.NumPoints * _relativeCountOrDistance);
+                                var count = (int)Math.Ceiling(feature.Geometry.NumPoints * relativeCount);
 
                                 if (count < 2)
                                     count = 2;
@@ -165,16 +156,16 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                             }
                             else
                             {
-                                var distance = envelopeTile.Height * _relativeCountOrDistance;
+                                var distance = envelopeTile.Height * relativeCount;
                                 coordinates = RamerDouglasPecker(feature.Geometry.Coordinates, distance);
                             }
 
                             l.Features.Add(new Feature(new LineString(coordinates), feature.Attributes));
                             break;
                         case "Polygon":
-                            if (_isLttb)
+                            if (isLttb)
                             {
-                                var count = (int)Math.Ceiling(feature.Geometry.NumPoints * _relativeCountOrDistance);
+                                var count = (int)Math.Ceiling(feature.Geometry.NumPoints * relativeCount);
 
                                 if (count < 3)
                                     count = 3;
@@ -183,10 +174,10 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                             }
                             else
                             {
-                                var distance = envelopeTile.Height * _relativeCountOrDistance;
+                                var distance = envelopeTile.Height * relativeCount;
                                 coordinates = RamerDouglasPecker(feature.Geometry.Coordinates, distance);
                                 if (coordinates.Length < 3)
-                                    coordinates = new Coordinate[] { coordinates[0], new((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1] };
+                                    coordinates = [coordinates[0], new((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1]];
                             }
 
                             coordinates[^1] = coordinates[0];
@@ -201,9 +192,9 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                             for (var i = 0; i < multiLineString!.NumGeometries; i++)
                             {
                                 var lineString = multiLineString!.Geometries[i];
-                                if (_isLttb)
+                                if (isLttb)
                                 {
-                                    var count = (int)Math.Ceiling(lineString.NumPoints * _relativeCountOrDistance);
+                                    var count = (int)Math.Ceiling(lineString.NumPoints * relativeCount);
 
                                     if (count < 2)
                                         count = 2;
@@ -212,7 +203,7 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                                 }
                                 else
                                 {
-                                    var distance = envelopeTile.Height * _relativeCountOrDistance;
+                                    var distance = envelopeTile.Height * relativeCount;
                                     coordinates = RamerDouglasPecker(lineString.Coordinates, distance);
                                 }
                                 lineStrings[i] = new LineString(coordinates);
@@ -225,9 +216,9 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                             for (var i = 0; i < multiPolygon!.NumGeometries; i++)
                             {
                                 var polygon = multiPolygon!.Geometries[i];
-                                if (_isLttb)
+                                if (isLttb)
                                 {
-                                    var count = (int)Math.Ceiling(polygon.NumPoints * _relativeCountOrDistance);
+                                    var count = (int)Math.Ceiling(polygon.NumPoints * relativeCount);
 
                                     if (count < 3)
                                         count = 3;
@@ -236,11 +227,11 @@ public class ReducingNumberOfPointsDistortion : IDistortion
                                 }
                                 else
                                 {
-                                    var distance = envelopeTile.Height * _relativeCountOrDistance;
+                                    var distance = envelopeTile.Height * relativeCount;
                                     coordinates = RamerDouglasPecker(polygon.Coordinates, distance);
 
                                     if (coordinates.Length < 3)
-                                        coordinates = new Coordinate[] { coordinates[0], new((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1] };
+                                        coordinates = [coordinates[0], new((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1]];
                                 }
 
                                 coordinates[^1] = coordinates[0];

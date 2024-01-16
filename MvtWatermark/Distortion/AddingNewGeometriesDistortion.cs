@@ -5,10 +5,8 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class AddingNewGeometriesDistortion : IDistortion
+public class AddingNewGeometriesDistortion(int count) : IDistortion
 {
-    private readonly int _count;
-
     private static Geometry GetRandomGeometry(Envelope envelope)
     {
         Geometry geometry;
@@ -43,10 +41,6 @@ public class AddingNewGeometriesDistortion : IDistortion
         return new Point(envelope.Centre);
 
     }
-    public AddingNewGeometriesDistortion(int count)
-    {
-        _count = count;
-    }
 
     public VectorTileTree Distort(VectorTileTree tiles)
     {
@@ -59,7 +53,7 @@ public class AddingNewGeometriesDistortion : IDistortion
             var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId);
             var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
 
-            var countForLayer = (int)Math.Ceiling((double)_count / tiles[tileId].Layers.Count);
+            var countForLayer = (int)Math.Ceiling((double)count / tiles[tileId].Layers.Count);
 
             foreach (var layer in tiles[tileId].Layers)
             {

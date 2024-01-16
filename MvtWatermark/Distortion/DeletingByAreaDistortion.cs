@@ -4,14 +4,9 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class DeletingByAreaDistortion : IDistortion
+public class DeletingByAreaDistortion(double relativeArea) : IDistortion
 {
-    private readonly double _relativeArea;
-
-    public DeletingByAreaDistortion(double relativeArea)
-    {
-        _relativeArea = relativeArea;
-    }
+    private readonly double _relativeArea = relativeArea;
 
     public VectorTileTree Distort(VectorTileTree tiles)
     {

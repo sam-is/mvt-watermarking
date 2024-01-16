@@ -3,21 +3,14 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class SeparationByGeometryTypeDistortion : IDistortion
+public class SeparationByGeometryTypeDistortion(SeparationByGeometryTypeDistortion.Mode mode) : IDistortion
 {
-
-    private readonly Mode _mode;
     public enum Mode
     {
         All,
         Points,
         Lines,
         Polygons
-    }
-
-    public SeparationByGeometryTypeDistortion(Mode mode)
-    {
-        _mode = mode;
     }
 
     public VectorTileTree Distort(VectorTileTree tiles)
@@ -62,7 +55,7 @@ public class SeparationByGeometryTypeDistortion : IDistortion
 
             var tile = new VectorTile { TileId = tileId };
 
-            switch (_mode)
+            switch (mode)
             {
                 case Mode.All:
                     tile.Layers.Add(pointLayer);

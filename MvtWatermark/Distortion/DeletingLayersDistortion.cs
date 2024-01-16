@@ -3,15 +3,8 @@ using NetTopologySuite.IO.VectorTiles;
 
 namespace Distortion;
 
-public class DeletingLayersDistortion : IDistortion
+public class DeletingLayersDistortion(double relativeNumberLayers) : IDistortion
 {
-    private readonly double _relativeNumberLayers;
-
-    public DeletingLayersDistortion(double relativeNumberLayers)
-    {
-        _relativeNumberLayers = relativeNumberLayers;
-    }
-
     public VectorTileTree Distort(VectorTileTree tiles)
     {
         var copyTileTree = new VectorTileTree();
@@ -20,7 +13,7 @@ public class DeletingLayersDistortion : IDistortion
         {
             var tile = tiles[tileId];
             var count = tile.Layers.Count;
-            var countDelete = (int)Math.Floor(count * _relativeNumberLayers);
+            var countDelete = (int)Math.Floor(count * relativeNumberLayers);
 
             var indexList = new List<int>();
             var random = new Random();
