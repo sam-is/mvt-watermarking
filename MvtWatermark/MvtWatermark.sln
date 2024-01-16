@@ -19,6 +19,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Researches", "Researches\Re
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Distortion", "Distortion\Distortion.csproj", "{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MvtWatermarkingService", "MvtWatermarkingService\MvtWatermarkingService.csproj", "{655610EF-DEB5-47D5-8200-2FB742D8D9A9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{20DD51F1-4547-4C98-A47A-45B4DE955E27} = {20DD51F1-4547-4C98-A47A-45B4DE955E27}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +46,10 @@ Global
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8E415897-2A85-49C9-A9CE-34ADC6CE7CCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{655610EF-DEB5-47D5-8200-2FB742D8D9A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{655610EF-DEB5-47D5-8200-2FB742D8D9A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{655610EF-DEB5-47D5-8200-2FB742D8D9A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{655610EF-DEB5-47D5-8200-2FB742D8D9A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
