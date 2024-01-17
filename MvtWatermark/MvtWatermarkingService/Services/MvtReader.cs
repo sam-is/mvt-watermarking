@@ -1,5 +1,7 @@
 ﻿using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
+using System.Collections.Concurrent;
+using System.IO;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Tile = NetTopologySuite.IO.VectorTiles.Tiles.Tile;
@@ -14,10 +16,10 @@ public partial class MvtReader
     {
         var tileId = GetTileIdFromUrl(url);
         if (tileId == null)
-            return null; 
+            return null;
 
         var reader = new MapboxTileReader();
-        
+
         using var sharedClient = new HttpClient()
         {
             BaseAddress = new Uri(url),
@@ -42,6 +44,29 @@ public partial class MvtReader
         return tile;
     }
 
+    public static VectorTileTree? Read(string url, int minX, int maxX, int minY, int maxY, int z)
+    {
+        var reader = new MapboxTileReader();
+        var tileTree = new VectorTileTree();
+        var dict = new ConcurrentDictionary<ulong, VectorTile>();
+        Parallel.For(minX, maxX, x =>
+        {
+            Parallel.For(minY, maxY, y =>
+            {
+                var tile = Read($"{url}/{z}/{x}/{y}");
+
+                if (tile != null && !tile.IsEmpty)
+                    //tileTree[tile.TileId] = tile;
+                    dict[tile.TileId] = tile;
+            });
+        });
+
+        foreach (var tile in dict.Values)
+            tileTree[tile.TileId] = tile;
+
+        return tileTree;
+    }
+
     public static Tile? GetTileIdFromUrl(string url)
     {
         var match = GetZXYRegex().Match(url).Groups[0].Value;
@@ -52,7 +77,7 @@ public partial class MvtReader
                 return null;
             return new Tile(numbers[1], numbers[2], numbers[0]);
         }
-        catch(FormatException)
+        catch (FormatException)
         {
             return null;
         }
@@ -67,5 +92,29 @@ public partial class MvtReader
         compressor.Flush();
         compressedStream.Seek(0, SeekOrigin.Begin);
         return compressedStream.ToArray();
+    }
+
+    public static byte[] VectorTileTreeToZip(VectorTileTree tileTree)
+    {
+        using var compressedFileStream = new MemoryStream();
+
+        using (var zipArchive = new ZipArchive(compressedFileStream, ZipArchiveMode.Create, true))
+        {
+
+            foreach (var tileId in tileTree)
+            {
+                var bytes = VectorTileToByteArray(tileTree[tileId]);
+                var tileInfo = new Tile(tileId);
+                var name = $"{tileInfo.Zoom}/{tileInfo.X}/{tileInfo.Y}";
+
+                var zipEntry = zipArchive.CreateEntry(name, CompressionLevel.NoCompression);
+
+                using var originalFileStream = new MemoryStream(bytes);
+                using var zipEntryStream = zipEntry.Open();
+                originalFileStream.CopyTo(zipEntryStream);
+            }
+        }
+
+        return compressedFileStream.ToArray();
     }
 }
