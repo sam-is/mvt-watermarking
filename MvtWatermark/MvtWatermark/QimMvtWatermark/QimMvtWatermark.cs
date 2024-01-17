@@ -728,17 +728,17 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             return copyTile;
     }
 
-    public static ConcurrentDictionary<int, bool[]> GetMessageDictonary(BitArray message, int Nb)
+    public static ConcurrentDictionary<int, bool[]> GetMessageDictonary(BitArray message, int nb)
     {
         var dictionaryMessage = new ConcurrentDictionary<int, bool[]>();
-        var step = (double)message.Length / Nb;
+        var step = (double)message.Length / nb;
         var tmparray = new bool[message.Length];
         message.CopyTo(tmparray, 0);
         var iter = 0;
         for (var i = 0; i < step; i++)
         {
-            dictionaryMessage[i] = tmparray.Take(new Range(iter, iter + Nb)).ToArray();
-            iter += Nb;
+            dictionaryMessage[i] = tmparray.Take(new Range(iter, iter + nb)).ToArray();
+            iter += nb;
         }
 
         return dictionaryMessage;
