@@ -75,9 +75,14 @@ public class QimMvtWatermarkOptions
     /// If select <see cref="Mode.WithTilesMajorityVote"/> in <see cref="Mode"/> this parametrs needed for correctly extraction
     /// </summary>
     public int? MessageLength { get; set; }
+    /// <summary>
+    /// Optimizes genereting quantization matrix.
+    /// Parameter <c>countMaps</c> in constructor setup maximum quantization matrices that will be created.
+    /// </summary>
+    public Maps Maps { get; set; }
 
     public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance,
-                                  int? nb, int? r, int? m, bool isGeneralExtractionMethod = false,
+                                  int? nb, int? r, int? m, int countMaps = 10, bool isGeneralExtractionMethod = false,
                                   Mode mode = Mode.WithTilesMajorityVote, int? messageLength = null)
     {
         T2 = t2;
@@ -117,15 +122,16 @@ public class QimMvtWatermarkOptions
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
         Mode = mode;
         MessageLength = messageLength;
+        Maps = new Maps(countMaps);
     }
 
-    public QimMvtWatermarkOptions() : this(0.9, 0.4, 5, 2048, 2, 8, 8, null) { }
+    public QimMvtWatermarkOptions() : this(0.9, 0.2, 5, 2048, 2, 8, 8, null) { }
 
     public QimMvtWatermarkOptions(QimMvtWatermarkOptions options) : this(options.T2, options.Delta2, options.T1, options.Delta1, options.Extent, options.Distance, options.M,
-                                                                         options.R, options.Nb, options.IsGeneralExtractionMethod, options.Mode, options.MessageLength)
+                                                                         options.R, options.Nb, options.Maps, options.IsGeneralExtractionMethod, options.Mode, options.MessageLength)
     { }
 
-    public QimMvtWatermarkOptions(double t2, double delta2, int t1, int delta1, int extent, int distance, int m, int r, int nb, bool isGeneralExtractionMethod, Mode mode, int? messageLength)
+    public QimMvtWatermarkOptions(double t2, double delta2, int t1, int delta1, int extent, int distance, int m, int r, int nb, Maps maps, bool isGeneralExtractionMethod, Mode mode, int? messageLength)
     {
         T2 = t2;
         Delta2 = delta2;
@@ -139,5 +145,6 @@ public class QimMvtWatermarkOptions
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
         Mode = mode;
         MessageLength = messageLength;
+        Maps = maps;
     }
 }

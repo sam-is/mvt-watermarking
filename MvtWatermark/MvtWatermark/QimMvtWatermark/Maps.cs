@@ -4,17 +4,30 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark;
 public class Maps
 {
-    private static readonly List<bool[,]?> _maps = [null, null, null, null, null, null, null, null, null, null];
-    private static readonly List<QimMvtWatermarkOptions?> _options = [null, null, null, null, null, null, null, null, null, null];
+    private readonly List<bool[,]?> _maps;
+    private readonly List<QimMvtWatermarkOptions?> _options;
+    private readonly int _count;
 
-    static public bool[,] GetMap(QimMvtWatermarkOptions options, int key)
+    public Maps(int count)
     {
-        if (_maps[key % 10] != null && _options[key % 10]!.Distance == options.Distance && _options[key % 10]!.Extent == options.Extent)
-            return _maps[key % 10]!;
+        _count = count;
+        _maps = new List<bool[,]?>(count);
+        _options = new List<QimMvtWatermarkOptions?>(count);
+        for(var i = 0; i< count;i++)
+        {
+            _maps.Add(null);
+            _options.Add(null);
+        }
+    }
 
-        _options[key % 10] = new QimMvtWatermarkOptions(options);
-        _maps[key % 10] = GenerateMap(key);
-        return _maps[key % 10]!;
+    public bool[,] GetMap(QimMvtWatermarkOptions options, int key)
+    {
+        if (_maps[key % _count] != null && _options[key % _count]!.Distance == options.Distance && _options[key % _count]!.Extent == options.Extent)
+            return _maps[key % _count]!;
+
+        _options[key % _count] = new QimMvtWatermarkOptions(options);
+        _maps[key % _count] = GenerateMap(key);
+        return _maps[key % _count]!;
     }
 
     /// <summary>
@@ -22,14 +35,14 @@ public class Maps
     /// </summary>
     /// <param name="key">Secret key</param>
     /// <returns>Re-quantization matrix</returns>
-    static private bool[,] GenerateMap(int key)
+    private bool[,] GenerateMap(int key)
     {
-        var map = new bool[_options[key % 10]!.Extent, _options[key % 10]!.Extent];
-        var random = new Random(key);
-        for (var i = 0; i < _options[key % 10]!.Extent; i++)
-            for (var j = 0; j < _options[key % 10]!.Extent; j++)
+        var map = new bool[_options[key % _count]!.Extent, _options[key % _count]!.Extent];
+        var random = new Random(key% _count);
+        for (var i = 0; i < _options[key % _count]!.Extent; i++)
+            for (var j = 0; j < _options[key % _count]!.Extent; j++)
                 map[i, j] = Convert.ToBoolean(random.Next() % 2);
-        map = ChangeMap(map, key % 10);
+        map = ChangeMap(map, key % _count);
         return map;
     }
 
@@ -38,7 +51,7 @@ public class Maps
     /// </summary>
     /// <param name="map">Re-quantization matrix</param>
     /// <returns>Modified re-quantization matrix</returns>
-    static private bool[,] ChangeMap(bool[,] map, int number)
+    private bool[,] ChangeMap(bool[,] map, int number)
     {
         for (var i = 0; i < _options[number]!.Extent; i++)
             for (var j = 0; j < _options[number]!.Extent; j++)
@@ -47,7 +60,7 @@ public class Maps
         return map;
     }
 
-    static private bool CheckMapPoint(bool[,] map, int x, int y, int number)
+    private bool CheckMapPoint(bool[,] map, int x, int y, int number)
     {
         var value = map[x, y];
 
@@ -78,7 +91,7 @@ public class Maps
     /// <param name="y">Y coordinate point in re-quantization matrix</param>
     /// <param name="value">Point value in re-quantization matrix</param>
     /// <returns>True if found opposite value, false otherwise</returns>
-    static private bool CheckNearestPoints(bool[,] map, int x, int y, bool value, int number)
+    private bool CheckNearestPoints(bool[,] map, int x, int y, bool value, int number)
     {
         if (x < 0 || x >= _options[number]!.Extent || y < 0 || y >= _options[number]!.Extent)
             return false;

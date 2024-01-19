@@ -357,7 +357,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var extentDist = envelopeTile.Height / options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = Maps.GetMap(options, key);
+        var map = options.Maps.GetMap(options, key);
 
         for (var i = 0; i < options.M; i++)
         {
@@ -430,7 +430,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var extentDist = envelopeTile.Height / options.Extent;
 
         var winx = GenerateWinx(key);
-        var map = Maps.GetMap(options, key);
+        var map = options.Maps.GetMap(options, key);
 
         var bits = new BitArray(options.Nb, false);
 
@@ -600,9 +600,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     public VectorTileTree EmbedWithMajorityVote(VectorTileTree tileTree, int key, BitArray message)
     {
         var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
-
         var dictionaryMessage = GetMessageDictonary(message, options.Nb);
-
 
         Parallel.ForEach(tileTree, tileId =>
         {
@@ -696,6 +694,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             var bitArray = Extract(tile, Math.Abs(key + (int)tileId));
             if (bitArray == null)
                 return;
+
             for (var i = 0; i < bitArray.Length; i++)
                 dict[index][i] += bitArray[i] == true ? 1 : -1;
         });
