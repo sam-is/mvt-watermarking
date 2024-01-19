@@ -25,7 +25,7 @@ public class MvtController(OptionsBuilder optionsBuilder, MvtReader mvtReader, M
         if (tileWatermarked == null)
             return BadRequest();
 
-        return File(MvtReader.VectorTileToByteArray(tileWatermarked), "application/vnd.mapbox-vector-tile", $"{tileWatermarked.TileId}.pbf");
+        return File(MvtReader.VectorTileToByteArray(tileWatermarked), "application/vnd.mapbox-vector-tile", $"{tileWatermarked.TileId}");
     }
 
     [Route("extract")]
