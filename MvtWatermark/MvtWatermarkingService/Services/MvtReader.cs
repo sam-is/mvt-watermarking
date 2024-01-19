@@ -49,9 +49,9 @@ public partial class MvtReader
         var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
         var dict = new ConcurrentDictionary<ulong, VectorTile>();
-        Parallel.For(minX, maxX, x =>
+        Parallel.For(minX, maxX + 1, x =>
         {
-            Parallel.For(minY, maxY, y =>
+            Parallel.For(minY, maxY + 1, y =>
             {
                 var tile = Read($"{url}/{z}/{x}/{y}");
 
