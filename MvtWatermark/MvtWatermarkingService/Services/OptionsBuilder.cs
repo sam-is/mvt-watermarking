@@ -19,9 +19,10 @@ public class OptionsBuilder(IConfiguration configuration)
         var m = section.GetValue<int?>("M");
         var isGeneralExtractionMethod = section.GetValue<bool>("IsGeneralExtractionMethod");
         var mode = section.GetValue<string>("Mode");
-
+        var countMaps = section.GetValue<int>("CountMaps");
+        
         mode ??= "WithTilesMajorityVote";
 
-        return new QimMvtWatermarkOptions(k, t2, t1, extent, distance, nb, r, m, isGeneralExtractionMethod, Enum.Parse<Mode>(mode));
+        return new QimMvtWatermarkOptions(k, t2, t1, extent, distance, nb, r, m, countMaps, isGeneralExtractionMethod, Enum.Parse<Mode>(mode));
     }
 }
