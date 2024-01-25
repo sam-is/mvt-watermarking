@@ -1,4 +1,5 @@
 ﻿using System;
+using MvtWatermark.QimMvtWatermark.Requantization;
 
 namespace MvtWatermark.QimMvtWatermark;
 
@@ -79,7 +80,7 @@ public class QimMvtWatermarkOptions
     /// Optimizes genereting quantization matrix.
     /// Parameter <c>countMaps</c> in constructor setup maximum quantization matrices that will be created.
     /// </summary>
-    public Maps Maps { get; set; }
+    public GeneratorOfRequantizationMatrices Maps { get; set; }
 
     public QimMvtWatermarkOptions(double k, double t2, int t1, int extent, int distance,
                                   int? nb, int? r, int? m, int countMaps = 10, bool isGeneralExtractionMethod = false,
@@ -122,7 +123,7 @@ public class QimMvtWatermarkOptions
         IsGeneralExtractionMethod = isGeneralExtractionMethod;
         Mode = mode;
         MessageLength = messageLength;
-        Maps = new Maps(countMaps);
+        Maps = new GeneratorOfRequantizationMatrices(countMaps);
     }
 
     public QimMvtWatermarkOptions() : this(0.9, 0.2, 5, 2048, 2, 8, 8, null) { }
@@ -131,7 +132,7 @@ public class QimMvtWatermarkOptions
                                                                          options.R, options.Nb, options.Maps, options.IsGeneralExtractionMethod, options.Mode, options.MessageLength)
     { }
 
-    public QimMvtWatermarkOptions(double t2, double delta2, int t1, int delta1, int extent, int distance, int m, int r, int nb, Maps maps, bool isGeneralExtractionMethod, Mode mode, int? messageLength)
+    public QimMvtWatermarkOptions(double t2, double delta2, int t1, int delta1, int extent, int distance, int m, int r, int nb, GeneratorOfRequantizationMatrices maps, bool isGeneralExtractionMethod, Mode mode, int? messageLength)
     {
         T2 = t2;
         Delta2 = delta2;
