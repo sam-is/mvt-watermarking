@@ -1,5 +1,6 @@
 ﻿using NetTopologySuite.Geometries;
 using System;
+using System.Drawing;
 
 namespace MvtWatermark.QimMvtWatermark;
 
@@ -73,6 +74,23 @@ public static class CoordinateConverter
         y = Math.Atan(Math.Exp(Math.PI / 180 * y));
         y /= Math.PI / 360;
         y -= 90;
+        return new Coordinate(x, y);
+    }
+
+    public record IntPoint(int X, int Y);
+    public static IntPoint MetersToInteger(Coordinate coordinate, Envelope tileEnvelope, double extentDistance)
+    {
+        var x = Convert.ToInt32((coordinate.X - tileEnvelope.MinX) / extentDistance);
+        var y = Convert.ToInt32((coordinate.Y - tileEnvelope.MinY) / extentDistance);
+
+        return new IntPoint(x, y);
+    }
+
+    public static Coordinate IntegerToMeters(IntPoint coordinate, Envelope tileEnvelope, double extentDistance)
+    {
+        var x = tileEnvelope.MinX + coordinate.X * extentDistance;
+        var y = tileEnvelope.MinY + coordinate.Y * extentDistance;
+
         return new Coordinate(x, y);
     }
 }
