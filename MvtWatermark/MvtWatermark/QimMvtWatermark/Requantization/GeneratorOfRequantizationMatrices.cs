@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MvtWatermark.QimMvtWatermark;
-public class Maps
+namespace MvtWatermark.QimMvtWatermark.Requantization;
+public class GeneratorOfRequantizationMatrices
 {
     private readonly List<bool[,]?> _maps;
     private readonly List<QimMvtWatermarkOptions?> _options;
     private readonly int _count;
 
-    public Maps(int count)
+    public GeneratorOfRequantizationMatrices(int count)
     {
         _count = count;
         _maps = new List<bool[,]?>(count);
         _options = new List<QimMvtWatermarkOptions?>(count);
-        for(var i = 0; i< count;i++)
+        for (var i = 0; i < count; i++)
         {
             _maps.Add(null);
             _options.Add(null);
@@ -38,7 +38,7 @@ public class Maps
     private bool[,] GenerateMap(int key)
     {
         var map = new bool[_options[key % _count]!.Extent, _options[key % _count]!.Extent];
-        var random = new Random(key% _count);
+        var random = new Random(key % _count);
         for (var i = 0; i < _options[key % _count]!.Extent; i++)
             for (var j = 0; j < _options[key % _count]!.Extent; j++)
                 map[i, j] = Convert.ToBoolean(random.Next() % 2);
