@@ -1,86 +1,19 @@
-﻿using NetTopologySuite.Features;
+﻿using MvtWatermark.QimMvtWatermark.ExtractingMethods;
+using MvtWatermark.QimMvtWatermark.Requantization;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
-using NetTopologySuite.IO.VectorTiles.Mapbox;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Tile = NetTopologySuite.IO.VectorTiles.Tiles.Tile;
 
 namespace MvtWatermark.QimMvtWatermark;
 
 public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 {
-
-    /// <summary>
-    /// Generates a matrix with embedded message indexes
-    /// </summary>
-    /// <param name="key">Secret key</param>
-    /// <returns>Matrix with embedded message indexes</returns>
-    private int[,] GenerateWinx(int key)
-    {
-        var random = new Random(key);
-        var winx = new int[options.M, options.M];
-
-        for (var i = 0; i < options.M; i++)
-            for (var j = 0; j < options.M; j++)
-                winx[i, j] = -1;
-
-
-        for (var i = 0; i < options.Nb; i++)
-        {
-            for (var j = 0; j < options.R; j++)
-            {
-                int x;
-                int y;
-                do
-                {
-                    x = random.Next() % options.M;
-                    y = random.Next() % options.M;
-                } while (winx[x, y] != -1);
-
-                winx[x, y] = i;
-            }
-        }
-
-        return winx;
-    }
-
-    /// <summary>
-    /// Checks the nearest points for the opposite value
-    /// </summary>
-    /// <param name="map">Re-quantization matrix</param>
-    /// <param name="x">X coordinate point in re-quantization matrix</param>
-    /// <param name="y">Y coordinate point in re-quantization matrix</param>
-    /// <param name="value">Point value in re-quantization matrix</param>
-    /// <returns>True if found opposite value, false otherwise</returns>
-    private bool CheckNearestPoints(bool[,] map, int x, int y, bool value)
-    {
-        if (x < 0 || x >= options.Extent || y < 0 || y >= options.Extent)
-            return false;
-
-        if (x + 1 < options.Extent)
-            if (map[x + 1, y] != value)
-                return true;
-
-        if (x - 1 >= 0)
-            if (map[x - 1, y] != value)
-                return true;
-
-        if (y + 1 < options.Extent)
-            if (map[x, y + 1] != value)
-                return true;
-
-        if (y - 1 >= 0)
-            if (map[x, y - 1] != value)
-                return true;
-
-        return false;
-    }
-
     /// <summary>
     /// Counts statistics in square from M*M matrix, on the basis of which the value of the message bit is taken
     /// </summary>
@@ -88,16 +21,17 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// <param name="geometry">Geometry bounding the square</param>
     /// <param name="map">Re-quantization matrix</param>
     /// <param name="tileEnvelope">Envelope that bounding tile</param>
-    /// <param name="extentDist">Distances in meters for difference i and i+1 for extent</param>
+    /// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
     /// <param name="s0">The number of values is zero</param>
     /// <param name="s1">The number of values is one</param>
     /// <returns>Relative value indicating how much one number is greater than another</returns>
-    private double Statistics(VectorTile tile, Geometry geometry, bool[,] map, Envelope tileEnvelope, double extentDist, out int s0, out int s1)
+    private double Statistics(VectorTile tile, Geometry geometry, RequantizationMatrix requantizationMatrix, Envelope tileEnvelope, double extentDistance, out int s0, out int s1)
     {
         s0 = 0;
         s1 = 0;
 
         foreach (var layer in tile.Layers)
+        {
             foreach (var feature in layer.Features)
             {
                 var featureGeometry = feature.Geometry;
@@ -107,227 +41,25 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
                     var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinate);
                     if (geometry.Contains(new Point(coordinateMeters)))
                     {
-                        var x = Convert.ToInt32((coordinateMeters.X - tileEnvelope.MinX) / extentDist);
-                        var y = Convert.ToInt32((coordinateMeters.Y - tileEnvelope.MinY) / extentDist);
-                        if (x == options.Extent || y == options.Extent)
-                            continue;
-                        var mapValue = Convert.ToInt32(map[x, y]);
+                        var intCoorinate = CoordinateConverter.MetersToInteger(coordinateMeters, tileEnvelope, extentDistance);
+                        var mapValue = requantizationMatrix[intCoorinate];
 
-                        if (mapValue == 1)
+                        if (mapValue == null)
+                            continue;
+
+                        if ((bool)mapValue)
                             s1++;
                         else
                             s0++;
                     }
                 }
             }
+        }
 
         if ((s0 == 0 && s1 == 0) || s0 + s1 < options.T1)
             return -1;
 
         return (double)Math.Abs(s0 - s1) / (s1 + s0);
-    }
-
-    private record IntPoint(int X, int Y);
-
-    private List<IntPoint> GetOppositePoint(bool[,] map, int x, int y, bool value)
-    {
-        var listPoints = new List<IntPoint>();
-
-        if (x + 1 < options.Extent)
-            if (map[x + 1, y] != value)
-                listPoints.Add(new IntPoint(x + 1, y));
-
-        if (x - 1 >= 0)
-            if (map[x - 1, y] != value)
-                listPoints.Add(new IntPoint(x - 1, y));
-
-        if (y + 1 < options.Extent)
-            if (map[x, y + 1] != value)
-                listPoints.Add(new IntPoint(x, y + 1));
-
-        if (y - 1 >= 0)
-            if (map[x, y - 1] != value)
-                listPoints.Add(new IntPoint(x, y - 1));
-
-        return listPoints;
-    }
-
-    /// <summary>
-    /// Searches for the nearest points with the opposite value in the re-quantization matrix
-    /// </summary>
-    /// <param name="map">Re-quantization matrix</param>
-    /// <param name="value">The opposite value to which to look for</param>
-    /// <param name="x">X coordinate point in re-quantization matrix</param>
-    /// <param name="y">Y coordinate point in re-quantization matrix</param>
-    /// <returns>List of found points</returns>
-    private List<IntPoint> FindOppositeIndexes(bool[,] map, bool value, int x, int y)
-    {
-        var listPoints = new List<IntPoint>();
-
-        if (CheckNearestPoints(map, x, y, value))
-        {
-            var l = GetOppositePoint(map, x, y, value);
-            listPoints.AddRange(l);
-        }
-
-        for (var i = 1; i < options.Distance; ++i)
-        {
-
-            if (CheckNearestPoints(map, x + i, y, value))
-            {
-                var l = GetOppositePoint(map, x + i, y, value);
-                listPoints.AddRange(l);
-            }
-
-            if (CheckNearestPoints(map, x - i, y, value))
-            {
-                var l = GetOppositePoint(map, x - i, y, value);
-                listPoints.AddRange(l);
-            }
-
-            if (CheckNearestPoints(map, x, y + i, value))
-            {
-                var l = GetOppositePoint(map, x, y + 1, value);
-                listPoints.AddRange(l);
-            }
-
-            if (CheckNearestPoints(map, x, y - i, value))
-            {
-                var l = GetOppositePoint(map, x, y - 1, value);
-                listPoints.AddRange(l);
-            }
-        }
-        return listPoints;
-    }
-
-    /// <summary>
-    /// Changes coordinates of geometry points in a certain area
-    /// </summary>
-    /// <param name="tile">Vector tile with geometry where needed to change coordinates</param>
-    /// <param name="polygon">The polygon inside which should be points whose coordinates need to be changed</param>
-    /// <param name="tileEnvelope">Envelope that bounding tile</param>
-    /// <param name="extentDist">Distances in meters for difference i and i+1 for extent</param>
-    /// <param name="map">Matrix re-quantization</param>
-    /// <param name="value">The value that corresponds to the value in the re-quantization matrix to which the coordinates will need to be shifted</param>
-    /// <param name="countToChange">The number of points that need to change coordinates</param>
-    /// <param name="count">Total number of points</param>
-    private void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope,
-                                  double extentDist, bool[,] map, bool value, int countToChange, int count)
-    {
-        var step = (int)Math.Floor((double)count / countToChange);
-        if (step == 0)
-            step = 1;
-        var countChanged = 0;
-        var countSuited = 0;
-        foreach (var layer in tile.Layers)
-        {
-            foreach (var feature in layer.Features)
-            {
-                var geometry = feature.Geometry;
-                var coordinates = geometry.Coordinates;
-                for (var j = 0; j < coordinates.Length; j++)
-                {
-                    if (countChanged >= countToChange)
-                    {
-                        return;
-                    }
-
-                    var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinates[j]);
-                    if (polygon.Contains(new Point(coordinateMeters)))
-                    {
-                        var x = Convert.ToInt32((coordinateMeters.X - tileEnvelope.MinX) / extentDist);
-                        var y = Convert.ToInt32((coordinateMeters.Y - tileEnvelope.MinY) / extentDist);
-
-                        if (x == options.Extent || y == options.Extent)
-                            continue;
-
-                        var mapValue = map[x, y];
-                        if (mapValue == value)
-                            continue;
-
-                        countSuited++;
-
-                        if (countSuited % step == 0)
-                        {
-                            var listPoints = FindOppositeIndexes(map, mapValue, x, y);
-
-                            foreach (var point in listPoints)
-                            {
-                                var geometryCopy = geometry.Copy();
-                                var areas = new List<double>();
-
-                                if (geometryCopy.GeometryType == "MultiPolygon")
-                                {
-                                    var multipolygon = geometryCopy as MultiPolygon;
-                                    foreach (Polygon p in multipolygon!.Cast<Polygon>())
-                                        areas.Add(p.Area);
-                                }
-                                else
-                                {
-                                    areas.Add(geometryCopy.Area);
-                                }
-
-                                var xMeters = tileEnvelope.MinX + point.X * extentDist;
-                                var yMeters = tileEnvelope.MinY + point.Y * extentDist;
-                                var coord = CoordinateConverter.MetersToDegrees(new Coordinate(xMeters, yMeters));
-                                var countChangedForPoint = 0;
-                                if (x != point.X)
-                                    geometryCopy.Coordinates[j].X = coord.X;
-                                if (y != point.Y)
-                                    geometryCopy.Coordinates[j].Y = coord.Y;
-                                countChangedForPoint++;
-
-                                if (!geometryCopy.IsValid)
-                                {
-                                    if (geometryCopy.GeometryType == "Polygon")
-                                    {
-                                        geometryCopy.Coordinates[^1].X = geometryCopy.Coordinates[0].X;
-                                        geometryCopy.Coordinates[^1].Y = geometryCopy.Coordinates[0].Y;
-                                    }
-
-                                    if (geometryCopy.GeometryType == "MultiPolygon")
-                                    {
-                                        var multipolygon = geometryCopy as MultiPolygon;
-                                        foreach (Polygon p in multipolygon!.Cast<Polygon>())
-                                        {
-                                            p.Coordinates[^1].X = p.Coordinates[0].X;
-                                            p.Coordinates[^1].Y = p.Coordinates[0].Y;
-                                        }
-                                    }
-
-                                    countChangedForPoint++;
-
-                                    if (!geometryCopy.IsValid)
-                                        continue;
-                                }
-
-                                var isBroken = false;
-                                if (geometryCopy.GeometryType == "MultiPolygon")
-                                {
-                                    var multipolygon = geometryCopy as MultiPolygon;
-                                    for (var i = 0; i < multipolygon!.Geometries.Length; i++)
-                                        if (Math.Max(multipolygon[i].Area, areas[i]) / Math.Min(multipolygon[i].Area, areas[i]) > 3)
-                                            isBroken = true;
-                                }
-                                else
-                                {
-                                    if (Math.Max(geometryCopy.Area, areas[0]) / Math.Min(geometryCopy.Area, areas[0]) > 3)
-                                        isBroken = true;
-                                }
-
-                                if (isBroken)
-                                    continue;
-
-                                countChanged += countChangedForPoint;
-                                geometry = geometryCopy;
-                                break;
-                            }
-                        }
-                    }
-                }
-                feature.Geometry = geometry;
-            }
-        }
     }
 
     /// <summary>
@@ -339,25 +71,16 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// <returns>Vector tile with an embedded message</returns>
     public VectorTile? Embed(VectorTile tile, int key, BitArray message)
     {
-        var copyTile = new VectorTile { TileId = tile.TileId };
-        foreach (var layer in tile.Layers)
-        {
-            var l = new Layer { Name = layer.Name };
-            foreach (var feature in layer.Features)
-                l.Features.Add(new Feature(feature.Geometry.Copy(), feature.Attributes));
 
-            copyTile.Layers.Add(l);
-        }
-
+        var copyTile = VectorTileUtils.Copy(tile);
         var embedded = false;
-        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(copyTile.TileId);
-        var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
-        envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
-        var a = envelopeTile.Height / options.M;
-        var extentDist = envelopeTile.Height / options.Extent;
+        var tileInforamtion = new Tile(copyTile.TileId);
+        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
+        var extentDistance = envelopeTile.Height / options.Extent;
 
-        var winx = GenerateWinx(key);
+        var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
+        var requantizationMatrix = new RequantizationMatrix(map, options.Extent, options.Distance);
 
         for (var i = 0; i < options.M; i++)
         {
@@ -366,45 +89,25 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
                 var index = winx[i, j];
                 if (index == -1)
                     continue;
-                var value = Convert.ToInt32(message[index]);
+                var value = message[index];
 
-                var polygon = new Polygon(
-                    new LinearRing(
-                        new Coordinate[]
-                        {
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j),
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * (j + 1)),
-                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * (j + 1)),
-                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * j),
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j)
-                        }
-                ));
+                var polygon = GeneratorBoundsPolygon.Get(envelopeTile, options.M, i, j);
 
-                var stat = Statistics(copyTile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
+                var stat = Statistics(copyTile, polygon, requantizationMatrix, envelopeTile, extentDistance, out var s0, out var s1);
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 
                 embedded = true;
                 if (stat >= options.T2 + options.Delta2)
-                {
-                    if (s1 - s0 > 0 && value == 1)
+                    if ((s1 - s0 > 0 && value) || (s0 - s1 > 0 && !value))
                         continue;
 
-                    if (s0 - s1 > 0 && value == 0)
-                        continue;
-                }
+                var countAdded = (int)Math.Ceiling(((s0 + s1) * (options.T2 + options.Delta2) + (value ? s0 : -s0) + (value ? -s1 : s1)) / 2);
+                if (countAdded <= 0)
+                    continue;
 
-                if (value == 1)
-                {
-                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (options.T2 + options.Delta2) + s0 - s1) / 2);
-                    ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, true, countAdded, s0);
-                }
-
-                if (value == 0)
-                {
-                    var countAdded = (int)Math.Ceiling(((s0 + s1) * (options.T2 + options.Delta2) + s1 - s0) / 2);
-                    ChangeCoordinate(copyTile, polygon, envelopeTile, extentDist, map, false, countAdded, s1);
-                }
+                var coordinatesChanger = new CoordinatesChanger(countAdded, value, value ? s0 : s1, requantizationMatrix);
+                coordinatesChanger.ChangeCoordinate(copyTile, polygon, envelopeTile, extentDistance);
             }
         }
 
@@ -422,26 +125,19 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     public BitArray? Extract(VectorTile tile, int key)
     {
         var embedded = false;
-        var t = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId);
-        var envelopeTile = CoordinateConverter.TileBounds(t.X, t.Y, t.Zoom);
-        envelopeTile = CoordinateConverter.DegreesToMeters(envelopeTile);
+        var tileInforamtion = new Tile(tile.TileId);
+        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
+        var extentDistance = envelopeTile.Height / options.Extent;
 
-        var a = envelopeTile.Height / options.M;
-        var extentDist = envelopeTile.Height / options.Extent;
-
-        var winx = GenerateWinx(key);
+        var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
+        var requantizationMatrix = new RequantizationMatrix(map, options.Extent);
 
-        var bits = new BitArray(options.Nb, false);
-
-        var dictGeneralExtractionMethod = new Dictionary<int, Tuple<int, int>>(options.Nb);
-        var dict = new Dictionary<int, int>(options.Nb);
-
-        for (var i = 0; i < options.Nb; i++)
-        {
-            dictGeneralExtractionMethod.Add(i, new(0, 0));
-            dict.Add(i, 0);
-        }
+        IExtractingMethod extractorOfBits;
+        if (options.IsGeneralExtractionMethod)
+            extractorOfBits = new GeneralExtractionMethod(options.Nb, options.T2);
+        else
+            extractorOfBits = new MajorityExtractionMethod(options.Nb);
 
         for (var i = 0; i < options.M; i++)
         {
@@ -452,66 +148,22 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
                 if (index == -1)
                     continue;
 
-                var polygon = new Polygon(
-                    new LinearRing(
-                        new Coordinate[]
-                        {
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j),
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * (j + 1)),
-                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * (j + 1)),
-                                    new(envelopeTile.MinX + a * (i + 1), envelopeTile.MinY + a * j),
-                                    new(envelopeTile.MinX + a * i, envelopeTile.MinY + a * j)
-                        }
-                ));
+                var polygon = GeneratorBoundsPolygon.Get(envelopeTile, options.M, i, j);
 
-                var stat = Statistics(tile, polygon, map, envelopeTile, extentDist, out var s0, out var s1);
+                var stat = Statistics(tile, polygon, requantizationMatrix, envelopeTile, extentDistance, out var s0, out var s1);
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 
-                dictGeneralExtractionMethod[index] = new(dictGeneralExtractionMethod[index].Item1 + s0, dictGeneralExtractionMethod[index].Item2 + s1);
-
                 embedded = true;
                 if (stat >= options.T2)
-                {
-                    if (s0 > s1)
-                        dict[index] -= 1;
-
-                    if (s1 > s0)
-                        dict[index] += 1;
-                }
-            }
-        }
-
-        if (options.IsGeneralExtractionMethod)
-        {
-            for (var i = 0; i < options.Nb; i++)
-            {
-                var s0 = dictGeneralExtractionMethod[i].Item1;
-                var s1 = dictGeneralExtractionMethod[i].Item2;
-                if ((double)Math.Abs(s0 - s1) / (s1 + s0) > options.T2)
-                {
-                    if (s1 > s0)
-                        bits[i] = true;
-                    if (s0 > s1)
-                        bits[i] = false;
-                }
-            }
-        }
-        else
-        {
-            for (var i = 0; i < options.Nb; i++)
-            {
-                if (dict[i] > 0)
-                    bits[i] = true;
-                if (dict[i] < 0)
-                    bits[i] = false;
+                    extractorOfBits.AddStatistics(index, s0, s1);
             }
         }
 
         if (!embedded)
             return null;
 
-        return bits;
+        return extractorOfBits.GetBits();
     }
 
     /// <summary>
@@ -546,7 +198,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
                 bits[i] = message[(i + current) % message.Count];
 
             var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
-            if (copyTile == null || !IsValidForRead(copyTile))
+            if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
             {
                 copyTileTree[tileId] = tile;
                 continue;
@@ -562,7 +214,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
     public VectorTileTree EmbedRepeat(VectorTileTree tileTree, int key, BitArray message)
     {
-        var concurrentDictionary = new ConcurrentDictionary<ulong, VectorTile>();
+        var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
 
         var messages = new bool[options.Nb * tileTree.Count()];
 
@@ -583,16 +235,16 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             var bits = new BitArray(dict[tileId]);
 
             var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
-            if (copyTile == null || !IsValidForRead(copyTile))
-                concurrentDictionary[tileId] = tile;
+            if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
+                dictionaryTiles[tileId] = tile;
             else
-                concurrentDictionary[tileId] = copyTile;
+                dictionaryTiles[tileId] = copyTile;
         });
 
         var copyTileTree = new VectorTileTree();
 
-        foreach (var tileId in concurrentDictionary.Keys)
-            copyTileTree[tileId] = concurrentDictionary[tileId];
+        foreach (var tileId in dictionaryTiles.Keys)
+            copyTileTree[tileId] = dictionaryTiles[tileId];
 
         return copyTileTree;
     }
@@ -604,11 +256,17 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
         Parallel.ForEach(tileTree, tileId =>
         {
-            var tile = Embed(tileTree[tileId], key, dictionaryMessage, message.Length);
-            if (tile == null)
-                dictionaryTiles[tileId] = tileTree[tileId];
-            else
+            if (tileTree[tileId] == null)
+                return;
+
+            var tile = tileTree[tileId];
+            var bits = new BitArray(dictionaryMessage[Convert.ToInt32(tileId % (ulong)Math.Floor((double)message.Length / options.Nb))]);
+
+            var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
+            if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
                 dictionaryTiles[tileId] = tile;
+            else
+                dictionaryTiles[tileId] = copyTile;
         });
 
         var copyTileTree = new VectorTileTree();
@@ -687,6 +345,9 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
         Parallel.ForEach(tileTree, tileId =>
         {
+            if (tileTree[tileId] == null)
+                return;
+
             var tile = tileTree[tileId];
 
             var index = Convert.ToInt32(tileId % (ulong)Math.Floor((double)sizeMessage / options.Nb));
@@ -721,7 +382,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var bits = new BitArray(dictionaryMessage[Convert.ToInt32(tileId % (ulong)Math.Floor((double)messageLength / options.Nb))]);
 
         var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
-        if (copyTile == null || !IsValidForRead(copyTile))
+        if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
             return null;
         else
             return copyTile;
@@ -741,24 +402,5 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         }
 
         return dictionaryMessage;
-    }
-
-    public static bool IsValidForRead(VectorTile tile)
-    {
-        var reader = new MapboxTileReader();
-        using var memoryStream = new MemoryStream();
-        tile.Write(memoryStream);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-
-        try
-        {
-            var readTile = reader.Read(memoryStream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId));
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-
-        return true;
     }
 }
