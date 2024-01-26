@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark.ExtractingMethods;
 public class MajorityExtractionMethod : IExtractingMethod
 {
-    public Dictionary<int, int> Values { get; set; }
-    public int CountBits { get; set; }
+    public Dictionary<int, int> Values { get; init; }
+    public int CountBits { get; init; }
     public MajorityExtractionMethod(int countBits)
     {
         CountBits = countBits;

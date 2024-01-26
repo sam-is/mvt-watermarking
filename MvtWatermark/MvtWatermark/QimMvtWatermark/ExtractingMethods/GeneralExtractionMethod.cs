@@ -11,9 +11,9 @@ public class GeneralExtractionMethod : IExtractingMethod
         public int S1 { get; set; } = s1;
     };
 
-    public Dictionary<int, PairOfStatistics> Values { get; set; }
-    public int CountBits { get; set; }
-    public double RelativeNumber { get; set; }
+    public Dictionary<int, PairOfStatistics> Values { get; init; }
+    public int CountBits { get; init; }
+    public double RelativeNumber { get; init; }
     public GeneralExtractionMethod(int countBits, double relativeNumber)
     {
         CountBits = countBits;
