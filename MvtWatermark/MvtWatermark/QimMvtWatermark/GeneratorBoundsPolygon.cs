@@ -1,12 +1,19 @@
 ﻿using NetTopologySuite.Geometries;
-using System.Dynamic;
 
 namespace MvtWatermark.QimMvtWatermark;
 public static class GeneratorBoundsPolygon
 {
-    public static Polygon Get(Envelope envelopeTile, double countMSquares, int i, int j)
+    /// <summary>
+    /// Generate envelope for one of M^M squres. Needed for selection geometry that inside specific square
+    /// </summary>
+    /// <param name="envelopeTile">Envelope of current tile</param>
+    /// <param name="m">M parameter of algorithm</param>
+    /// <param name="i">X index of square</param>
+    /// <param name="j">Y index of square</param>
+    /// <returns></returns>
+    public static Polygon Get(Envelope envelopeTile, double m, int i, int j)
     {
-        var sizeMSquare = envelopeTile.Height / countMSquares;
+        var sizeMSquare = envelopeTile.Height / m;
         return new Polygon(
                     new LinearRing(
                         new Coordinate[]
