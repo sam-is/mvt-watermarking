@@ -1,18 +1,121 @@
 using Microsoft.Data.Sqlite;
 using MvtWatermark.QimMvtWatermark;
+using NetTopologySuite.Features;
+using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
 using System.Collections;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace MvtWatermarkTests;
 
 public class QimMvtWatermarkTests
 {
+    [Theory]
+    [InlineData(Mode.WithCheck)]
+    [InlineData(Mode.Repeat)]
+    [InlineData(Mode.WithTilesMajorityVote)]
+    public void EmbedOneTile(Mode mode)
+    {
+        var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), "TmpTiles");
+        var tileTree = new VectorTileTree();
+
+        var tile = new VectorTile
+        {
+            TileId = 0
+        };
+
+        var feature = new Feature(new LineString(
+                            new Coordinate[]
+                            {
+                                new(5, 5),
+                                new(10, 10),
+                                new(15, 15)
+                            }
+                        ),
+                        new AttributesTable());
+        var layer = new Layer();
+        layer.Features.Add(feature);
+
+        tile.Layers.Add(layer);
+        tileTree[tile.TileId] = tile;
+
+        var bits = new bool[] { false };
+        var message = new BitArray(bits);
+
+        var options = new QimMvtWatermarkOptions(0.9, 0.2, 0, 2048, 2, message.Count, 1, null, mode: mode, messageLength: message.Length);
+        var qimMvtWatermark = new QimMvtWatermark(options);
+
+        var watermarkedTileTree = qimMvtWatermark.Embed(tileTree, 0, message);
+
+        var readTileTree = Data.WriteAndReadFromFile(watermarkedTileTree, pathToSave);
+
+        var m = qimMvtWatermark.Extract(readTileTree, 0);
+
+        Assert.NotNull(m);
+
+        for (var i = 0; i < message.Count; i++)
+            Assert.True(m![i] == message[i]);
+    }
+
+    [Theory]
+    [InlineData(Mode.WithCheck)]
+    [InlineData(Mode.Repeat)]
+    [InlineData(Mode.WithTilesMajorityVote)]
+    public void EmbedTileTree(Mode mode)
+    {
+        var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), "TmpTiles");
+        var tileTree = new VectorTileTree();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var tile = new VectorTile
+            {
+                TileId = (ulong)i
+            };
+
+            var tileInfo = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tile.TileId);
+
+            var envelope = CoordinateConverter.TileBounds(tileInfo.X, tileInfo.Y, tileInfo.Zoom);
+
+            var coordinates = new Coordinate[]
+            {
+                new(envelope.MinX + 0.15 * envelope.Width, envelope.MinY + 0.15 * envelope.Height),
+                new(envelope.MinX + 0.5 * envelope.Width, envelope.MinY + 0.5 * envelope.Height),
+                new(envelope.MinX + 0.7 * envelope.Width, envelope.MinY + 0.7 * envelope.Height)
+            };
+
+            var feature = new Feature(new LineString(coordinates), new AttributesTable());
+            var layer = new Layer();
+            layer.Features.Add(feature);
+
+            tile.Layers.Add(layer);
+            tileTree[tile.TileId] = tile;
+        }
+
+        var bits = new bool[10];
+        for (var i = 0; i < bits.Length; i++)
+            bits[i] = true;
+        var message = new BitArray(bits);
+
+        var options = new QimMvtWatermarkOptions(0.9, 0.2, 0, 2048, 2, 1, 1, null, mode: mode, messageLength: message.Length);
+        var qimMvtWatermark = new QimMvtWatermark(options);
+
+        var watermarkedTileTree = qimMvtWatermark.Embed(tileTree, 0, message);
+
+        var readTileTree = Data.WriteAndReadFromFile(watermarkedTileTree, pathToSave);
+
+        var m = qimMvtWatermark.Extract(readTileTree, 0);
+
+        Assert.NotNull(m);
+
+        for (var i = 0; i < message.Count; i++)
+            Assert.True(m![i] == message[i]);
+    }
+
     [Theory]
     [InlineData(1, 100)]
     [InlineData(2, 50)]
@@ -54,11 +157,7 @@ public class QimMvtWatermarkTests
             [tileWatermarked!.TileId] = tileWatermarked
         };
 
-        Data.WriteToFile(tileTreeWatermarked, pathToSave);
-
-        var readTileTree = Data.ReadFromFiles(pathToSave);
-
-        Directory.Delete(pathToSave, true);
+        var readTileTree = Data.WriteAndReadFromFile(tileTreeWatermarked, pathToSave);
 
         var readTile = readTileTree[readTileTree.First()];
         Assert.False(readTile.IsEmpty);
@@ -84,18 +183,14 @@ public class QimMvtWatermarkTests
 
         var message = new BitArray(new[] { true, true, true, true });
 
-        var options = new QimMvtWatermarkOptions(0.6, 0.5, 20, 4096, 2, message.Count, 15, null, false, Mode.Repeat);
+        var options = new QimMvtWatermarkOptions(0.8, 0.2, 5, 2048, 2, message.Count, 15, null, 10, false, Mode.Repeat);
 
         var watermark = new QimMvtWatermark(options);
         var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
 
         Assert.NotNull(tileTreeWatermarked);
 
-        Data.WriteToFile(tileTreeWatermarked, pathToSave);
-
-        var readTileTree = Data.ReadFromFiles(pathToSave);
-
-        Directory.Delete(pathToSave, true);
+        var readTileTree = Data.WriteAndReadFromFile(tileTreeWatermarked, pathToSave);
 
         var m = watermark.Extract(readTileTree, 0);
 
@@ -126,18 +221,14 @@ public class QimMvtWatermarkTests
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.9, 0.3, 5, 2048, 2, 5, 20, null, false, Mode.WithTilesMajorityVote, message.Length);
+        var options = new QimMvtWatermarkOptions(0.9, 0.3, 5, 2048, 2, 5, 20, null, 10, false, Mode.WithTilesMajorityVote, message.Length);
 
         var watermark = new QimMvtWatermark(options);
         var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
 
         Assert.NotNull(tileTreeWatermarked);
 
-        Data.WriteToFile(tileTreeWatermarked, pathToSave);
-
-        var readTileTree = Data.ReadFromFiles(pathToSave);
-
-        Directory.Delete(pathToSave, true);
+        var readTileTree = Data.WriteAndReadFromFile(tileTreeWatermarked, pathToSave);
 
         var m = watermark.Extract(readTileTree, 0);
 
@@ -246,23 +337,19 @@ public class QimMvtWatermarkTests
         const int maxX = 250;
         const int minY = 390;
         const int maxY = 400;
-        var tileTree = Data.GetUrlVectorTileTree(minX, maxX, minY, maxY, z);
+        var tileTree = Data.GetUrlVectorTileTree(Data.TegolaUrl, minX, maxX, minY, maxY, z);
 
         var bits = new bool[24];
         for (var i = 0; i < bits.Length; i++)
             bits[i] = true;
         var message = new BitArray(bits);
 
-        var options = new QimMvtWatermarkOptions(0.9, 0.3, 5, 2048, 2, 3, 10, null, false, Mode.WithTilesMajorityVote, message.Length);
+        var options = new QimMvtWatermarkOptions(0.9, 0.3, 5, 2048, 2, 3, 10, null, 10, false, Mode.WithTilesMajorityVote, message.Length);
 
         var watermark = new QimMvtWatermark(options);
         var tileTreeWatermarked = watermark.Embed(tileTree, 0, message);
 
-        Data.WriteToFile(tileTreeWatermarked, pathToSave);
-
-        var readTileTree = Data.ReadFromFiles(pathToSave);
-
-        Directory.Delete(pathToSave, true);
+        var readTileTree = Data.WriteAndReadFromFile(tileTreeWatermarked, pathToSave);
 
         var m = watermark.Extract(readTileTree, 0);
 
