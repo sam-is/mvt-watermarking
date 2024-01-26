@@ -1,11 +1,13 @@
 ﻿using MvtWatermark.QimMvtWatermark.ExtractingMethods;
+using MvtWatermark.QimMvtWatermark.MessagePreparing;
+using MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
+using MvtWatermark.QimMvtWatermark.MessagePreparing.Extract;
 using MvtWatermark.QimMvtWatermark.Requantization;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Tile = NetTopologySuite.IO.VectorTiles.Tiles.Tile;
@@ -133,11 +135,11 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var map = options.Maps.GetMap(options, key);
         var requantizationMatrix = new RequantizationMatrix(map, options.Extent);
 
-        IExtractingMethod extractorOfBits;
+        IExtractingMethod extractorBits;
         if (options.IsGeneralExtractionMethod)
-            extractorOfBits = new GeneralExtractionMethod(options.Nb, options.T2);
+            extractorBits = new GeneralExtractionMethod(options.Nb, options.T2);
         else
-            extractorOfBits = new MajorityExtractionMethod(options.Nb);
+            extractorBits = new MajorityExtractionMethod(options.Nb);
 
         for (var i = 0; i < options.M; i++)
         {
@@ -156,14 +158,14 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
                 embedded = true;
                 if (stat >= options.T2)
-                    extractorOfBits.AddStatistics(index, s0, s1);
+                    extractorBits.AddStatistics(index, s0, s1);
             }
         }
 
         if (!embedded)
             return null;
 
-        return extractorOfBits.GetBits();
+        return extractorBits.GetBits();
     }
 
     /// <summary>
@@ -177,25 +179,21 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     {
         return options.Mode switch
         {
-            Mode.WithTilesMajorityVote => EmbedWithMajorityVote(tileTree, key, message),
-            Mode.WithCheck => EmbedWithCheck(tileTree, key, message),
-            Mode.Repeat => EmbedRepeat(tileTree, key, message),
+            Mode.WithTilesMajorityVote => Embed(tileTree, key, new EmbedMajorityVoice(message, options.Nb)),
+            Mode.WithCheck => Embed(tileTree, key, message.Length, new EmbedCheck(message, options.Nb)),
+            Mode.Repeat => Embed(tileTree, key, new EmbedRepeat(message, tileTree.Select(id => id), options.Nb)),
             _ => throw new NotImplementedException(),
         };
     }
 
-    public VectorTileTree EmbedWithCheck(VectorTileTree tileTree, int key, BitArray message)
+    public VectorTileTree Embed(VectorTileTree tileTree, int key, int messageLength, IMessageForEmbed<int> messagePreparing)
     {
-        var current = 0;
+        var index = 0;
         var copyTileTree = new VectorTileTree();
-
         foreach (var tileId in tileTree)
         {
             var tile = tileTree[tileId];
-
-            var bits = new BitArray(options.Nb);
-            for (var i = 0; i < options.Nb; i++)
-                bits[i] = message[(i + current) % message.Count];
+            var bits = messagePreparing.GetPart(index);
 
             var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
             if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
@@ -205,62 +203,20 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             }
 
             copyTileTree[tileId] = copyTile;
-            current += options.Nb;
+            index += options.Nb;
         }
-        if (current < message.Count)
-            throw new ArgumentException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.", nameof(message));
+        if(index < messageLength)
+            throw new InvalidOperationException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.");
         return copyTileTree;
     }
 
-    public VectorTileTree EmbedRepeat(VectorTileTree tileTree, int key, BitArray message)
+    public VectorTileTree Embed(VectorTileTree tileTree, int key, IMessageForEmbed<ulong> messagePreparing)
     {
         var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
-
-        var messages = new bool[options.Nb * tileTree.Count()];
-
-        for (var i = 0; i < messages.Length; i++)
-            messages[i] = message[i % message.Count];
-
-        var dict = new ConcurrentDictionary<ulong, bool[]>();
-        var iter = 0;
-        foreach (var tileId in tileTree)
-        {
-            dict[tileId] = messages.Take(new Range(iter, iter + options.Nb)).ToArray();
-            iter++;
-        }
-
         Parallel.ForEach(tileTree, tileId =>
         {
             var tile = tileTree[tileId];
-            var bits = new BitArray(dict[tileId]);
-
-            var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
-            if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
-                dictionaryTiles[tileId] = tile;
-            else
-                dictionaryTiles[tileId] = copyTile;
-        });
-
-        var copyTileTree = new VectorTileTree();
-
-        foreach (var tileId in dictionaryTiles.Keys)
-            copyTileTree[tileId] = dictionaryTiles[tileId];
-
-        return copyTileTree;
-    }
-
-    public VectorTileTree EmbedWithMajorityVote(VectorTileTree tileTree, int key, BitArray message)
-    {
-        var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
-        var dictionaryMessage = GetMessageDictonary(message, options.Nb);
-
-        Parallel.ForEach(tileTree, tileId =>
-        {
-            if (tileTree[tileId] == null)
-                return;
-
-            var tile = tileTree[tileId];
-            var bits = new BitArray(dictionaryMessage[Convert.ToInt32(tileId % (ulong)Math.Floor((double)message.Length / options.Nb))]);
+            var bits = messagePreparing.GetPart(tileId);
 
             var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
             if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
@@ -287,16 +243,15 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     {
         return options.Mode switch
         {
-            Mode.WithTilesMajorityVote => ExtractWithMajorityVote(tileTree, key, options.MessageLength),
-            Mode.WithCheck => ExtractWithCheck(tileTree, key),
-            Mode.Repeat => ExtractRepeat(tileTree, key),
+            Mode.WithTilesMajorityVote => Extract(tileTree, key, new ExtractMajorityVoice(options.MessageLength, options.Nb)),
+            Mode.WithCheck => Extract(tileTree, key, new ExtractCheck(tileTree.Select(id => id), options.Nb)),
+            Mode.Repeat => Extract(tileTree, key, new ExtractRepeat(tileTree.Select(id => id), options.Nb)),
             _ => throw new NotImplementedException(),
         };
     }
 
-    public BitArray ExtractWithCheck(VectorTileTree tileTree, int key)
+    public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<int> messagePreparing)
     {
-        var message = new bool[options.Nb * tileTree.Count()];
         var index = 0;
         foreach (var tileId in tileTree)
         {
@@ -304,103 +259,25 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             var bits = Extract(tile, Math.Abs(key + (int)tileId));
             if (bits != null)
             {
-                bits.CopyTo(message, index);
+                messagePreparing.SetPart(bits, index);
                 index += bits.Count;
             }
         }
-        return new BitArray(message.Take(index).ToArray());
+        return messagePreparing.Get();
     }
 
-    public BitArray ExtractRepeat(VectorTileTree tileTree, int key)
+    public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<ulong> messagePreparing)
     {
-        var message = new bool[options.Nb * tileTree.Count()];
-
-        var dict = new Dictionary<ulong, int>();
-        var iter = 0;
-        foreach (var tileId in tileTree)
-        {
-            dict.Add(tileId, iter);
-            iter++;
-        }
-
-        Parallel.ForEach(tileTree, tileId =>
-        {
-            var tile = tileTree[tileId];
-            var bits = Extract(tile, Math.Abs(key + (int)tileId));
-            bits?.CopyTo(message, dict[tileId] * options.Nb);
-        });
-
-        return new BitArray(message);
-    }
-
-    public BitArray ExtractWithMajorityVote(VectorTileTree tileTree, int key, int? sizeMessage)
-    {
-        if (sizeMessage == null)
-            throw new ArgumentNullException(nameof(sizeMessage));
-
-        var dict = new ConcurrentDictionary<int, int[]>();
-        var indices = (int)Math.Floor((double)sizeMessage / options.Nb);
-        for (var i = 0; i < indices; i++)
-            dict[i] = new int[options.Nb];
-
         Parallel.ForEach(tileTree, tileId =>
         {
             if (tileTree[tileId] == null)
                 return;
 
             var tile = tileTree[tileId];
-
-            var index = Convert.ToInt32(tileId % (ulong)Math.Floor((double)sizeMessage / options.Nb));
-
-            var bitArray = Extract(tile, Math.Abs(key + (int)tileId));
-            if (bitArray == null)
-                return;
-
-            for (var i = 0; i < bitArray.Length; i++)
-                dict[index][i] += bitArray[i] == true ? 1 : -1;
+            var bits = Extract(tile, Math.Abs(key + (int)tileId));
+            messagePreparing.SetPart(bits, tileId);
         });
 
-        var result = new bool[options.Nb * indices];
-
-        for (var i = 0; i < indices; i++)
-        {
-            for (var j = 0; j < dict[i].Length; j++)
-            {
-                if (dict[i][j] > 0)
-                    result[i * options.Nb + j] = true;
-                else
-                    result[i * options.Nb + j] = false;
-            }
-        }
-
-        return new BitArray(result);
-    }
-
-    public VectorTile? Embed(VectorTile tile, int key, IDictionary<int, bool[]> dictionaryMessage, int messageLength)
-    {
-        var tileId = tile.TileId;
-        var bits = new BitArray(dictionaryMessage[Convert.ToInt32(tileId % (ulong)Math.Floor((double)messageLength / options.Nb))]);
-
-        var copyTile = Embed(tile, Math.Abs(key + (int)tileId), bits);
-        if (copyTile == null || !VectorTileUtils.IsValidForRead(copyTile))
-            return null;
-        else
-            return copyTile;
-    }
-
-    public static ConcurrentDictionary<int, bool[]> GetMessageDictonary(BitArray message, int nb)
-    {
-        var dictionaryMessage = new ConcurrentDictionary<int, bool[]>();
-        var step = (double)message.Length / nb;
-        var tmparray = new bool[message.Length];
-        message.CopyTo(tmparray, 0);
-        var iter = 0;
-        for (var i = 0; i < step; i++)
-        {
-            dictionaryMessage[i] = tmparray.Take(new Range(iter, iter + nb)).ToArray();
-            iter += nb;
-        }
-
-        return dictionaryMessage;
+        return messagePreparing.Get(); 
     }
 }

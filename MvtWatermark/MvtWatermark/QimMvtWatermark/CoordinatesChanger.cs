@@ -66,9 +66,7 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
         for (var j = 0; j < coordinates.Length; j++)
         {
             if (CountChanged >= CountToChange)
-            {
                 return geometry;
-            }
 
             var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinates[j]);
             if (polygon.Contains(new Point(coordinateMeters)))
