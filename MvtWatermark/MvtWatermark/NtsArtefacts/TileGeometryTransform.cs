@@ -5,7 +5,7 @@ using NetTopologySuite.GeometriesGraph;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]
-namespace MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
+namespace MvtWatermark.NtsArtefacts;
 
 /// <summary>
 /// A transformation utility from WGS84 coordinates to a local tile coordinate system in pixel

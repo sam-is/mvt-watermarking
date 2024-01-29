@@ -24,7 +24,7 @@ public class DeleterByBounds: IDistortion
         var copyTileTree = new VectorTileTree();
         foreach (var tileId in tiles)
         {
-            var tile = new MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile(tileId);
+            var tile = new MvtWatermark.NtsArtefacts.Tile(tileId);
             var vectorTile = tiles[tileId];
             if (tile.Top <= _top && tile.Bottom >= _bottom && tile.Left >= _left && tile.Right <= _right)
             {

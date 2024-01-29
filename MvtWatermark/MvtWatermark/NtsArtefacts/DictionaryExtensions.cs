@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
+namespace MvtWatermark.NtsArtefacts;
 
 public static class DictionaryExtensions
 {

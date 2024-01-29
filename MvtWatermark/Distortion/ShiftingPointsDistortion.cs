@@ -51,7 +51,7 @@ public class ShiftingPointsDistortion : IDistortion
                     for (var i = 0; i < length; i += step)
                     {
                         var coordinateMeters = CoordinateConverter.DegreesToMeters(geometry.Coordinates[i]);
-                        var randomNumber = random.Next(0, 3);
+                        var randomNumber = random.Next(0, 4);
 
                         switch (randomNumber)
                         {

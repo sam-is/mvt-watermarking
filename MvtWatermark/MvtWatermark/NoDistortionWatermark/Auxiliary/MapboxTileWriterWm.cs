@@ -6,7 +6,7 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using Mapbox = NetTopologySuite.IO.VectorTiles.Mapbox;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
-using MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
+using MvtWatermark.NtsArtefacts;
 using System.Linq;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;

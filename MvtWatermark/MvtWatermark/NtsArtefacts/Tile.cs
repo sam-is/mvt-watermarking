@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using NetTopologySuite.IO.VectorTiles.Tiles;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]
-namespace MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts;
+namespace MvtWatermark.NtsArtefacts;
 
 /// <summary>
 /// Represents a tile.

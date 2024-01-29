@@ -35,13 +35,13 @@ public class FewPointsDeleter: IDistortion
 
                     if (feature.Geometry is LineString)
                     {
-                        //copyFeature.Geometry = DeleteFewDotsLineString(feature.Geometry);
-                        copyFeature.Geometry = NewDeleteFewDotsLineString(feature.Geometry, _numberOfPointsToDelete);
+                        copyFeature.Geometry = DeleteFewDotsLineString(feature.Geometry);
+                        //copyFeature.Geometry = NewDeleteFewDotsLineString(feature.Geometry, _numberOfPointsToDelete);
                     }
                     else if (feature.Geometry is MultiLineString)
                     {
-                        //copyFeature.Geometry = DeleteFewDotsMultiLineString(feature.Geometry);
-                        copyFeature.Geometry = NewDeleteFewDotsMultiLineString(feature.Geometry);
+                        copyFeature.Geometry = DeleteFewDotsMultiLineString(feature.Geometry);
+                        //copyFeature.Geometry = NewDeleteFewDotsMultiLineString(feature.Geometry);
                     }
                     else
                     {
@@ -86,7 +86,7 @@ public class FewPointsDeleter: IDistortion
 
         //var occupiedIndices = new List<bool>(geometry.Coordinates.Length);
 
-        var rand = new Random(25);
+        var rand = new Random();
 
         var dotsToDeleteIndices = new List<int>(numberOfPointsToDelete);
         var occupiedIndices = new bool[geometry.Coordinates.Length];
@@ -144,7 +144,7 @@ public class FewPointsDeleter: IDistortion
 
         var lineStringList = ((MultiLineString)geometry).Cast<LineString>().ToList();
 
-        var rand = new Random(25);
+        var rand = new Random();
         var upperBorder = _numberOfPointsToDelete <= lineStringList.Count ? _numberOfPointsToDelete : lineStringList.Count;
         var chosenLineStringsCount = rand.Next(1, upperBorder + 1); // точек может быть больше, чем лайнстрингов
         var lineStringsToChangeIndices = new List<int>(chosenLineStringsCount);

@@ -43,6 +43,17 @@ public class TileSetCreator
         if (!areAnyCorrectTilesHere)
             throw new ArgumentException("No correct tiles have been found");
 
+        // ДЛЯ СОХРАНЕНИЯ ТАЙЛОВ vvv
+        /*foreach (var tileId in vectorTileTree)
+        {
+            using (var fs = new FileStream($"{tileId}.mvt", FileMode.Create))
+            {
+                //Write the tile to the stream.
+                vectorTileTree[tileId].Write(fs);
+            }
+        }*/
+        // ДЛЯ СОХРАНЕНИЯ ТАЙЛОВ ^^^
+
         return vectorTileTree;
     }
 
@@ -118,7 +129,7 @@ public class TileSetCreator
 
     private static VectorTile? CreateRandomVectorTileOneLineString(int x, int y, int zoom, int dotsNumber, out ulong tile_id)
     {
-        tile_id = MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
+        tile_id = MvtWatermark.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
         var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
         var vt = new VectorTile { TileId = tileDefinition.Id };
 
@@ -150,7 +161,7 @@ public class TileSetCreator
 
     private static VectorTile? CreateRandomVectorTile(int x, int y, int zoom, out ulong tile_id)
     {
-        tile_id = MvtWatermark.NoDistortionWatermark.Auxiliary.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
+        tile_id = MvtWatermark.NtsArtefacts.Tile.CalculateTileId(zoom, x, y);
         var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, zoom);
         var vt = new VectorTile { TileId = tileDefinition.Id };
         Layer lyr = CreateRandomLayer(1); 

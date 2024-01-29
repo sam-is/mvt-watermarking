@@ -188,17 +188,20 @@ public class DistortionTester
                                     resultMatrix[i][j] += resultMatrix3[i][j];
                                     resultMatrix[i][j] += resultMatrix4[i][j];
                                     resultMatrix[i][j] /= 4;
+
+                                    //resultMatrix[i][j] = resultMatrix[i][j] < 0.92 ? 0 : resultMatrix[i][j]; //!!! строка для ограничения Shiftingpoints
                                 }
                             }
 
                             double metric = 0;
-                            foreach (var vector in resultMatrix1)
+                            //foreach (var vector in resultMatrix1) // здесь всё это время была ошибка? А как это вообще
+                            foreach (var vector in resultMatrix)
                             {
                                 foreach (var value in vector)
                                     metric += value;
                             }
 
-                            var resultsCount = resultMatrix1.Count * resultMatrix1[0].Count;
+                            var resultsCount = resultMatrix.Count * resultMatrix[0].Count;
                             var relativeMetric = Math.Round(metric / resultsCount, 4);
 
                             var optionsString = $"\nAVERAGE | D: {options.D} | M: {options.M} " +
@@ -286,13 +289,14 @@ public class DistortionTester
                             }
 
                             double metric = 0;
-                            foreach (var vector in resultMatrix1)
+                            //foreach (var vector in resultMatrix1)
+                            foreach (var vector in resultMatrix)
                             {
                                 foreach (var value in vector)
                                     metric += value;
                             }
 
-                            var resultsCount = resultMatrix1.Count * resultMatrix1[0].Count;
+                            var resultsCount = resultMatrix.Count * resultMatrix[0].Count;
                             var relativeMetric = Math.Round(metric / resultsCount, 4);
 
                             var optionsString = $"\nAVERAGE | D: {options.D} | M: {options.M} " +
@@ -324,17 +328,19 @@ public class DistortionTester
     {
         var resultMatrix = new List<List<double>>();
 
-        //var step = 0.05;
-        //var upperBorder = 1;
-        //double param = 0;
+        var step = 0.05;
+        var upperBorder = 1;
+        var param = 0.0;
 
-        var step = 1;
-        var upperBorder = 3;
-        var param = 1;
+        //var step = 1;
+        //var upperBorder = 50;
+        //var param = 0;
 
-        //var step = 0.01;
-        //var upperBorder = 0.5;
-        //var param = 0.01;
+        
+        var spStep = 0.025;
+        var spUpperBorder = 0.51;
+        var spParam = 0.01;
+        
 
         while (param <= upperBorder)
         {
@@ -342,19 +348,20 @@ public class DistortionTester
 
             var distortionWithParameterList = new List<IDistortion>() {
                     //new DeletingLayersDistortion(param),
-                    /*
-                    new DeletingByAreaDistortion(param),
+                    
+                    //new DeletingByAreaDistortion(param),
                     new RemoverByPerimeter(param),
-                    new ObjectsAdder(param),
+                    //new ObjectsAdder(param),
                     new ObjectsRemover(param),
-                    new ObjectsMagnifier(param),
-                    new CoordinateOrderReverser(param),
-                    */
+                    //new ObjectsMagnifier(param),
+                    //new CoordinateOrderReverser(param),
+                    
 
                     //new FixedObjectsMagnifier(Convert.ToInt32(Math.Ceiling(param * 10)))
-                    new FewPointsDeleter(param),
+                    //new FixedObjectsMagnifier(param),
+                    //new FewPointsDeleter(param),
 
-                    //new ShiftingPointsDistortion(param),
+                    new ShiftingPointsDistortion(spParam),
 
                     /*new ReducingNumberOfPointsDistortion(param, false),
                     new ReducingNumberOfPointsDistortion(param, true),*/
@@ -372,6 +379,7 @@ public class DistortionTester
             resultMatrix.Add(oneParamResultVector);
 
             param += step;
+            spParam += spStep;
         }
 
         

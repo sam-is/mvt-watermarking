@@ -6,6 +6,7 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
+using MvtWatermark.NtsArtefacts;
 
 namespace MvtWatermark.NoDistortionWatermark.Auxiliary;
 
@@ -28,9 +29,9 @@ public class MapboxTileReaderWm
     /// </summary>
     /// <param name="tileDict">Dictionary (ulong, Mapbox.Tile) that contains tile id as key and Mapbox vector tile as value</param>
     /// <returns></returns>
-    public VectorTileTree Read(Dictionary<ulong, Tile> tileDict)
+    public VectorTileTree Read(Dictionary<ulong, NetTopologySuite.IO.VectorTiles.Mapbox.Tile> tileDict)
     {
-        var sortedTiles = new SortedDictionary<ulong, Tile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
+        var sortedTiles = new SortedDictionary<ulong, NetTopologySuite.IO.VectorTiles.Mapbox.Tile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
         foreach (var (tileIndex, tile) in tileDict)
         {
             sortedTiles[tileIndex] = tileDict[tileIndex];
@@ -52,7 +53,7 @@ public class MapboxTileReaderWm
     /// <param name="tileId">Tile id</param>
     /// <param name="idAttributeName">Optional. Specifies the name of the attribute that the vector tile feature's ID should be stored in the NetTopologySuite Features AttributeTable.</param>
     /// <returns></returns>
-    public VectorTile Read(Tile tile, ulong tileId, string idAttributeName)
+    public VectorTile Read(NetTopologySuite.IO.VectorTiles.Mapbox.Tile tile, ulong tileId, string idAttributeName)
     {
         var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
         var vectorTile = new VectorTile { TileId = tileDefinition.Id };
@@ -60,7 +61,7 @@ public class MapboxTileReaderWm
         {
             Debug.Assert(mbTileLayer.Version == 2U);
 
-            var tgs = new NtsArtefacts.TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
             var layer = new Layer {Name = mbTileLayer.Name};
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
@@ -81,7 +82,7 @@ public class MapboxTileReaderWm
     /// <param name="options"></param>
     /// <param name="firstHalfOfTheKey"></param>
     /// <returns></returns>
-    public int? ExtractWm(Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
+    public int? ExtractWm(NetTopologySuite.IO.VectorTiles.Mapbox.Tile tile, ulong tileId, NoDistortionWatermarkOptions options, short firstHalfOfTheKey)
     {
         int key = firstHalfOfTheKey;
         key = (key << 16) + (short)tileId;
@@ -94,7 +95,7 @@ public class MapboxTileReaderWm
         {
             Debug.Assert(mbTileLayer.Version == 2U);
 
-            var tgs = new NtsArtefacts.TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
 
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
@@ -123,7 +124,9 @@ public class MapboxTileReaderWm
         return mostFrequestWatermarkInt;
     }
 
-    private IFeature ReadFeature(NtsArtefacts.TileGeometryTransform tgs, Tile.Layer mbTileLayer, Tile.Feature mbTileFeature, string idAttributeName)
+    private IFeature ReadFeature(NtsArtefacts.TileGeometryTransform tgs, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Layer mbTileLayer, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Feature mbTileFeature, string idAttributeName)
     {
         var geometry = ReadGeometry(tgs, mbTileFeature.Type, mbTileFeature.Geometry);
         var attributes = ReadAttributeTable(mbTileFeature, mbTileLayer.Keys, mbTileLayer.Values);
@@ -138,17 +141,18 @@ public class MapboxTileReaderWm
         return new Feature(geometry, attributes);
     }
 
-    private Geometry ReadGeometry(NtsArtefacts.TileGeometryTransform tgs, Tile.GeomType type, IList<uint> geometry)
+    private Geometry ReadGeometry(NtsArtefacts.TileGeometryTransform tgs, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType type, IList<uint> geometry)
     {
         switch (type)
         {
-            case Tile.GeomType.Point:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.Point:
                 return ReadPoint(tgs, geometry);
 
-            case Tile.GeomType.LineString:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.LineString:
                 return ReadLineString(tgs, geometry);
 
-            case Tile.GeomType.Polygon:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.Polygon:
                 return ReadPolygon(tgs, geometry);
         }
 
@@ -163,10 +167,11 @@ public class MapboxTileReaderWm
     /// <param name="options"></param>
     /// <param name="keySequence"></param>
     /// <returns></returns>
-    private int? ExtractFromFeature(NtsArtefacts.TileGeometryTransform tgs, Tile.Feature mbTileFeature, 
+    private int? ExtractFromFeature(NtsArtefacts.TileGeometryTransform tgs, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Feature mbTileFeature, 
         NoDistortionWatermarkOptions options, int[] keySequence)
     {
-        if (mbTileFeature.Type == Tile.GeomType.LineString)
+        if (mbTileFeature.Type == NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.LineString)
         {
             var watermarkInt = ReadLineStringWm(tgs, mbTileFeature.Geometry, options, keySequence);
             return watermarkInt;
@@ -732,7 +737,8 @@ public class MapboxTileReaderWm
 
     }
 
-    private static IAttributesTable ReadAttributeTable(Tile.Feature mbTileFeature, List<string> keys, List<Tile.Value> values)
+    private static IAttributesTable ReadAttributeTable(NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Feature mbTileFeature, 
+        List<string> keys, List<NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Value> values)
     {
         var att = new AttributesTable();
 
