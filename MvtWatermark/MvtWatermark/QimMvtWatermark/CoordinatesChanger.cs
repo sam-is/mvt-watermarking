@@ -4,26 +4,47 @@ using NetTopologySuite.IO.VectorTiles;
 using System;
 
 namespace MvtWatermark.QimMvtWatermark;
+/// <summary>
+/// Changes coordinates of vector tile.
+/// </summary>
+/// <param name="countToChange">Count of point with <c>value</c> that must be changed to opposite value</param>
+/// <param name="value">Value which count must be increase</param>
+/// <param name="count">Count of all points with <c>value</c></param>
+/// <param name="requantizationMatrix">Re-quantization matrix</param>
 public class CoordinatesChanger(int countToChange, bool value, int count, RequantizationMatrix requantizationMatrix)
 {
+    /// <summary>
+    /// Count of point with <see cref="Value"/> that must be changed to opposite value.
+    /// </summary>
     public int CountToChange { get; } = countToChange;
+    /// <summary>
+    /// Value which count must be increase.
+    /// </summary>
     public bool Value { get; } = value;
+    /// <summary>
+    /// Count of all points with <see cref="Value"/>.
+    /// </summary>
     public int Count { get; } = count;
-    public int CountChanged { get; set; } = 0;
-    public int CountSuited { get; set; } = 0;
+    /// <summary>
+    /// Count points that value changed.
+    /// </summary>
+    public int CountChanged { get; private set; } = 0;
+    /// <summary>
+    /// Count suited points
+    /// </summary>
+    public int CountSuited { get; private set; } = 0;
+    /// <summary>
+    /// Re-quantization matrix
+    /// </summary>
     public RequantizationMatrix RequantizationMatrix { get; set; } = requantizationMatrix;
 
     /// <summary>
-    /// Changes coordinates of geometry points in a certain area
+    /// Changes coordinates of geometry points in vector tile.
     /// </summary>
     /// <param name="tile">Vector tile with geometry where needed to change coordinates</param>
     /// <param name="polygon">The polygon inside which should be points whose coordinates need to be changed</param>
     /// <param name="tileEnvelope">Envelope that bounding tile</param>
     /// <param name="extentDist">Distances in meters for difference i and i+1 for extent</param>
-    /// <param name="map">Matrix re-quantization</param>
-    /// <param name="value">The value that corresponds to the value in the re-quantization matrix to which the coordinates will need to be shifted</param>
-    /// <param name="countToChange">The number of points that need to change coordinates</param>
-    /// <param name="count">Total number of points</param>
     public void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope,
                                   double extentDist)
     {
@@ -38,20 +59,33 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
             {
                 var geometry = feature.Geometry;
 
-                if (geometry.GeometryType == "MultiPolygon")
+                switch (geometry.OgcGeometryType)
                 {
-                    var multipolygon = geometry as MultiPolygon;
-                    for (var i = 0; i < multipolygon!.Count; i++)
-                    {
-                        var p = multipolygon[i];
-                        Geometry newGeometry;
-                        newGeometry = ChangeCoordinate(p, step, polygon, tileEnvelope, extentDist);
-                        multipolygon.Geometries[i] = newGeometry;
-                    }
-                }
-                else
-                {
-                    geometry = ChangeCoordinate(geometry, step, polygon, tileEnvelope, extentDist);
+                    case OgcGeometryType.MultiPoint:
+                        {
+                            new NetTopologySuite.Geometries.Prepared.PreparedPo
+                            var multi = geometry as MultiPoint;
+                            for (var i = 0; i < multi!.Count; i++)
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                            break;
+                        }
+                    case OgcGeometryType.MultiLineString:
+                        {
+                            var multi = geometry as MultiLineString;
+                            for (var i = 0; i < multi!.Count; i++)
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                            break;
+                        }
+                    case OgcGeometryType.MultiPolygon:
+                        {
+                            var multi = geometry as MultiPolygon;
+                            for (var i = 0; i < multi!.Count; i++)
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                            break;
+                        }
+                    default:
+                        geometry = ChangeCoordinate(geometry, step, polygon, tileEnvelope, extentDist);
+                        break;
                 }
 
                 feature.Geometry = geometry;
@@ -59,6 +93,15 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
         }
     }
 
+    /// <summary>
+    /// Changes coordinates of geometry points.
+    /// </summary>
+    /// <param name="geometry">Geometry which coordinate changing</param>
+    /// <param name="step">Step for found points</param>
+    /// <param name="polygon">Bounds of M^M squre</param>
+    /// <param name="tileEnvelope">Tile envelope</param>
+    /// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
+    /// <returns>Changed geometry</returns>
     private Geometry ChangeCoordinate(Geometry geometry, int step, Polygon polygon, Envelope tileEnvelope,
                                   double extentDistance)
     {

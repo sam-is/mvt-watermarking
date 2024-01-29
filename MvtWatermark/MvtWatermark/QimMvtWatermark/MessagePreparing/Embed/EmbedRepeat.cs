@@ -5,9 +5,19 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
+
+/// <summary>
+/// Preparing message for embed with <see cref="Mode.WithTilesMajorityVote"/>.
+/// </summary>
 public class EmbedRepeat : IMessageForEmbed<ulong>
 {
     public ConcurrentDictionary<ulong, bool[]> PartsOfMessage { get; init; }
+    /// <summary>
+    /// Create a new intance of class.
+    /// </summary>
+    /// <param name="message">Embeded message</param>
+    /// <param name="tileIds">Ids of tiles in tile tree</param>
+    /// <param name="size">Bits per tile (parameter <see cref="QimMvtWatermarkOptions.Nb"/>)</param>
     public EmbedRepeat(BitArray message, IEnumerable<ulong> tileIds, int size)
     {
         var messages = new bool[size * tileIds.Count()];
@@ -24,5 +34,10 @@ public class EmbedRepeat : IMessageForEmbed<ulong>
         }
     }
 
+    /// <summary>
+    /// Computes and returns part of message by tile index.
+    /// </summary>
+    /// <param name="index">Index of tile</param>
+    /// <returns>Part of message</returns>
     public BitArray GetPart(ulong index) => new(PartsOfMessage[index]);
 }

@@ -1,5 +1,4 @@
 ﻿using MvtWatermark.QimMvtWatermark.ExtractingMethods;
-using MvtWatermark.QimMvtWatermark.MessagePreparing;
 using MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
 using MvtWatermark.QimMvtWatermark.MessagePreparing.Extract;
 using MvtWatermark.QimMvtWatermark.Requantization;
@@ -21,7 +20,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// </summary>
     /// <param name="tile">Vector tile with geometry</param>
     /// <param name="geometry">Geometry bounding the square</param>
-    /// <param name="map">Re-quantization matrix</param>
+    /// <param name="requantizationMatrix">Re-quantization matrix</param>
     /// <param name="tileEnvelope">Envelope that bounding tile</param>
     /// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
     /// <param name="s0">The number of values is zero</param>
@@ -186,6 +185,15 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         };
     }
 
+    /// <summary>
+    /// Embeds a message into VectorTileTree
+    /// </summary>
+    /// <param name="tileTree">VectorTileTree for embedding message</param>
+    /// <param name="key">Secret key</param>
+    /// <param name="messageLength">Message length</param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{int}>"/></param>
+    /// <returns>VectorTileTree with an embedded message</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public VectorTileTree Embed(VectorTileTree tileTree, int key, int messageLength, IMessageForEmbed<int> messagePreparing)
     {
         var index = 0;
@@ -205,11 +213,18 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             copyTileTree[tileId] = copyTile;
             index += options.Nb;
         }
-        if(index < messageLength)
+        if (index < messageLength)
             throw new InvalidOperationException("Not all of the message was embedded, try reducing the message size or increasing the nb parameter.");
         return copyTileTree;
     }
 
+    /// <summary>
+    /// Embeds a message into VectorTileTree
+    /// </summary>
+    /// <param name="tileTree">VectorTileTree for embedding message</param>
+    /// <param name="key">Secret key</param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{ulong}>"/></param>
+    /// <returns>VectorTileTree with an embedded message</returns>
     public VectorTileTree Embed(VectorTileTree tileTree, int key, IMessageForEmbed<ulong> messagePreparing)
     {
         var dictionaryTiles = new ConcurrentDictionary<ulong, VectorTile>();
@@ -250,6 +265,13 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         };
     }
 
+    /// <summary>
+    /// Extracts an embedded message from VectorTileTree
+    /// </summary>
+    /// <param name="tileTree">VectorTileTree to extract the message from</param>
+    /// <param name="key">Secret key</param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{int}"/></param>
+    /// <returns>Extracted message</returns>
     public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<int> messagePreparing)
     {
         var index = 0;
@@ -266,6 +288,13 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         return messagePreparing.Get();
     }
 
+    /// <summary>
+    /// Extracts an embedded message from VectorTileTree
+    /// </summary>
+    /// <param name="tileTree">VectorTileTree to extract the message from</param>
+    /// <param name="key">Secret key</param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{ulong}"/></param>
+    /// <returns>Extracted message</returns>
     public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<ulong> messagePreparing)
     {
         Parallel.ForEach(tileTree, tileId =>
@@ -278,6 +307,6 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
             messagePreparing.SetPart(bits, tileId);
         });
 
-        return messagePreparing.Get(); 
+        return messagePreparing.Get();
     }
 }

@@ -7,7 +7,11 @@ public static class GeneratorMatrix
     /// Generates a matrix with embedded message indexes
     /// </summary>
     /// <param name="key">Secret key</param>
+    /// <param name="sizeMatrix">Size matrix (<see cref="QimMvtWatermarkOptions.M"/>)</param>
+    /// <param name="sizeMessage">Size embeding message</param>
+    /// <param name="repeatCoefficient">How much each index repeat (<see cref="QimMvtWatermarkOptions.R"/>)</param>
     /// <returns>Matrix with embedded message indexes</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public static int[,] GenerateRandomMatrixWithIndices(int key, int sizeMatrix, int sizeMessage, int repeatCoefficient)
     {
         if (sizeMatrix * sizeMatrix < sizeMessage * repeatCoefficient)

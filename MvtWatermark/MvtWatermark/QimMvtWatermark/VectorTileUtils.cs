@@ -8,6 +8,11 @@ using Tile = NetTopologySuite.IO.VectorTiles.Tiles.Tile;
 namespace MvtWatermark.QimMvtWatermark;
 public static class VectorTileUtils
 {
+    /// <summary>
+    /// Writes and reads vector tile. If vector tile not readable returns false, if vector tile read return true.
+    /// </summary>
+    /// <param name="tile">Vector tile</param>
+    /// <returns>True if vector tile read, otherwise false</returns>
     public static bool IsValidForRead(VectorTile tile)
     {
         var reader = new MapboxTileReader();
@@ -27,6 +32,11 @@ public static class VectorTileUtils
         return true;
     }
 
+    /// <summary>
+    /// Create copy from <see cref="VectorTile"/>.
+    /// </summary>
+    /// <param name="tile">Source vector tile</param>
+    /// <returns>Copy vector tile</returns>
     public static VectorTile Copy(VectorTile tile)
     {
         var copyTile = new VectorTile { TileId = tile.TileId };
