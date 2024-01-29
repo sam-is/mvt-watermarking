@@ -63,7 +63,6 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
                 {
                     case OgcGeometryType.MultiPoint:
                         {
-                            new NetTopologySuite.Geometries.Prepared.PreparedPo
                             var multi = geometry as MultiPoint;
                             for (var i = 0; i < multi!.Count; i++)
                                 multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
