@@ -11,9 +11,8 @@ namespace MvtWatermark.QimMvtWatermark;
 /// <param name="tile">Vector tile with geometry</param>
 /// <param name="requantizationMatrix">Re-quantization matrix</param>
 /// <param name="tileEnvelope">Envelope that bounding tile</param>
-/// <param name="extentDistance">Distance in meters for difference i and i+1 for extent</param>
 /// <param name="threshold">If in square count points will be smaller than <c>threshold</c> then this square not counted. (<see cref="QimMvtWatermarkOptions.T1"/>)</param>
-public class StatisticsCollector(VectorTile tile, RequantizationMatrix requantizationMatrix, Envelope tileEnvelope, double extentDistance, int threshold)
+public class StatisticsCollector(VectorTile tile, RequantizationMatrix requantizationMatrix, Envelope tileEnvelope, int threshold)
 {
     /// <summary>
     /// Vector tile with geometry.
@@ -30,7 +29,7 @@ public class StatisticsCollector(VectorTile tile, RequantizationMatrix requantiz
     /// <summary>
     /// Distances in meters for difference i and i+1 for extent.
     /// </summary>
-    public double ExtentDistance { get; } = extentDistance;
+    public double ExtentDistance { get; } = tileEnvelope.Height / requantizationMatrix.Extent;
     public int Threshold { get; } = threshold;
 
     /// <summary>

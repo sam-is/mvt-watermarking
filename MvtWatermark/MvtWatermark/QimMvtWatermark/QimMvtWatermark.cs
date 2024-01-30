@@ -15,54 +15,6 @@ namespace MvtWatermark.QimMvtWatermark;
 
 public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 {
-    ///// <summary>
-    ///// Counts statistics in square from M*M matrix, on the basis of which the value of the message bit is taken
-    ///// </summary>
-    ///// <param name="tile">Vector tile with geometry</param>
-    ///// <param name="geometry">Geometry bounding the square</param>
-    ///// <param name="requantizationMatrix">Re-quantization matrix</param>
-    ///// <param name="tileEnvelope">Envelope that bounding tile</param>
-    ///// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
-    ///// <param name="s0">The number of values is zero</param>
-    ///// <param name="s1">The number of values is one</param>
-    ///// <returns>Relative value indicating how much one number is greater than another</returns>
-    //private double Statistics(VectorTile tile, Geometry geometry, RequantizationMatrix requantizationMatrix, Envelope tileEnvelope, double extentDistance, out int s0, out int s1)
-    //{
-    //    s0 = 0;
-    //    s1 = 0;
-
-    //    foreach (var layer in tile.Layers)
-    //    {
-    //        foreach (var feature in layer.Features)
-    //        {
-    //            var featureGeometry = feature.Geometry;
-    //            var coordinates = featureGeometry.Coordinates;
-    //            foreach (var coordinate in coordinates)
-    //            {
-    //                var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinate);
-    //                if (geometry.Contains(new Point(coordinateMeters)))
-    //                {
-    //                    var intCoorinate = CoordinateConverter.MetersToInteger(coordinateMeters, tileEnvelope, extentDistance);
-    //                    var mapValue = requantizationMatrix[intCoorinate];
-
-    //                    if (mapValue == null)
-    //                        continue;
-
-    //                    if ((bool)mapValue)
-    //                        s1++;
-    //                    else
-    //                        s0++;
-    //                }
-    //            }
-    //        }
-    //    }
-
-    //    if ((s0 == 0 && s1 == 0) || s0 + s1 < options.T1)
-    //        return -1;
-
-    //    return (double)Math.Abs(s0 - s1) / (s1 + s0);
-    //}
-
     /// <summary>
     /// Embeds a message into one vector tile
     /// </summary>
@@ -77,12 +29,11 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var embedded = false;
         var tileInforamtion = new Tile(copyTile.TileId);
         var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
-        var extentDistance = envelopeTile.Height / options.Extent;
 
         var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
-        var requantizationMatrix = new RequantizationMatrix(map, options.Extent, options.Distance);
-        var statisticsCollector = new StatisticsCollector(copyTile, requantizationMatrix, envelopeTile, extentDistance, options.T1);
+        var requantizationMatrix = new RequantizationMatrix(map, options.Distance);
+        var statisticsCollector = new StatisticsCollector(copyTile, requantizationMatrix, envelopeTile, options.T1);
 
         for (var i = 0; i < options.M; i++)
         {
@@ -95,7 +46,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
                 var polygon = GeneratorBoundsPolygon.Get(envelopeTile, options.M, i, j);
 
-                var stat = statisticsCollector.Collect(polygon, out var s0, out var s1); //Statistics(copyTile, polygon, requantizationMatrix, envelopeTile, extentDistance, out var s0, out var s1);
+                var stat = statisticsCollector.Collect(polygon, out var s0, out var s1);
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 
@@ -109,7 +60,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
                     continue;
 
                 var coordinatesChanger = new CoordinatesChanger(countAdded, value, value ? s0 : s1, requantizationMatrix);
-                coordinatesChanger.ChangeCoordinate(copyTile, polygon, envelopeTile, extentDistance);
+                coordinatesChanger.ChangeCoordinate(copyTile, polygon, envelopeTile);
             }
         }
 
@@ -129,12 +80,11 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         var embedded = false;
         var tileInforamtion = new Tile(tile.TileId);
         var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
-        var extentDistance = envelopeTile.Height / options.Extent;
 
         var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
         var requantizationMatrix = new RequantizationMatrix(map, options.Extent);
-        var statisticsCollector = new StatisticsCollector(tile, requantizationMatrix, envelopeTile, extentDistance, options.T1);
+        var statisticsCollector = new StatisticsCollector(tile, requantizationMatrix, envelopeTile, options.T1);
 
         IExtractingMethod extractorBits;
         if (options.IsGeneralExtractionMethod)
@@ -153,7 +103,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
 
                 var polygon = GeneratorBoundsPolygon.Get(envelopeTile, options.M, i, j);
 
-                var stat = statisticsCollector.Collect(polygon, out var s0, out var s1);// Statistics(tile, polygon, requantizationMatrix, envelopeTile, extentDistance, out var s0, out var s1);
+                var stat = statisticsCollector.Collect(polygon, out var s0, out var s1);
                 if (Math.Abs(stat + 1) < 0.00001)
                     continue;
 

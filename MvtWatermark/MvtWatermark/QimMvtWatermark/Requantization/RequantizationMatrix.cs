@@ -10,7 +10,7 @@ namespace MvtWatermark.QimMvtWatermark.Requantization;
 /// <param name="map">Re-quantization matrix</param>
 /// <param name="extent">Extent of tile</param>
 /// <param name="distance">Value that bigger than distance between opposite value in matrix</param>
-public class RequantizationMatrix(bool[,] map, int extent, int distance = 0)
+public class RequantizationMatrix(bool[,] map, /*int extent,*/ int distance = 0)
 {
     /// <summary>
     /// Re-quantization matrix.
@@ -19,7 +19,7 @@ public class RequantizationMatrix(bool[,] map, int extent, int distance = 0)
     /// <summary>
     /// Extent of tile.
     /// </summary>
-    public int Extent { get; } = extent;
+    public int Extent { get; } = map.GetLength(0);
     /// <summary>
     /// Value that bigger than distance between opposite value in matrix.
     /// </summary>

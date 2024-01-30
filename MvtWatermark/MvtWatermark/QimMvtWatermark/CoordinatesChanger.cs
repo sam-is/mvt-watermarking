@@ -5,7 +5,7 @@ using System;
 
 namespace MvtWatermark.QimMvtWatermark;
 /// <summary>
-/// Changes coordinates of vector tile.
+/// Changes coordinates of vector tile. For new tile create a new instance.
 /// </summary>
 /// <param name="countToChange">Count of point with <c>value</c> that must be changed to opposite value</param>
 /// <param name="value">Value which count must be increase</param>
@@ -36,7 +36,7 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
     /// <summary>
     /// Re-quantization matrix
     /// </summary>
-    public RequantizationMatrix RequantizationMatrix { get; set; } = requantizationMatrix;
+    public RequantizationMatrix RequantizationMatrix { get; private set; } = requantizationMatrix;
 
     /// <summary>
     /// Changes coordinates of geometry points in vector tile.
@@ -44,10 +44,9 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
     /// <param name="tile">Vector tile with geometry where needed to change coordinates</param>
     /// <param name="polygon">The polygon inside which should be points whose coordinates need to be changed</param>
     /// <param name="tileEnvelope">Envelope that bounding tile</param>
-    /// <param name="extentDist">Distances in meters for difference i and i+1 for extent</param>
-    public void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope,
-                                  double extentDist)
+    public void ChangeCoordinate(VectorTile tile, Polygon polygon, Envelope tileEnvelope)
     {
+        var extentDistance = tileEnvelope.Height / RequantizationMatrix.Extent;
         var step = (int)Math.Floor((double)Count / CountToChange);
         if (step == 0)
             step = 1;
@@ -65,25 +64,25 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
                         {
                             var multi = geometry as MultiPoint;
                             for (var i = 0; i < multi!.Count; i++)
-                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDistance);
                             break;
                         }
                     case OgcGeometryType.MultiLineString:
                         {
                             var multi = geometry as MultiLineString;
                             for (var i = 0; i < multi!.Count; i++)
-                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDistance);
                             break;
                         }
                     case OgcGeometryType.MultiPolygon:
                         {
                             var multi = geometry as MultiPolygon;
                             for (var i = 0; i < multi!.Count; i++)
-                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDist);
+                                multi.Geometries[i] = ChangeCoordinate(multi[i], step, polygon, tileEnvelope, extentDistance);
                             break;
                         }
                     default:
-                        geometry = ChangeCoordinate(geometry, step, polygon, tileEnvelope, extentDist);
+                        geometry = ChangeCoordinate(geometry, step, polygon, tileEnvelope, extentDistance);
                         break;
                 }
 
@@ -101,8 +100,7 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
     /// <param name="tileEnvelope">Tile envelope</param>
     /// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
     /// <returns>Changed geometry</returns>
-    private Geometry ChangeCoordinate(Geometry geometry, int step, Polygon polygon, Envelope tileEnvelope,
-                                  double extentDistance)
+    private Geometry ChangeCoordinate(Geometry geometry, int step, Polygon polygon, Envelope tileEnvelope, double extentDistance)
     {
         var coordinates = geometry.Coordinates;
         for (var j = 0; j < coordinates.Length; j++)
