@@ -7,9 +7,12 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+
 namespace MvtWatermarkTests;
 public class Data
 {
+    static public string TegolaUrl { get; } = "https://tegola-osm-demo.go-spatial.org/v1/maps/osm";
+    static public string QwantPath { get; } = "https://www.qwant.com/maps/default";
     static public VectorTileTree GetDbVectorTileTree(string path, int minX, int maxX, int minY, int maxY, int z)
     {
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
@@ -104,7 +107,7 @@ public class Data
             return (0, 0, 0, 0);
     }
 
-    static public VectorTileTree GetUrlVectorTileTree(int minX, int maxX, int minY, int maxY, int z)
+    static public VectorTileTree GetUrlVectorTileTree(string url, int minX, int maxX, int minY, int maxY, int z)
     {
         var reader = new MapboxTileReader();
         var tileTreeTegola = new VectorTileTree();
@@ -114,7 +117,7 @@ public class Data
             {
                 using var sharedClient = new HttpClient()
                 {
-                    BaseAddress = new Uri($"https://tegola-osm-demo.go-spatial.org/v1/maps/osm/{z}/{x}/{y}"),
+                    BaseAddress = new Uri($"{url}/{z}/{x}/{y}"),
                 };
 
                 sharedClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 QGIS/32210");
@@ -191,5 +194,14 @@ public class Data
             }
         }
         return tileTree;
+    }
+
+    static public VectorTileTree WriteAndReadFromFile(VectorTileTree tileTree, string path)
+    {
+        WriteToFile(tileTree, path);
+        var readTileTree = ReadFromFiles(path);
+        Directory.Delete(path, true);
+
+        return readTileTree;
     }
 }
