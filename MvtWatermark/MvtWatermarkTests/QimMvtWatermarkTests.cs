@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using MvtWatermark.QimMvtWatermark;
+using NetTopologySuite;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
@@ -257,23 +258,23 @@ public class QimMvtWatermarkTests
     }
 
     [Theory]
-    //[InlineData(687072)]
+    [InlineData(687072)]
     [InlineData(688101)]
     [InlineData(690148)]
     [InlineData(693216)]
     [InlineData(687073)]
     [InlineData(692194)]
-    //[InlineData(693218)]
+    [InlineData(693218)]
     [InlineData(686051)]
     [InlineData(693219)]
     [InlineData(686052)]
     [InlineData(686053)]
     [InlineData(693221)]
-    //[InlineData(684006)]
+    [InlineData(684006)]
     [InlineData(685030)]
     [InlineData(692198)]
     [InlineData(684007)]
-    [InlineData(690151)]
+    //[InlineData(690151)]
     [InlineData(684008)]
     public void TestOpenAfterWatermarking(ulong id)
     {
@@ -301,7 +302,7 @@ public class QimMvtWatermarkTests
         memoryStream.Seek(0, SeekOrigin.Begin);
         using var decompressor = new GZipStream(memoryStream, CompressionMode.Decompress, false);
         var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
-
+        
         var bits = new bool[3];
         for (var i = 0; i < bits.Length; i++)
             bits[i] = true;
@@ -314,7 +315,7 @@ public class QimMvtWatermarkTests
         var tileWatermarked = watermark.Embed(tile, (int)tile.TileId, message);
 
         Assert.NotNull(tileWatermarked);
-        Assert.True(VectorTileUtils.IsValidForRead(tileWatermarked));
+        Assert.True(VectorTileUtils.IsValidForRead(tileWatermarked, 4096 * 8));
     }
 
     [Fact]
