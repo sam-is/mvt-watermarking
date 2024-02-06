@@ -196,9 +196,9 @@ public class Data
         return tileTree;
     }
 
-    static public VectorTileTree WriteAndReadFromFile(VectorTileTree tileTree, string path)
+    static public VectorTileTree WriteAndReadFromFile(VectorTileTree tileTree, string path, uint extent = 4096)
     {
-        WriteToFile(tileTree, path);
+        WriteToFile(tileTree, path, extent);
         var readTileTree = ReadFromFiles(path);
         Directory.Delete(path, true);
 

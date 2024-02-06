@@ -13,11 +13,11 @@ public static class VectorTileUtils
     /// </summary>
     /// <param name="tile">Vector tile</param>
     /// <returns>True if vector tile read, otherwise false</returns>
-    public static bool IsValidForRead(VectorTile tile)
+    public static bool IsValidForRead(VectorTile tile, uint extent = 4096)
     {
         var reader = new MapboxTileReader();
         using var memoryStream = new MemoryStream();
-        tile.Write(memoryStream);
+        tile.Write(memoryStream, extent);
         memoryStream.Seek(0, SeekOrigin.Begin);
 
         try

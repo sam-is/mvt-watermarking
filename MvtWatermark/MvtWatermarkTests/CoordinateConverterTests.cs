@@ -1,5 +1,6 @@
 ﻿using MvtWatermark.QimMvtWatermark;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO.VectorTiles.Tiles;
 using Xunit;
 
 namespace MvtWatermarkTests;
@@ -17,6 +18,13 @@ public class CoordinateConverterTests
         Assert.Equal(expectedMaxX, envelope.MaxX, 1E-4);
         Assert.Equal(expectedMinY, envelope.MinY, 1E-4);
         Assert.Equal(expectedMaxY, envelope.MaxY, 1E-4);
+
+        var tile = new Tile(x, y, z);
+        Assert.Equal(envelope.MinX, tile.Left, 1E-4);
+        Assert.Equal(envelope.MaxX, tile.Right, 1E-4);
+        Assert.Equal(envelope.MinY, tile.Bottom, 1E-4);
+        Assert.Equal(envelope.MaxY, tile.Top, 1E-4);
+
     }
 
     [Theory]

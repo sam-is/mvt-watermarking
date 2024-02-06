@@ -95,13 +95,14 @@ public static class CoordinateConverter
     /// <returns>Geometry with meters coordinates</returns>
     public static Geometry DegreesToMeters(Geometry geometry)
     {
-        for (var i = 0; i < geometry.Coordinates.Length; i++)
+        var copy = geometry.Copy();
+        for (var i = 0; i < copy.Coordinates.Length; i++)
         {
-            var coordinateMeters = DegreesToMeters(geometry.Coordinates[i]);
-            geometry.Coordinates[i].X = coordinateMeters.X;
-            geometry.Coordinates[i].Y = coordinateMeters.Y;
+            var coordinateMeters = DegreesToMeters(copy.Coordinates[i]);
+            copy.Coordinates[i].X = coordinateMeters.X;
+            copy.Coordinates[i].Y = coordinateMeters.Y;
         }
-        return geometry;
+        return copy;
     }
 
     /// <summary>
