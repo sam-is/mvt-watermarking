@@ -150,7 +150,8 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     {
         var index = 0;
         var copyTileTree = new VectorTileTree();
-        foreach (var tileId in tileTree)
+        var orderedIds = tileTree.OrderBy(id => id);
+        foreach (var tileId in orderedIds)
         {
             var tile = tileTree[tileId];
             var bits = messagePreparing.GetPart(index);
@@ -227,7 +228,8 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<int> messagePreparing)
     {
         var index = 0;
-        foreach (var tileId in tileTree)
+        var orderedIds = tileTree.OrderBy(id => id);
+        foreach (var tileId in orderedIds)
         {
             var tile = tileTree[tileId];
             var bits = Extract(tile, Math.Abs(key + (int)tileId));
