@@ -7,13 +7,15 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-
 namespace MvtWatermarkTests;
+
 public class Data
 {
-    static public string TegolaUrl { get; } = "https://tegola-osm-demo.go-spatial.org/v1/maps/osm";
-    static public string QwantPath { get; } = "https://www.qwant.com/maps/default";
-    static public VectorTileTree GetDbVectorTileTree(string path, int minX, int maxX, int minY, int maxY, int z)
+    public static string TegolaUrl => "https://tegola-osm-demo.go-spatial.org/v1/maps/osm";
+
+    public static string QwantPath => "https://www.qwant.com/maps/default";
+
+    public static VectorTileTree GetDbVectorTileTree(string path, int minX, int maxX, int minY, int maxY, int z)
     {
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
@@ -48,7 +50,7 @@ public class Data
         return tileTree;
     }
 
-    static public VectorTileTree GetDbVectorTileTree(string path, int z)
+    public static VectorTileTree GetDbVectorTileTree(string path, int z)
     {
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
@@ -75,14 +77,14 @@ public class Data
             }
             catch
             {
-
+                // ignored
             }
         }
 
         return tileTree;
     }
 
-    static public (int, int, int, int) GetMinMax(string path, int z)
+    public static (int, int, int, int) GetMinMax(string path, int z)
     {
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
@@ -92,22 +94,22 @@ public class Data
 
         var sqlReader = sqlCommand.ExecuteReader();
 
-        if (sqlReader.Read())
+        if (!sqlReader.Read())
         {
-            var minX = sqlReader.GetInt32(0);
-            var maxX = sqlReader.GetInt32(1);
-            var minY = sqlReader.GetInt32(2);
-            var maxY = sqlReader.GetInt32(3);
-            var tmpMinY = (1 << z) - maxY - 1;
-            maxY = (1 << z) - minY - 1;
-            minY = tmpMinY;
-            return (minX, maxX, minY, maxY);
-        }
-        else
             return (0, 0, 0, 0);
+        }
+
+        var minX = sqlReader.GetInt32(0);
+        var maxX = sqlReader.GetInt32(1);
+        var minY = sqlReader.GetInt32(2);
+        var maxY = sqlReader.GetInt32(3);
+        var tmpMinY = (1 << z) - maxY - 1;
+        maxY = (1 << z) - minY - 1;
+        minY = tmpMinY;
+        return (minX, maxX, minY, maxY);
     }
 
-    static public VectorTileTree GetUrlVectorTileTree(string url, int minX, int maxX, int minY, int maxY, int z)
+    public static VectorTileTree GetUrlVectorTileTree(string url, int minX, int maxX, int minY, int maxY, int z)
     {
         var reader = new MapboxTileReader();
         var tileTreeTegola = new VectorTileTree();
@@ -115,11 +117,8 @@ public class Data
         {
             Parallel.For(minY, maxY, y =>
             {
-                using var sharedClient = new HttpClient()
-                {
-                    BaseAddress = new Uri($"{url}/{z}/{x}/{y}"),
-                };
-
+                using var sharedClient = new HttpClient();
+                sharedClient.BaseAddress = new Uri($"{url}/{z}/{x}/{y}");
                 sharedClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 QGIS/32210");
                 sharedClient.DefaultRequestHeaders.Add("accept-encoding", "gzip");
 
@@ -136,7 +135,7 @@ public class Data
                 }
                 catch (Exception)
                 {
-
+                    // ignored
                 }
             });
         });
@@ -144,7 +143,7 @@ public class Data
         return tileTreeTegola;
     }
 
-    static public void WriteToFile(VectorTileTree tileTree, string path, uint extent = 4096)
+    public static void WriteToFile(VectorTileTree tileTree, string path, uint extent = 4096)
     {
         foreach (var tileId in tileTree)
         {
@@ -163,7 +162,7 @@ public class Data
         }
     }
 
-    static public VectorTileTree ReadFromFiles(string path)
+    private static VectorTileTree ReadFromFiles(string path)
     {
         var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
@@ -196,7 +195,7 @@ public class Data
         return tileTree;
     }
 
-    static public VectorTileTree WriteAndReadFromFile(VectorTileTree tileTree, string path, uint extent = 4096)
+    public static VectorTileTree WriteAndReadFromFile(VectorTileTree tileTree, string path, uint extent = 4096)
     {
         WriteToFile(tileTree, path, extent);
         var readTileTree = ReadFromFiles(path);

@@ -18,18 +18,22 @@ public class StatisticsCollector(VectorTile tile, RequantizationMatrix requantiz
     /// Vector tile with geometry.
     /// </summary>
     public VectorTile Tile { get; } = tile;
+
     /// <summary>
     /// Re-quantization matrix.
     /// </summary>
     public RequantizationMatrix RequantizationMatrix { get; } = requantizationMatrix;
+
     /// <summary>
     /// Envelope that bounding tile.
     /// </summary>
     public Envelope TileEnvelope { get; } = tileEnvelope;
+
     /// <summary>
     /// Distances in meters for difference i and i+1 for extent.
     /// </summary>
     public double ExtentDistance { get; } = tileEnvelope.Height / requantizationMatrix.Extent;
+
     public int Threshold { get; } = threshold;
 
     /// <summary>
@@ -55,8 +59,8 @@ public class StatisticsCollector(VectorTile tile, RequantizationMatrix requantiz
                     var coordinateMeters = CoordinateConverter.DegreesToMeters(coordinate);
                     if (geometry.Contains(new Point(coordinateMeters)))
                     {
-                        var intCoorinate = CoordinateConverter.MetersToInteger(coordinateMeters, TileEnvelope, ExtentDistance);
-                        var mapValue = RequantizationMatrix[intCoorinate];
+                        var intCoordinate = CoordinateConverter.MetersToInteger(coordinateMeters, TileEnvelope, ExtentDistance);
+                        var mapValue = RequantizationMatrix[intCoordinate];
 
                         if (mapValue == null)
                             continue;

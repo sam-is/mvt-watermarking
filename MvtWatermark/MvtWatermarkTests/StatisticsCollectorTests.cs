@@ -17,13 +17,12 @@ public class StatisticsCollectorTests
         };
 
         var feature = new Feature(new LineString(
-                            new Coordinate[]
-                            {
-                                new(5, 5),
-                                new(10, 10),
-                                new(15, 15)
-                            }
-                        ),
+                [
+                    new Coordinate(5, 5),
+                    new Coordinate(10, 10),
+                    new Coordinate(15, 15)
+                ]
+            ),
                         new AttributesTable());
         var layer = new Layer();
         layer.Features.Add(feature);

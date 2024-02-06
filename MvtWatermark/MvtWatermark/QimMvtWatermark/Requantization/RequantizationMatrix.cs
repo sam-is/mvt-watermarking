@@ -16,10 +16,12 @@ public class RequantizationMatrix(bool[,] map, /*int extent,*/ int distance = 0)
     /// Re-quantization matrix.
     /// </summary>
     public bool[,] Map { get; } = map;
+
     /// <summary>
     /// Extent of tile.
     /// </summary>
     public int Extent { get; } = map.GetLength(0);
+
     /// <summary>
     /// Value that bigger than distance between opposite value in matrix.
     /// </summary>

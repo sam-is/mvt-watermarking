@@ -12,6 +12,7 @@ public static class VectorTileUtils
     /// Writes and reads vector tile. If vector tile not readable returns false, if vector tile read return true.
     /// </summary>
     /// <param name="tile">Vector tile</param>
+    /// <param name="extent">The extent</param>
     /// <returns>True if vector tile read, otherwise false</returns>
     public static bool IsValidForRead(VectorTile tile, uint extent = 4096)
     {
@@ -22,7 +23,7 @@ public static class VectorTileUtils
 
         try
         {
-            var readTile = reader.Read(memoryStream, new Tile(tile.TileId));
+            _ = reader.Read(memoryStream, new Tile(tile.TileId));
         }
         catch (InvalidOperationException)
         {

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,17 +15,19 @@ public class ExtractCheck(IEnumerable<ulong> tileIds, int size) : IMessageFromEx
     /// Result message.
     /// </summary>
     public bool[] Message { get; } = new bool[size * tileIds.Count()];
+
     /// <summary>
     /// Last index of message part.
     /// </summary>
     public int LastIndex { get; private set; }
+
     /// <summary>
     /// Bits per message.
     /// </summary>
     public int Size { get; } = size;
 
     /// <summary>
-    /// Computs extracted message.
+    /// Computes extracted message.
     /// </summary>
     /// <returns>Extracted message</returns>
     public BitArray Get() => new(Message.Take(LastIndex + Size).ToArray());

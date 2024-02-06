@@ -13,18 +13,21 @@ internal class ExtractMajorityVoice : IMessageFromExtract<ulong>
     /// Parts of message.
     /// </summary>
     public ConcurrentDictionary<int, int[]> PartsOfMessage { get; init; }
+
     /// <summary>
-    /// Size of embeded message.
+    /// Size of embedded message.
     /// </summary>
     public int SizeMessage { get; init; }
+
     /// <summary>
     /// Bits per tile.
     /// </summary>
     public int Size { get; init; }
+
     /// <summary>
-    /// Create a new intance of class.
+    /// Create a new instance of class.
     /// </summary>
-    /// <param name="sizeMessage">Size of embeded message</param>
+    /// <param name="sizeMessage">Size of embedded message</param>
     /// <param name="size">Bits per tile (parameter <see cref="QimMvtWatermarkOptions.Nb"/>)</param>
     /// <exception cref="ArgumentNullException"></exception>
     public ExtractMajorityVoice(int? sizeMessage, int size)
@@ -38,7 +41,7 @@ internal class ExtractMajorityVoice : IMessageFromExtract<ulong>
     }
 
     /// <summary>
-    /// Computs extracted message.
+    /// Computes extracted message.
     /// </summary>
     /// <returns>Extracted message</returns>
     public BitArray Get()
@@ -73,6 +76,6 @@ internal class ExtractMajorityVoice : IMessageFromExtract<ulong>
         var indexInDictionary = Convert.ToInt32(index % (ulong)Math.Floor((double)SizeMessage / Size));
 
         for (var i = 0; i < part.Length; i++)
-            PartsOfMessage[indexInDictionary][i] += part[i] == true ? 1 : -1;
+            PartsOfMessage[indexInDictionary][i] += part[i] ? 1 : -1;
     }
 }

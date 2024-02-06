@@ -5,18 +5,20 @@ namespace MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
 /// <summary>
 /// Preparing message for embed with <see cref="Mode.WithCheck"/>.
 /// </summary>
-/// <param name="message">Embeded message</param>
+/// <param name="message">Embedded message</param>
 /// <param name="size">Bits per tile (parameter <see cref="QimMvtWatermarkOptions.Nb"/>)</param>
 public class EmbedCheck(BitArray message, int size) : IMessageForEmbed<int>
 {
     /// <summary>
-    /// Embeded message.
+    /// Embedded message.
     /// </summary>
     public BitArray Message { get; } = message;
+
     /// <summary>
     /// Bits per tile.
     /// </summary>
     public int Size { get; } = size;
+
     /// <summary>
     /// Computes and returns part of message by index.
     /// </summary>

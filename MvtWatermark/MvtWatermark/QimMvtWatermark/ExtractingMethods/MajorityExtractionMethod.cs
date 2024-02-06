@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark.ExtractingMethods;
 
 /// <summary>
-/// Use in extracting function. Accumulates statistics for other M^M squres from tile and returns extracted bits.
-/// For every M^M squres compute bit that embed in squre. Resulted bit get with majority voice of all M^M squres that consist bit with same index.
+/// Use in extracting function. Accumulates statistics for other M^M squares from tile and returns extracted bits.
+/// For every M^M squares compute bit that embed in square. Resulted bit get with majority voice of all M^M squares that contains a bit with same index.
 /// </summary>
 public class MajorityExtractionMethod : IExtractingMethod
 {
@@ -13,10 +13,12 @@ public class MajorityExtractionMethod : IExtractingMethod
     /// Keep statistics for every index of message.
     /// </summary>
     public Dictionary<int, int> Values { get; init; }
+
     /// <summary>
     /// Count bits per tile.
     /// </summary>
     public int CountBits { get; init; }
+
     /// <summary>
     /// Create a new instance of class.
     /// </summary>

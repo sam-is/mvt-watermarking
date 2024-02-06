@@ -20,11 +20,10 @@ public enum Mode
     /// <summary>
     /// The original message is embedded in a row in the tiles. 
     /// If it was not possible to embed a part of the message in the tile, then it will not be embedded. 
-    /// If the message ends before the tiles, it is repeated again.
+    /// If the message ends before the tiles, it is repeated.
     /// </summary>
     Repeat
 }
-
 
 public class QimMvtWatermarkOptions
 {
@@ -37,7 +36,7 @@ public class QimMvtWatermarkOptions
     /// </summary>
     public double Delta2 { get; set; }
     /// <summary>
-    /// The number of points in the each square from MxM, that is necessary for successful embedding
+    /// The number of points in each square from MxM, that is necessary for successful embedding
     /// </summary>
     public int T1 { get; set; }
     /// <summary>
@@ -73,11 +72,11 @@ public class QimMvtWatermarkOptions
     /// </summary>
     public Mode Mode { get; set; }
     /// <summary>
-    /// If select <see cref="Mode.WithTilesMajorityVote"/> in <see cref="Mode"/> this parametrs needed for correctly extraction
+    /// If select <see cref="Mode.WithTilesMajorityVote"/> in <see cref="Mode"/> this parameters needed for correctly extraction
     /// </summary>
     public int? MessageLength { get; set; }
     /// <summary>
-    /// Optimizes genereting quantization matrix.
+    /// Optimizes generating quantization matrix.
     /// Parameter <c>countMaps</c> in constructor setup maximum quantization matrices that will be created.
     /// </summary>
     public GeneratorOfRequantizationMatrices Maps { get; set; }
@@ -95,27 +94,27 @@ public class QimMvtWatermarkOptions
 
         if (nb == null && r != null && m != null)
         {
-            R = (int)r!;
-            M = (int)m!;
+            R = (int)r;
+            M = (int)m;
             Nb = (int)Math.Floor((double)M * M / R);
         }
         else if (r == null && nb != null && m != null)
         {
-            M = (int)m!;
-            Nb = (int)nb!;
+            M = (int)m;
+            Nb = (int)nb;
             R = (int)Math.Floor((double)M * M / Nb);
         }
         else if (m == null && nb != null && r != null)
         {
-            R = (int)r!;
-            Nb = (int)nb!;
+            R = (int)r;
+            Nb = (int)nb;
             M = (int)Math.Ceiling(Math.Sqrt(Nb * R));
         }
         else if (nb != null && r != null && m != null)
         {
-            Nb = (int)nb!;
-            R = (int)r!;
-            M = (int)m!;
+            Nb = (int)nb;
+            R = (int)r;
+            M = (int)m;
         }
         else
             throw new ArgumentNullException(nb == null ? nameof(nb) : nameof(r), "Only one of nb, r, m parameters can be null");

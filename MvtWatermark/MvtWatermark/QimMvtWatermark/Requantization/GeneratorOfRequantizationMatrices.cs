@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark.Requantization;
 
 /// <summary>
-/// Creates re-quantization matrix for embeding and exracting by key. In matrix distance between opposite value nust be not bigger than <see cref="QimMvtWatermarkOptions.Distance"/>.
+/// Creates re-quantization matrix for embedding and extracting by key. In matrix distance between opposite value must be not bigger than <see cref="QimMvtWatermarkOptions.Distance"/>.
 /// </summary>
 public class GeneratorOfRequantizationMatrices
 {
@@ -24,7 +24,7 @@ public class GeneratorOfRequantizationMatrices
     /// <summary>
     /// Create a new instance of class.
     /// </summary>
-    /// <param name="count">Maximum of created matrices. Needed for optimization time of embeding and extracting</param>
+    /// <param name="count">Maximum of created matrices. Needed for optimization time of embedding and extracting</param>
     public GeneratorOfRequantizationMatrices(int count)
     {
         _count = count;

@@ -8,9 +8,10 @@ public static class CoordinateConverter
     /// <summary>
     /// Converts degrees to radians.
     /// </summary>
-    /// <param name="deg">Digrees</param>
+    /// <param name="deg">Degrees</param>
     /// <returns>Radians</returns>
     public static double DegToRad(double deg) => deg * Math.PI / 180;
+
     /// <summary>
     /// Converts longitude with known zoom to x.
     /// </summary>

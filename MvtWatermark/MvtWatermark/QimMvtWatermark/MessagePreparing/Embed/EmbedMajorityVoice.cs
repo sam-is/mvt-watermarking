@@ -14,18 +14,21 @@ public class EmbedMajorityVoice : IMessageForEmbed<ulong>
     /// Keep parts of message.
     /// </summary>
     public ConcurrentDictionary<int, bool[]> PartsOfMessage { get; init; }
+
     /// <summary>
-    /// Embeded message.
+    /// Embedded message.
     /// </summary>
     public BitArray Message { get; init; }
+
     /// <summary>
     /// Bits per tile.
     /// </summary>
     public int Size { get; init; }
+
     /// <summary>
-    /// Create a new intance of class.
+    /// Create a new instance of class.
     /// </summary>
-    /// <param name="message">Embeded message</param>
+    /// <param name="message">Embedded message</param>
     /// <param name="size">Bits per tile (parameter <see cref="QimMvtWatermarkOptions.Nb"/>)</param>
     public EmbedMajorityVoice(BitArray message, int size)
     {

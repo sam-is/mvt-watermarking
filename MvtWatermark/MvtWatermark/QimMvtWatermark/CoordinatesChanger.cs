@@ -4,6 +4,7 @@ using NetTopologySuite.IO.VectorTiles;
 using System;
 
 namespace MvtWatermark.QimMvtWatermark;
+
 /// <summary>
 /// Changes coordinates of vector tile. For new tile create a new instance.
 /// </summary>
@@ -17,22 +18,27 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
     /// Count of point with <see cref="Value"/> that must be changed to opposite value.
     /// </summary>
     public int CountToChange { get; } = countToChange;
+
     /// <summary>
     /// Value which count must be increase.
     /// </summary>
     public bool Value { get; } = value;
+
     /// <summary>
     /// Count of all points with <see cref="Value"/>.
     /// </summary>
     public int Count { get; } = count;
+
     /// <summary>
     /// Count points that value changed.
     /// </summary>
-    public int CountChanged { get; private set; } = 0;
+    public int CountChanged { get; private set; }
+
     /// <summary>
     /// Count suited points
     /// </summary>
-    public int CountSuited { get; private set; } = 0;
+    public int CountSuited { get; private set; }
+
     /// <summary>
     /// Re-quantization matrix
     /// </summary>
@@ -96,7 +102,7 @@ public class CoordinatesChanger(int countToChange, bool value, int count, Requan
     /// </summary>
     /// <param name="geometry">Geometry which coordinate changing</param>
     /// <param name="step">Step for found points</param>
-    /// <param name="polygon">Bounds of M^M squre</param>
+    /// <param name="polygon">Bounds of M^M square</param>
     /// <param name="tileEnvelope">Tile envelope</param>
     /// <param name="extentDistance">Distances in meters for difference i and i+1 for extent</param>
     /// <returns>Changed geometry</returns>

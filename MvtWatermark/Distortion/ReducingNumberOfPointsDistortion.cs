@@ -177,7 +177,7 @@ public class ReducingNumberOfPointsDistortion(double relativeCount, bool isLttb)
                                 var distance = envelopeTile.Height * relativeCount;
                                 coordinates = RamerDouglasPecker(feature.Geometry.Coordinates, distance);
                                 if (coordinates.Length < 3)
-                                    coordinates = [coordinates[0], new((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1]];
+                                    coordinates = [coordinates[0], new Coordinate((coordinates[0].X + coordinates[^1].X) / 2, (coordinates[0].Y + coordinates[^1].Y) / 2), coordinates[^1]];
                             }
 
                             coordinates[^1] = coordinates[0];
@@ -189,9 +189,9 @@ public class ReducingNumberOfPointsDistortion(double relativeCount, bool isLttb)
                         case "MultiLineString":
                             var multiLineString = feature.Geometry as MultiLineString;
                             var lineStrings = new LineString[multiLineString!.NumGeometries];
-                            for (var i = 0; i < multiLineString!.NumGeometries; i++)
+                            for (var i = 0; i < multiLineString.NumGeometries; i++)
                             {
-                                var lineString = multiLineString!.Geometries[i];
+                                var lineString = multiLineString.Geometries[i];
                                 if (isLttb)
                                 {
                                     var count = (int)Math.Ceiling(lineString.NumPoints * relativeCount);
@@ -213,9 +213,9 @@ public class ReducingNumberOfPointsDistortion(double relativeCount, bool isLttb)
                         case "MultiPolygon":
                             var multiPolygon = feature.Geometry as MultiPolygon;
                             var polygons = new Polygon[multiPolygon!.NumGeometries];
-                            for (var i = 0; i < multiPolygon!.NumGeometries; i++)
+                            for (var i = 0; i < multiPolygon.NumGeometries; i++)
                             {
-                                var polygon = multiPolygon!.Geometries[i];
+                                var polygon = multiPolygon.Geometries[i];
                                 if (isLttb)
                                 {
                                     var count = (int)Math.Ceiling(polygon.NumPoints * relativeCount);

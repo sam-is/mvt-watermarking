@@ -12,15 +12,16 @@ namespace MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
 public class EmbedRepeat : IMessageForEmbed<ulong>
 {
     public ConcurrentDictionary<ulong, bool[]> PartsOfMessage { get; init; }
+
     /// <summary>
-    /// Create a new intance of class.
+    /// Create a new instance of class.
     /// </summary>
-    /// <param name="message">Embeded message</param>
+    /// <param name="message">Embedded message</param>
     /// <param name="tileIds">Ids of tiles in tile tree</param>
     /// <param name="size">Bits per tile (parameter <see cref="QimMvtWatermarkOptions.Nb"/>)</param>
-    public EmbedRepeat(BitArray message, IEnumerable<ulong> tileIds, int size)
+    public EmbedRepeat(BitArray message, List<ulong> tileIds, int size)
     {
-        var messages = new bool[size * tileIds.Count()];
+        var messages = new bool[size * tileIds.Count];
 
         for (var i = 0; i < messages.Length; i++)
             messages[i] = message[i % message.Count];

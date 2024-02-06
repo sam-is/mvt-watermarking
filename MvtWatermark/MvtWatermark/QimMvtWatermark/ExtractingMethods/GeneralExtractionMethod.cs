@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace MvtWatermark.QimMvtWatermark.ExtractingMethods;
 
 /// <summary>
-/// Use in extracting function. Accumulates statistics for other M^M squres from tile and returns extracted bits.
+/// Use in extracting function. Accumulates statistics for other M^M squares from tile and returns extracted bits.
 /// For every bit accumulates general statistics of <see cref="PairOfStatistics.S0"/> and <see cref="PairOfStatistics.S1"/> and then computed extracted bit.
 /// </summary>
 public class GeneralExtractionMethod : IExtractingMethod
@@ -25,20 +25,23 @@ public class GeneralExtractionMethod : IExtractingMethod
         /// Count points of feature with value 1 from re-quantization matrix.
         /// </summary>
         public int S1 { get; set; } = s1;
-    };
+    }
 
     /// <summary>
     /// Keep statistics for every index of message.
     /// </summary>
     public Dictionary<int, PairOfStatistics> Values { get; init; }
+
     /// <summary>
     /// Count bits per tile.
     /// </summary>
     public int CountBits { get; init; }
+
     /// <summary>
     /// Minimum value, if computed value will be smaller that this, computed value not counted.
     /// </summary>
     public double RelativeNumber { get; init; }
+
     /// <summary>
     /// Create a new instance of class.
     /// </summary>
@@ -50,7 +53,7 @@ public class GeneralExtractionMethod : IExtractingMethod
         RelativeNumber = relativeNumber;
         Values = new Dictionary<int, PairOfStatistics>(countBits);
         for (var i = 0; i < countBits; i++)
-            Values.Add(i, new(0, 0));
+            Values.Add(i, new PairOfStatistics(0, 0));
     }
 
     /// <summary>

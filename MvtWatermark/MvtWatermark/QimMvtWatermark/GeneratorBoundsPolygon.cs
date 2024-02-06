@@ -4,7 +4,7 @@ namespace MvtWatermark.QimMvtWatermark;
 public static class GeneratorBoundsPolygon
 {
     /// <summary>
-    /// Generate envelope for one of M^M squres. Needed for selection geometry that inside specific square
+    /// Generate envelope for one of M^M squares. Needed for selection geometry that inside specific square
     /// </summary>
     /// <param name="envelopeTile">Envelope of current tile in meters</param>
     /// <param name="m">M parameter of algorithm</param>
@@ -15,15 +15,14 @@ public static class GeneratorBoundsPolygon
     {
         var sizeMSquare = envelopeTile.Height / m;
         return new Polygon(
-                    new LinearRing(
-                        new Coordinate[]
-                        {
-                            new(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * j),
-                            new(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * (j + 1)),
-                            new(envelopeTile.MinX + sizeMSquare * (i + 1), envelopeTile.MinY + sizeMSquare * (j + 1)),
-                            new(envelopeTile.MinX + sizeMSquare * (i + 1), envelopeTile.MinY + sizeMSquare * j),
-                            new(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * j)
-                        }
-                ));
+        new LinearRing(
+            [
+                new Coordinate(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * j),
+                new Coordinate(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * (j + 1)),
+                new Coordinate(envelopeTile.MinX + sizeMSquare * (i + 1), envelopeTile.MinY + sizeMSquare * (j + 1)),
+                new Coordinate(envelopeTile.MinX + sizeMSquare * (i + 1), envelopeTile.MinY + sizeMSquare * j),
+                new Coordinate(envelopeTile.MinX + sizeMSquare * i, envelopeTile.MinY + sizeMSquare * j)
+            ]
+        ));
     }
 }

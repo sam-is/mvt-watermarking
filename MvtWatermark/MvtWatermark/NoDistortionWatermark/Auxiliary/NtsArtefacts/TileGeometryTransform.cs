@@ -1,7 +1,5 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using NetTopologySuite.Geometries;
-using NetTopologySuite.GeometriesGraph;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 
 [assembly: InternalsVisibleTo("NetTopologySuite.IO.VectorTiles.Tests")]

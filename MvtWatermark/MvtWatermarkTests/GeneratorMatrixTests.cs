@@ -4,6 +4,7 @@ using System.Linq;
 using Xunit;
 
 namespace MvtWatermarkTests;
+
 public class GeneratorMatrixTests
 {
     [Theory]

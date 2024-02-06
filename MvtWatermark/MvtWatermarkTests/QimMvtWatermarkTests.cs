@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using MvtWatermark.QimMvtWatermark;
-using NetTopologySuite;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
@@ -30,21 +29,20 @@ public class QimMvtWatermarkTests
         };
 
         var feature = new Feature(new LineString(
-                            new Coordinate[]
-                            {
-                                new(5, 5),
-                                new(10, 10),
-                                new(15, 15)
-                            }
-                        ),
-                        new AttributesTable());
+                [
+                    new Coordinate(5, 5),
+                    new Coordinate(10, 10),
+                    new Coordinate(15, 15)
+                ]
+            ),
+            new AttributesTable());
         var layer = new Layer();
         layer.Features.Add(feature);
 
         tile.Layers.Add(layer);
         tileTree[tile.TileId] = tile;
 
-        var bits = new bool[] { false };
+        var bits = new[] { false };
         var message = new BitArray(bits);
 
         var options = new QimMvtWatermarkOptions(0.9, 0.2, 0, 2048, 2, message.Count, 1, null, mode: mode, messageLength: message.Length);
@@ -59,7 +57,7 @@ public class QimMvtWatermarkTests
         Assert.NotNull(m);
 
         for (var i = 0; i < message.Count; i++)
-            Assert.True(m![i] == message[i]);
+            Assert.True(m[i] == message[i]);
     }
 
     [Theory]
@@ -114,7 +112,7 @@ public class QimMvtWatermarkTests
         Assert.NotNull(m);
 
         for (var i = 0; i < message.Count; i++)
-            Assert.True(m![i] == message[i]);
+            Assert.True(m[i] == message[i]);
     }
 
     [Theory]
@@ -155,7 +153,7 @@ public class QimMvtWatermarkTests
 
         var tileTreeWatermarked = new VectorTileTree
         {
-            [tileWatermarked!.TileId] = tileWatermarked
+            [tileWatermarked.TileId] = tileWatermarked
         };
 
         var readTileTree = Data.WriteAndReadFromFile(tileTreeWatermarked, pathToSave);
@@ -168,7 +166,7 @@ public class QimMvtWatermarkTests
         Assert.NotNull(m);
 
         for (var i = 0; i < message.Count; i++)
-            Assert.True(m![i] == message[i]);
+            Assert.True(m[i] == message[i]);
     }
 
     [Fact]
@@ -198,7 +196,7 @@ public class QimMvtWatermarkTests
         Assert.NotNull(m);
 
         for (var i = 0; i < message.Count; i++)
-            Assert.True(m![i] == message[i]);
+            Assert.True(m[i] == message[i]);
     }
 
     [Fact]
@@ -294,7 +292,7 @@ public class QimMvtWatermarkTests
 
         Assert.NotNull(obj);
 
-        var bytes = (byte[])obj!;
+        var bytes = (byte[])obj;
 
         using var memoryStream = new MemoryStream(bytes);
         var reader = new MapboxTileReader();

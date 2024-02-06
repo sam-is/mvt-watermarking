@@ -2,7 +2,6 @@
 using MvtWatermark.QimMvtWatermark.MessagePreparing.Embed;
 using MvtWatermark.QimMvtWatermark.MessagePreparing.Extract;
 using MvtWatermark.QimMvtWatermark.Requantization;
-using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using System;
 using System.Collections;
@@ -24,11 +23,10 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// <returns>Vector tile with an embedded message</returns>
     public VectorTile? Embed(VectorTile tile, int key, BitArray message)
     {
-
         var copyTile = VectorTileUtils.Copy(tile);
         var embedded = false;
-        var tileInforamtion = new Tile(copyTile.TileId);
-        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
+        var tileInformation = new Tile(copyTile.TileId);
+        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInformation.X, tileInformation.Y, tileInformation.Zoom));
 
         var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
@@ -78,8 +76,8 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     public BitArray? Extract(VectorTile tile, int key)
     {
         var embedded = false;
-        var tileInforamtion = new Tile(tile.TileId);
-        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInforamtion.X, tileInforamtion.Y, tileInforamtion.Zoom));
+        var tileInformation = new Tile(tile.TileId);
+        var envelopeTile = CoordinateConverter.DegreesToMeters(CoordinateConverter.TileBounds(tileInformation.X, tileInformation.Y, tileInformation.Zoom));
 
         var winx = GeneratorMatrix.GenerateRandomMatrixWithIndices(key, options.M, options.Nb, options.R);
         var map = options.Maps.GetMap(options, key);
@@ -132,8 +130,8 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         {
             Mode.WithTilesMajorityVote => Embed(tileTree, key, new EmbedMajorityVoice(message, options.Nb)),
             Mode.WithCheck => Embed(tileTree, key, message.Length, new EmbedCheck(message, options.Nb)),
-            Mode.Repeat => Embed(tileTree, key, new EmbedRepeat(message, tileTree.Select(id => id), options.Nb)),
-            _ => throw new NotImplementedException(),
+            Mode.Repeat => Embed(tileTree, key, new EmbedRepeat(message, tileTree.Select(id => id).ToList(), options.Nb)),
+            _ => throw new NotImplementedException()
         };
     }
 
@@ -143,7 +141,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// <param name="tileTree">VectorTileTree for embedding message</param>
     /// <param name="key">Secret key</param>
     /// <param name="messageLength">Message length</param>
-    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{int}>"/></param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{T}"/></param>
     /// <returns>VectorTileTree with an embedded message</returns>
     /// <exception cref="InvalidOperationException"></exception>
     public VectorTileTree Embed(VectorTileTree tileTree, int key, int messageLength, IMessageForEmbed<int> messagePreparing)
@@ -176,7 +174,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// </summary>
     /// <param name="tileTree">VectorTileTree for embedding message</param>
     /// <param name="key">Secret key</param>
-    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{ulong}>"/></param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageForEmbed{T}"/></param>
     /// <returns>VectorTileTree with an embedded message</returns>
     public VectorTileTree Embed(VectorTileTree tileTree, int key, IMessageForEmbed<ulong> messagePreparing)
     {
@@ -213,8 +211,8 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
         {
             Mode.WithTilesMajorityVote => Extract(tileTree, key, new ExtractMajorityVoice(options.MessageLength, options.Nb)),
             Mode.WithCheck => Extract(tileTree, key, new ExtractCheck(tileTree.Select(id => id), options.Nb)),
-            Mode.Repeat => Extract(tileTree, key, new ExtractRepeat(tileTree.Select(id => id), options.Nb)),
-            _ => throw new NotImplementedException(),
+            Mode.Repeat => Extract(tileTree, key, new ExtractRepeat(tileTree.Select(id => id).ToList(), options.Nb)),
+            _ => throw new NotImplementedException()
         };
     }
 
@@ -223,7 +221,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// </summary>
     /// <param name="tileTree">VectorTileTree to extract the message from</param>
     /// <param name="key">Secret key</param>
-    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{int}"/></param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{T}"/></param>
     /// <returns>Extracted message</returns>
     public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<int> messagePreparing)
     {
@@ -247,7 +245,7 @@ public class QimMvtWatermark(QimMvtWatermarkOptions options) : IMvtWatermark
     /// </summary>
     /// <param name="tileTree">VectorTileTree to extract the message from</param>
     /// <param name="key">Secret key</param>
-    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{ulong}"/></param>
+    /// <param name="messagePreparing">Message preparing object <see cref="IMessageFromExtract{T}"/></param>
     /// <returns>Extracted message</returns>
     public BitArray Extract(VectorTileTree tileTree, int key, IMessageFromExtract<ulong> messagePreparing)
     {
