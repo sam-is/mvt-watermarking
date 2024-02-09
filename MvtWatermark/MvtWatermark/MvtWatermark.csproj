@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
   </PropertyGroup>
@@ -9,16 +9,9 @@
   <ItemGroup>
     <PackageReference Include="NetTopologySuite" Version="2.5.0" />
     <PackageReference Include="NetTopologySuite.Features" Version="2.1.0" />
-    <PackageReference Include="protobuf-net" Version="3.1.26" />
+    <PackageReference Include="NetTopologySuite.IO.VectorTiles" Version="1.0.3" />
+    <PackageReference Include="NetTopologySuite.IO.VectorTiles.Mapbox" Version="1.0.3" />
+    <PackageReference Include="protobuf-net" Version="3.2.30" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="NetTopologySuite.IO.VectorTiles">
-      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
-    </Reference>
-    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
-      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
+  
 </Project>
