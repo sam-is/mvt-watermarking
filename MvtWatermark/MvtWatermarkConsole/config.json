@@ -1,0 +1,14 @@
+{
+  "k": 0.9,
+  "t2": 0.2,
+  "t1": 5,
+  "extent": 2048,
+  "distance": 2,
+  "nb": 1,
+  "r": 4,
+  "m": null,
+  "countMaps": 10,
+  "isGeneralExtractionMethod": false,
+  "mode": "WithTilesMajorityVote",
+  "messageLength":  24
+}
