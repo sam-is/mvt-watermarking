@@ -58,7 +58,6 @@ internal class Program
         {
             Console.WriteLine(HelpText.AutoBuild(res, _ => _, _ => _).AddPreOptionsText($"exception: {ex.Message}"));
         }
-
     }
 
     private static void Run(Options options)

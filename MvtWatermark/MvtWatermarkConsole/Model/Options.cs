@@ -4,20 +4,20 @@ namespace MvtWatermarkConsole.Model;
 
 public class Options
 {
-    [Option('s', "source", Required = true, HelpText = "Source of data. May be: mbtiles, mvt, pbf or folder with tile tree")]
+    [Option('s', "source", Required = true, HelpText = "Source of data. May be: mbtiles or folder with tile tree.")]
     public required string Source { get; set; }
 
-    [Option('m', "mode", Required = true, HelpText = "Mode. Embed for embeding, Extract for extracting")]
+    [Option('m', "mode", Required = true, HelpText = "Mode. Embed for embeding, Extract for extracting.")]
     public required Mode Mode { get; set; }
 
-    [Option('k', "key", Required = true, HelpText = "Secret key")]
+    [Option('k', "key", Required = true, HelpText = "Secret key. Must be Integer.")]
     public required int Key { get; set; }
 
     [Option('c', "config", Required = false, HelpText = "Path to config file with parameters for watermarking algorthm. \n" +
-        "If not select create default options.")]
+        "If not selected, the standard options will be selected.")]
     public string? ConfigPath { get; set; }
 
-    [Option('w', "watermark", HelpText = "Watermark for embed. Required if select Mode Embed")]
+    [Option('w', "watermark", HelpText = "Watermark for embed. Required if select Mode Embed.")]
     public string? Message { get; set; }
 
     [Option('o', "output", HelpText = "Output path to save. For Mode Embed, where to save watermarked data. \n" +
@@ -25,9 +25,9 @@ public class Options
         "For Embed required. For extract optional, if not select watermark print into console.")]
     public string? OutputPath { get; set; }
 
-    [Option("minz", HelpText = "Optional. Minimum zoom")]
+    [Option("minz", HelpText = "Optional. Minimum zoom.")]
     public int? MinZ { get; set; }
 
-    [Option("maxz", HelpText = "Optional. Maximum zoom")]
+    [Option("maxz", HelpText = "Optional. Maximum zoom.")]
     public int? MaxZ { get; set; }
 }

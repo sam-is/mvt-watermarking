@@ -84,6 +84,4 @@ public static class DataReader
     }
 
     public static bool IsMbtiles(string path) => Path.GetExtension(path) == ".mbtiles";
-
-    public static bool IsOneTile(string path) => Path.GetExtension(path) == ".pbf" || Path.GetExtension(path) == ".mvt";
 }
