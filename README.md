@@ -1,14 +1,13 @@
 # mvt-watermarking
 Implementation of algorithms for embedding digital watermarks in spatial data made in Mapbox Vector Tiles format
 
-# Quick Start
-## Library
+
+# Library
 TODO added Nuget Package
 
-### QimMvtWatermark
+## QimMvtWatermark
 Algorithm works with NetTopologySuite VectorTileTree.
 
-####
 Dependencies:
 - NetTopologySuite
 - NetTopologySuite.Features
@@ -16,7 +15,8 @@ Dependencies:
 - NetTopologySuite.IO.VectorTiles.Mapbox
 - protobuf-net
 
-#### Embeding watermark
+## Quick Start
+### Embeding watermark
 ```csharp
 var key = 0
 var message = new BitArray(new[] { true, true, false, false, true, true, false, false });
@@ -25,7 +25,7 @@ var mvtWatermark = new QimMvtWatermark(options);
 var tileWatermarked = mvtWatermark.Embed(tileTree, key, message);
 ```
 
-#### Extracting watermark
+### Extracting watermark
 
 ```csharp
 var key = 0
@@ -33,9 +33,9 @@ var options = new QimMvtWatermarkOptions();
 var mvtWatermark = new QimMvtWatermark(options);
 var message = mvtWatermark.Extract(tileTree, key);
 ```
-#### Options
+### Options
 
-##### Main options
+#### Main options
 - `k`
   
 Coefficient for t2 when embedded. The larger this parameter, the more accurate whne extracting. Valid values: [0, 1). Default value: 0.9.
@@ -75,7 +75,7 @@ There are 3 modes of the algorithm: `Repeat`, `WithCheck`, `WithTilesMajorityVot
   If the embedding was carried out by this mode, then when extracting, you need to add the `messageLength` parameter in the options, so that the link between the part of the message and the tile id can be calculated
 
 
-##### Additional options
+#### Additional options
 - `t1`
 
 How many objects should the square (see m options) in tile have at least for it to be taken when extracting. Default value: 5
@@ -99,8 +99,8 @@ Additional extraction method. It works worse, so it is not recommended to choose
 
 The length of the embedded message in bits. If the second `WithTilesMajorityVote` is selected, then it is a required parameter, without which extraction will not work.
 
-#### How get VectorTileTree with NetTopologySuite.IO.VectorTiles.Mapbox
-##### From .mbtiles
+### How get VectorTileTree with NetTopologySuite.IO.VectorTiles.Mapbox
+#### From .mbtiles
 ```csharp
 public static VectorTileTree GetVectorTileTreeFromDb(string path, int z)
 {
@@ -156,7 +156,92 @@ public static VectorTileTree GetVectorTileTreeFromDb(string path, int z)
       return tileTree;
   }
 ```
-## Console
+# Console
+## Usage
+Embed
+
+    MvtWatermarkConsole.exe -s (source) -k (key) -m embed -w (watermark) -o (output) [options]
+Extract
+
+    MvtWatermarkConsole.exe -s (source) -k (key) -m extract [options]
+## Examples
+### Source - .mbtiles
+
+Embed
+
+     MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m embed -w test -o output_folder --minz 12 --maxz 12
+Extract
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m extract --minz 12 --maxz 12
+
+### Source - directory with tile tree
+tiles - directory with tile tree
+Embed
+
+     MvtWatermarkConsole.exe -s tiles -k 0 -m embed -w test -o output_folder --minz 12 --maxz 12
+Extract
+
+    MvtWatermarkConsole.exe -s tiles -k 0 -m extract --minz 12 --maxz 12
+## Parameters
+### Source
+`-s`, `--source`.
+
+Source of tile. May be .mbtiles db or directory with tile tree struct. Required parameter.
+
+### Key
+`-k`, `--key`.
+
+Secret key. Integer value. Required parameter.
+
+### Mode
+`-m`, `--mode`.
+
+Mode of algorthm. Valid values: embed, extract. Required value.
+
+### Config
+`-c`, `--config`.
+
+Path to config file in json foramt. If not selected, default options of algorithm will be use. About options see [Options](README.md#options).
+
+Example config.json:
+```json
+{
+  "k": 0.9,
+  "t2": 0.2,
+  "t1": 5,
+  "extent": 2048,
+  "distance": 2,
+  "nb": 1,
+  "r": 4,
+  "m": null,
+  "countMaps": 10,
+  "isGeneralExtractionMethod": false,
+  "mode": "WithTilesMajorityVote",
+  "messageLength":  24
+}
+```
+### Watermark
+`-w`, `--watermark`. 
+
+Embeded watermark string. Required for embed mode.
+
+### Output
+`-o`, `--output`. 
+
+For embed mode output for watermarked tile tree. Required for embed mode. 
+
+For extract mode output for embeded watermark. If not select with extract mode, embeded message displays in console.
+
+### MinZ
+`--minz`
+
+The minimum zoom level that tiles will be selected from.
+
+### MaxZ
+`--maxz`
+
+The maximum zoom level to which tiles will be selectedю
+
 
 # How algorithms work
 ## QimMvtWatermark
