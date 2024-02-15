@@ -18,7 +18,7 @@ public class Options
     public string? ConfigPath { get; set; }
 
     [Option('w', "watermark", HelpText = "Watermark for embed. Required if select Mode Embed.")]
-    public string? Message { get; set; }
+    public string? Watermark { get; set; }
 
     [Option('o', "output", HelpText = "Output path to save. For Mode Embed, where to save watermarked data. \n" +
         "For Mode Extract, where to save watermarked message. \n" +
