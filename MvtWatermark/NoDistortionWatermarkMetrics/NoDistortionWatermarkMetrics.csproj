@@ -16,15 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="NetTopologySuite.IO.VectorTiles">
-      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.dll</HintPath>
-    </Reference>
-    <Reference Include="NetTopologySuite.IO.VectorTiles.Mapbox">
-      <HintPath>..\NetTopologySuite.IO.VectorTiles\NetTopologySuite.IO.VectorTiles.Mapbox.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="stp10zoom.mbtiles">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
