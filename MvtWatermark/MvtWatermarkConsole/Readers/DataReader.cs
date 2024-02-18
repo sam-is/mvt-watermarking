@@ -18,7 +18,7 @@ public static class DataReader
         var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
 
-        using var command = new SqliteCommand(@"SELECT tile_column, tile_row, zoom_level, tile_data FROM tiles WHERE zoom_level BETWEEN $minz AND $maxz", sqliteConnection);
+        using var command = new SqliteCommand("SELECT tile_column, tile_row, zoom_level, tile_data FROM tiles WHERE zoom_level BETWEEN $minz AND $maxz", sqliteConnection);
         command.Parameters.AddWithValue("$minz", minZ);
         command.Parameters.AddWithValue("$maxz", maxZ);
         using var dbReader = command.ExecuteReader();

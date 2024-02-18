@@ -20,11 +20,11 @@ public static class MvtWatermarkOptionsReader
         var countMaps = Get<int>(dictionary, "countMaps") ?? 10;
         var isGeneralExtractionMethod = Get<bool>(dictionary, "isGeneralExtractionMethod") ?? false;
         var mode = GetMode(dictionary, "mode") ?? Mode.WithTilesMajorityVote;
-        var messengeLength = Get<int>(dictionary, "messageLength");
+        var messageLength = Get<int>(dictionary, "messageLength");
 
-        return new QimMvtWatermarkOptions(k, t2, t1, extent, distance, nb, r, m, countMaps, isGeneralExtractionMethod, mode, messengeLength);
+        return new QimMvtWatermarkOptions(k, t2, t1, extent, distance, nb, r, m, countMaps, isGeneralExtractionMethod, mode, messageLength);
     }
 
-    public static T? Get<T>(Dictionary<string, object> dictionary, string key) where T : struct => dictionary.TryGetValue(key, out var value) ? value != null ? ((JsonElement)value).Deserialize<T>() : null : null;
-    public static Mode? GetMode(Dictionary<string, object> dictionary, string key) => dictionary.TryGetValue(key, out var value) ? value != null ? Enum.Parse<Mode>(((JsonElement)value).ToString()) : null : null;
+    public static T? Get<T>(Dictionary<string, object> dictionary, string key) where T : struct => dictionary.TryGetValue(key, out var value) ? ((JsonElement)value).Deserialize<T>() : null;
+    public static Mode? GetMode(Dictionary<string, object> dictionary, string key) => dictionary.TryGetValue(key, out var value) ? Enum.Parse<Mode>(((JsonElement)value).ToString()) : null;
 }

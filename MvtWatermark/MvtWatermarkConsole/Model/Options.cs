@@ -13,7 +13,7 @@ public class Options
     [Option('k', "key", Required = true, HelpText = "Secret key. Must be Integer.")]
     public required int Key { get; set; }
 
-    [Option('c', "config", Required = false, HelpText = "Path to config file with parameters for watermarking algorthm. \n" +
+    [Option('c', "config", Required = false, HelpText = "Path to config file with parameters for watermarking algorithm. \n" +
         "If not selected, the standard options will be selected.")]
     public string? ConfigPath { get; set; }
 

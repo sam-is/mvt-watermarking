@@ -69,7 +69,7 @@ internal class Program
 
     private static void Run(Options options)
     {
-        var data = DataReader.Read(options.Source, options.MinZ == null ? 0 : (int)options.MinZ, options.MaxZ == null ? 22 : (int)options.MaxZ);
+        var data = DataReader.Read(options.Source, options.MinZ ?? 0, options.MaxZ ?? 22);
 
         var qimWatermarkOptions = options.ConfigPath == null ? new QimMvtWatermarkOptions() : MvtWatermarkOptionsReader.Read(options.ConfigPath);
         var watermark = new QimMvtWatermark(qimWatermarkOptions);
