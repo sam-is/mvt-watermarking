@@ -12,6 +12,8 @@ namespace MvtWatermark.NtsArtefacts;
 /// </summary>
 public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
 {
+    public uint Extent { get => _extent; }
+
     private NetTopologySuite.IO.VectorTiles.Tiles.Tile _tile;
     private uint _extent;
     private long _top;
@@ -28,7 +30,7 @@ public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
         _extent = extent;
         
         var meters = WebMercatorHandler.LatLonToMeters(_tile.Top, _tile.Left);
-        var pixels = WebMercatorHandler.MetersToPixels(meters, tile.Zoom, (int) extent);
+        var pixels = WebMercatorHandler.MetersToPixels(meters, tile.Zoom, (int) _extent);
         _top = (long)pixels.y;
         _left = (long)pixels.x;
     }
@@ -60,6 +62,26 @@ public struct TileGeometryTransform // ИЗМЕНИЛ ДОСТУП
         currentY = localY;
 
         return (dx, dy);
+    }
+
+    public (int x, int y, int dx, int dy) TransformExtended(CoordinateSequence sequence, int index, ref int currentX, ref int currentY)
+    {
+        var lon = sequence.GetOrdinate(index, Ordinate.X);
+        var lat = sequence.GetOrdinate(index, Ordinate.Y);
+
+        var meters = WebMercatorHandler.LatLonToMeters(lat, lon);
+        var pixels = WebMercatorHandler.MetersToPixels(meters, _tile.Zoom, (int)_extent);
+
+        var localX = (int)(pixels.x - _left);
+        var localY = (int)(_top - pixels.y);
+
+        var dx = localX - currentX;
+        var dy = localY - currentY;
+
+        currentX = localX;
+        currentY = localY;
+
+        return (localX, localY, dx, dy);
     }
 
     public (double longitude, double latitude) TransformInverse(int x, int y)

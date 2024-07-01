@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
 using NetTopologySuite.IO.VectorTiles.Tiles.WebMercator;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
-using MvtWatermark.NoDistortionWatermark;
-using static NetTopologySuite.Geometries.Utilities.GeometryMapper;
 using System.Collections;
 using System.Linq;
+using NetTopologySuite.Geometries.Implementation;
 //using MvtWatermark.NoDistortionWatermark.Auxiliary;
 //using MvtWatermark.NtsArtefacts;
 
@@ -18,9 +16,35 @@ namespace MvtWatermark.BufferWatermark.Auxiliary;
 // see: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
 public class BwmMapboxTileWriterWm
 {
-    private bool _hasSuccessfullyEmbededIntoSingleTile;
+    public List<bool> BitFlags { get => _bitFlags; }
+
+    private BufferWatermarkOptions _options;
+    //private bool _hasSuccessfullyEmbededIntoSingleTile;
+    private List<bool> _bitFlags;
+    private int[] _keySequence; // думаю она будет хранить номера бит фрагмента ЦВЗ, каждый по m раз, а всего элементов D.
+                                // Элементы соответствуют секторам от 0 до 360 градусов против часовой стрелки
+    private List<Sector> _sectors;
+    private int _buffer;
+
+    private BitArray? _embededBitsFromMessage;
+    private BitArray? _embededBitsFromFragment;
+    private int _embededMessageIndex;
+
+    /*
+    public BitArray? EmbededBitsFromMessage
+    {
+        get => _embededBitsFromMessage;
+    }
+    */
+
+    public BwmMapboxTileWriterWm(BufferWatermarkOptions options)
+    {
+        _options = options;
+        _buffer = options.Buffer; // ПЕРЕДЕЛАТЬ, отдельное поле для буфера не нужно!
+    }
+
     public Dictionary<ulong, Tile> WriteWm(VectorTileTree tree, BitArray message,
-        short firstHalfOfTheKey, BufferWatermarkOptions options, out BitArray embededMessage, uint extent = 4096)
+        short key1, short key2, out BitArray embededBitsFromMessage, uint extent = 4096)
     {
         // здесь тайловый словарь сортируется
         var sortedTiles = new SortedDictionary<ulong, VectorTile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
@@ -31,80 +55,87 @@ public class BwmMapboxTileWriterWm
 
         var result = new Dictionary<ulong, Tile>();
 
-        if (message.Count < sortedTiles.Count() * options.Nb)
+        if (message.Count < sortedTiles.Count() * _options.Nb)
         {
             throw new ArgumentException("Not enough bits in the watermark message",
-                $"Bits' number: {message.Count}, minimal required bits number: {sortedTiles.Count() * options.Nb}");
+                $"Bits' number: {message.Count}, minimal required bits number: {sortedTiles.Count() * _options.Nb}");
         }
 
-        _hasSuccessfullyEmbededIntoSingleTile = false;
+        _embededBitsFromMessage = new BitArray(tree.Count() * _options.Nb, false); // здесь будем хранить инфу о встроенных и невстроенных битах ЦВЗ
+        _embededBitsFromFragment = new BitArray(_options.Nb, false);
 
-        var watermarkString = new BitArray(message);
-        var watermarkStringFragment = new BitArray(options.Nb);
+        //_hasSuccessfullyEmbededIntoSingleTile = false;
 
-        var embededMessageFiller = new BitArray(sortedTiles.Count() * options.Nb);
-        var embededMessageIndex = 0;
+        var watermarkString = new BitArray(message); // это нужно, чтобы оригинальный BitArray message не изменялся при RightShift
+        var watermarkStringFragment = new BitArray(_options.Nb);
 
-        for (var i = 0; i < options.Nb; i++)
-        {
-            watermarkStringFragment[i] = watermarkString[i];
-        }
+        _embededMessageIndex = 0;
 
         // переменные для норм сообщений в исключениях
-        var tileNumber = 0; // текущий номер тайла в дереве (фактически это Dictionary, и тайлы хранятся в нём в порядке добавления)
-        var currentFragmentStartIndex = 0; // индекс начала текущей подпоследовательности (фрагмента) ЦВЗ
+        //var tileNumber = 0; // текущий номер тайла в дереве (фактически это Dictionary, и тайлы хранятся в нём в порядке добавления)
+        //var wmStartIndex = 0;
 
         foreach (var (tileIndex, vectorTile) in sortedTiles)
         {
-            if (_hasSuccessfullyEmbededIntoSingleTile)
+            for (var i = 0; i < _options.Nb; i++)
             {
-                for (var i = 0; i < options.Nb; i++)
-                {
-                    watermarkStringFragment[i] = watermarkString[i];
-                }
-                currentFragmentStartIndex += options.Nb;
+                watermarkStringFragment[i] = watermarkString[i];
+                _embededBitsFromFragment[i] = false;
             }
 
-            _hasSuccessfullyEmbededIntoSingleTile = false;
-            Tile resultTile = WriteWm(vectorTile, watermarkStringFragment, firstHalfOfTheKey, tileIndex,
-                options, tileNumber, currentFragmentStartIndex, extent);
+            Tile resultTile = WriteWm(vectorTile, watermarkStringFragment, key1, key2, tileIndex,
+                extent);
+            // В данном случае обычной записи через WriteWm -> EncodeWm скорее всего не получится,
+            // так как мы будем двигать точки в процессе. Поэтому надо оставить ниже обычный метод Write
+
+            watermarkString.RightShift(_options.Nb); 
+            // тут вроде всё правильно. Получается, BitArray справа налево идёт, то есть с самого младшего бита,
+            // как и должно быть?
+
+            _embededBitsFromFragment.CopyNbBitsTo(_embededBitsFromMessage, _embededMessageIndex * _options.Nb, _options.Nb);
+
+            //watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, _embededMessageIndex * _options.Nb, _options.Nb);
+            _embededMessageIndex++;
 
             result.Add(tileIndex, resultTile);
 
-            if (_hasSuccessfullyEmbededIntoSingleTile)
-            {
-                watermarkString.RightShift(options.Nb);
-
-                watermarkStringFragment.CopyNbBitsTo(embededMessageFiller, embededMessageIndex * options.Nb, options.Nb);
-                embededMessageIndex++;
-            }
-
-            tileNumber++;
+            //tileNumber++;
+            //wmStartIndex += _options.Nb;
         }
 
-        embededMessage = new BitArray(embededMessageIndex * options.Nb);
-        embededMessageFiller.CopyNbBitsTo(embededMessage, 0, embededMessage.Count);
+        embededBitsFromMessage = _embededBitsFromMessage;
 
         return result;
     }
 
-    public Tile WriteWm(VectorTile vectorTile, BitArray watermarkString, short firstHalfOfTheKey,
-        ulong tileId, BufferWatermarkOptions options, int tileNumber, int currentFragmentStartIndex, uint extent = 4096, string idAttributeName = "id")
+    private Tile WriteWm(VectorTile vectorTile, BitArray watermarkStringFragment, int key1, int key2,
+        ulong tileId, uint extent = 4096, string idAttributeName = "id")
     {
-        var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
-        if (watermarkInt == 0)
-            throw new ArgumentException("Одна или несколько подпоследовательностей ЦВЗ состоят целиком из нулей, их невозможно встроить",
-                $"Индекс тайла в дереве: {tileNumber}; Индекс начала подпоследовательности: {currentFragmentStartIndex}");
+        //var watermarkInt = WatermarkTransform.GetIntFromBitArray(watermarkString); // Фрагмент ЦВЗ в int
 
-        int key = firstHalfOfTheKey;
-        key = (key << 16) + (short)vectorTile.TileId;
+        key1 = (key1 << 16) + (short)vectorTile.TileId;
+        key2 = (key2 << 16) + (short)vectorTile.TileId;
 
-        var keySequence = SequenceGenerator.GenerateSequenceS(key, options.Nb, options.D, options.M);
+        // Генерация {Eta_k} происходит в классе DivideBySectors, Eta_k хаписываются в объекты структуры Sector.
+        // Какой здесь ключ использовать? Отдельный ещё какой-то?
+        _sectors = SectorManager.DivideBySectors(Convert.ToUInt32(_options.D), key2); 
+
+        // метод GenerateSequenceS переделан для данной СВИ
+        _keySequence = SequenceGenerator.GenerateSequenceS(key1, _options.Nb, _options.D, _options.M);
+
+        // список флагов для каждого бита фрагмента ЦВЗ. Изначально все флаги выставлены в False.
+        // Если есть хотя бы один отрезок, попадающий в секторы бита и подходящий для изменения, флаг помечается True.
+        // Если все флаги будут True, _hasSuccessfullyEmbededIntoSingleTile будет выставлен в True.
+        //_bitFlags = new List<bool>(new bool[_options.Nb]); // Создаём List из массива булей. Bool по умолчанию False.
+                                                             // Хотя возможно лучше было это всё форычем заполнить
+                                                             // без таких выкидонов
 
         var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
-        var tgt = new MvtWatermark.NtsArtefacts.TileGeometryTransform(tile, extent);
 
         var mapboxTile = new Tile();
+
+        var tgt = new NtsArtefacts.TileGeometryTransform(tile, extent);
+
         foreach (var localLayer in vectorTile.Layers)
         {
             var layer = new Tile.Layer { Version = 2, Name = localLayer.Name, Extent = extent };
@@ -127,29 +158,14 @@ public class BwmMapboxTileWriterWm
                         break;
                     case ILineal lineal:
                         feature.Type = Tile.GeomType.LineString;
-
-                        // для реализации параметра Lf
-                        if (embedingIndex < options.Lf)
-                        {
-                            feature.Geometry.AddRange(Encode(lineal, tgt, watermarkInt, options, keySequence)); // ЦВЗ только в лайнстринги запихивается
-                            // счётчик для Lf увеличивается на 1, даже когда в фиче лежит мультилайнстринг. Стоит ли это править?
-                            if (_hasSuccessfullyEmbededIntoSingleLineString)
-                            {
-                                _hasSuccessfullyEmbededIntoSingleTile = true;
-                                embedingIndex++;
-                            }// для реализации параметра Lf
-                        }
-                        else
-                        {
-                            feature.Geometry.AddRange(Encode(lineal, tgt));
-                        }
+                        feature.Geometry.AddRange(EncodeWm(lineal, watermarkStringFragment, tgt));
                         break;
                     case IPolygonal polygonal:
-                        feature.Type = Mapbox.Tile.GeomType.Polygon;
+                        feature.Type = Tile.GeomType.Polygon;
                         feature.Geometry.AddRange(Encode(polygonal, tgt, tile.Zoom));
                         break;
                     default:
-                        feature.Type = Mapbox.Tile.GeomType.Unknown;
+                        feature.Type = Tile.GeomType.Unknown;
                         break;
                 }
 
@@ -183,58 +199,85 @@ public class BwmMapboxTileWriterWm
     }
 
     /// <summary>
-    /// Writes the tiles in a /z/x/y.mvt folder structure.
+    /// Возвращает Mapbox Tile, полученный из VectorTile
     /// </summary>
-    /// <param name="tree">The tree.</param>
-    /// <param name="path">The path.</param>
-    /// <param name="extent">The extent.</param>
-    /// <remarks>Replaces the files if they are already present.</remarks>
-    public static void Write(this VectorTileTree tree, string path, uint extent = 4096)
+    /// <param name="vectorTile"></param>
+    /// <param name="extent"></param>
+    /// <param name="idAttributeName"></param>
+    /// <returns></returns>
+    public Tile GetMapboxTileFromVectorTile(VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
     {
-        IEnumerable<VectorTile> GetTiles()
+        var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
+        var tgt = new MvtWatermark.NtsArtefacts.TileGeometryTransform(tile, extent);
+
+        var mapboxTile = new Tile();
+        foreach (var localLayer in vectorTile.Layers)
         {
-            foreach (var tile in tree)
+            var layer = new Tile.Layer { Version = 2, Name = localLayer.Name, Extent = extent };
+            Console.WriteLine(layer.Name); // ОТЛАДКА
+
+            var keys = new Dictionary<string, uint>();
+            var values = new Dictionary<Tile.Value, uint>();
+
+            foreach (var localLayerFeature in localLayer.Features)
             {
-                yield return tree[tile];
+                var feature = new Tile.Feature();
+
+                // Encode geometry
+                switch (localLayerFeature.Geometry)
+                {
+                    case IPuntal puntal:
+                        feature.Type = Tile.GeomType.Point;
+                        feature.Geometry.AddRange(Encode(puntal, tgt));
+                        break;
+                    case ILineal lineal:
+                        feature.Type = Tile.GeomType.LineString;
+                        feature.Geometry.AddRange(Encode(lineal, tgt));
+                        break;
+                    case IPolygonal polygonal:
+                        feature.Type = Tile.GeomType.Polygon;
+                        feature.Geometry.AddRange(Encode(polygonal, tgt, tile.Zoom));
+                        break;
+                    default:
+                        feature.Type = Tile.GeomType.Unknown;
+                        break;
+                }
+
+                // If geometry collapsed during encoding, we don't add the feature at all
+                if (feature.Geometry.Count == 0)
+                    continue;
+
+                // Translate attributes for feature
+                AddAttributes(feature.Tags, keys, values, localLayerFeature.Attributes);
+
+                //Try and retrieve an ID from the attributes.
+                var id = localLayerFeature.Attributes.GetOptionalValue(idAttributeName);
+
+                //Converting ID to string, then trying to parse. This will handle situations will ignore situations where the ID value is not actually an integer or ulong number.
+                if (id != null && ulong.TryParse(id.ToString(), out var idVal))
+                {
+                    feature.Id = idVal;
+                }
+
+                // Add feature to layer
+                layer.Features.Add(feature);
             }
-        }
 
-        GetTiles().Write(path, extent);
+            layer.Keys.AddRange(keys.Keys);
+            layer.Values.AddRange(values.Keys);
+
+            mapboxTile.Layers.Add(layer);
+        }
+        return mapboxTile;
     }
 
     /// <summary>
-    /// Writes the tiles in a /z/x/y.mvt folder structure.
-    /// </summary>
-    /// <param name="vectorTiles">The tiles.</param>
-    /// <param name="path">The path.</param>
-    /// <param name="extent">The extent.</param>
-    /// <remarks>Replaces the files if they are already present.</remarks>
-    public static void Write(this IEnumerable<VectorTile> vectorTiles, string path, uint extent = 4096)
-    {
-        foreach (var vectorTile in vectorTiles)
-        {
-            var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
-            var zFolder = Path.Combine(path, tile.Zoom.ToString());
-            if (!Directory.Exists(zFolder)) Directory.CreateDirectory(zFolder);
-            var xFolder = Path.Combine(zFolder, tile.X.ToString());
-            if (!Directory.Exists(xFolder)) Directory.CreateDirectory(xFolder);
-            var file = Path.Combine(xFolder, $"{tile.Y}.mvt");
-
-            Console.WriteLine($"filename: {file}"); // отладка
-
-            using var stream = File.Open(file, FileMode.Create);
-            vectorTile.Write(stream, extent);
-        }
-    }
-
-    /// <summary>
-    /// Writes the tile to the given stream.
+    /// Creates and returnes Mapbox Tile from VectorTile.
     /// </summary>
     /// <param name="vectorTile">The vector tile.</param>
-    /// <param name="stream">The stream to write to.</param>
     /// <param name="extent">The extent.</param>
     /// <param name="idAttributeName">The name of an attribute property to use as the ID for the Feature. Vector tile feature ID's should be integer or ulong numbers.</param>
-    public static void Write(this VectorTile vectorTile, Stream stream, uint extent = 4096, string idAttributeName = "id")
+    public Tile Write(VectorTile vectorTile, uint extent = 4096, string idAttributeName = "id")
     {
         var tile = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(vectorTile.TileId);
         var tgt = new MvtWatermark.NtsArtefacts.TileGeometryTransform(tile, extent);
@@ -297,7 +340,8 @@ public class BwmMapboxTileWriterWm
             mapboxTile.Layers.Add(layer);
         }
 
-        ProtoBuf.Serializer.Serialize<Tile>(stream, mapboxTile);
+        //ProtoBuf.Serializer.Serialize<Tile>(stream, mapboxTile);
+        return mapboxTile;
     }
 
     private static void AddAttributes(List<uint> tags, Dictionary<string, uint> keys,
@@ -399,6 +443,24 @@ public class BwmMapboxTileWriterWm
         }
     }
 
+    /// <summary>
+    /// Encode with watermark fragment
+    /// </summary>
+    /// <param name="lineal"></param>
+    /// <param name="tgt"></param>
+    /// <returns></returns>
+    private IEnumerable<uint> EncodeWm(ILineal lineal, BitArray watermarkStringFragment, NtsArtefacts.TileGeometryTransform tgt)
+    {
+        var geometry = (Geometry)lineal;
+        int currentX = 0, currentY = 0;
+        for (var i = 0; i < geometry.NumGeometries; i++)
+        {
+            var lineString = (LineString)geometry.GetGeometryN(i);
+            foreach (var encoded in EncodeWm(lineString.CoordinateSequence, watermarkStringFragment, tgt, ref currentX, ref currentY))
+                yield return encoded;
+        }
+    }
+
     private static IEnumerable<uint> Encode(IPolygonal polygonal, 
         MvtWatermark.NtsArtefacts.TileGeometryTransform tgt, int zoom)
     {
@@ -425,6 +487,325 @@ public class BwmMapboxTileWriterWm
                 }
             }
         }
+    }
+
+    private IEnumerable<uint> EncodeWm(CoordinateSequence sequence, BitArray watermarkStringFragment,
+        NtsArtefacts.TileGeometryTransform tgt,
+        ref int currentX, ref int currentY)
+    {
+        var copyCurrentX = currentX;
+        var copyCurrentY = currentY;
+
+        sequence = GetCoordinateSequenceWm(sequence, watermarkStringFragment, tgt, copyCurrentX, copyCurrentY);
+
+        //currentX = curX;
+        //currentY = curY;
+
+        // how many parameters for LineTo command
+        var count = sequence.Count;
+
+        var encoded = new List<uint>();
+
+        // Start point
+        encoded.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
+        var position = tgt.TransformExtended(sequence, 0, ref currentX, ref currentY);
+        encoded.Add(GenerateParameterInteger(position.dx));
+        encoded.Add(GenerateParameterInteger(position.dy));
+
+        // Add LineTo command (stub)
+        var lineToCount = 0;
+        encoded.Add(GenerateCommandInteger(MapboxCommandType.LineTo, lineToCount));
+        for (var i = 1; i < count; i++)
+        {
+            position = tgt.TransformExtended(sequence, i, ref currentX, ref currentY);
+
+            if (position.dx != 0 || position.dy != 0)
+            {
+                encoded.Add(GenerateParameterInteger(position.dx));
+                encoded.Add(GenerateParameterInteger(position.dy));
+                lineToCount++;
+            }
+        }
+        if (lineToCount > 0)
+            encoded[3] = GenerateCommandInteger(MapboxCommandType.LineTo, lineToCount);
+
+        // Validate encoded data
+        // A line has 1 MoveTo and 1 LineTo command.
+        // A line is valid if it has at least 2 points
+        if (encoded.Count - 2 < 4)
+            encoded.Clear();
+
+        return encoded;
+    }
+
+    private CoordinateSequence GetCoordinateSequenceWm(CoordinateSequence sequence, BitArray watermarkStringFragment,
+        NtsArtefacts.TileGeometryTransform tgt, int currentX, int currentY)
+    {
+        // пока для удобства отдельными циклами всё, но потом надо сделать в одном-двух в новом методе, чтобы уменьшить
+        // вычислительную сложность алгоритма
+        var mapboxPixelCoordinates = new List<(int x, int y)>();
+
+        // !!! для удобства восприятия и работы с угловой окружностью преображаем y-координаты: y = extent - y
+        // а потом надо обратно
+        for (var i = 0; i < sequence.Count; i++)
+        {
+            var position = tgt.TransformExtended(sequence, i, ref currentX, ref currentY);
+            //mapboxPixelCoordinates.Add((position.x, position.y));
+            mapboxPixelCoordinates.Add((position.x, (int)tgt.Extent - position.y)); // long -> int , это наверное неправильно..
+        }
+
+        /*
+        for (var i = 0; i < mapboxPixelCoordinates.Count; i++)
+        {
+            // если координата за пределами тайла
+            if (CheckIfCoordinateIsOutside(mapboxPixelCoordinates[i], tgt.Extent))
+            {
+                bool? leftCoordinateIsOutside = null;
+                bool? rightCoordinateIsOutside = null;
+                if (i != 0)
+                    leftCoordinateIsOutside = CheckIfCoordinateIsOutside(mapboxPixelCoordinates[i - 1], tgt.Extent);
+                if (i != mapboxPixelCoordinates.Count - 1)
+                    rightCoordinateIsOutside = CheckIfCoordinateIsOutside(mapboxPixelCoordinates[i + 1], tgt.Extent);
+
+
+            }
+        }
+        */
+
+        var coordsOutsideFlags = new bool[mapboxPixelCoordinates.Count];
+
+        for (var i = 0; i < mapboxPixelCoordinates.Count; i++)
+        {
+            // если координата за пределами тайла
+            coordsOutsideFlags[i] = CheckIfCoordinateIsOutside(mapboxPixelCoordinates[i], tgt.Extent);
+        }
+
+
+        //var segmentsCrossing = new bool[mapboxPixelCoordinates.Count - 1]; // по умолчанию false ведь все?
+        var segmentsInfo = new List<(bool crosses, int dx, int dy, bool firstInside)>(mapboxPixelCoordinates.Count - 1); // по умолчанию false ведь все?
+        for (var i = 0; i < mapboxPixelCoordinates.Count - 1; i++)
+        {
+            //if ((coordsOutsideFlags[i] && !coordsOutsideFlags[i + 1]) || 
+            //    (!coordsOutsideFlags[i] && coordsOutsideFlags[i + 1]))
+            var crosses = false;
+            var dx = 0;
+            var dy = 0;
+            var firstInside = false;
+
+            //if (coordsOutsideFlags[i] ^ coordsOutsideFlags[i + 1])
+            //{
+            //    segmentsCrossing[i] = true;
+            //}
+
+            if (!coordsOutsideFlags[i] && coordsOutsideFlags[i + 1])
+            {
+                crosses = true;
+                dx = mapboxPixelCoordinates[i + 1].x - mapboxPixelCoordinates[i].x;
+                dy = mapboxPixelCoordinates[i + 1].y - mapboxPixelCoordinates[i].y;
+                firstInside = true;
+            }
+            else if (coordsOutsideFlags[i] && !coordsOutsideFlags[i + 1])
+            {
+                crosses = true;
+                dx = mapboxPixelCoordinates[i].x - mapboxPixelCoordinates[i + 1].x;
+                dy = mapboxPixelCoordinates[i].y - mapboxPixelCoordinates[i + 1].y;
+                //firstInside = false;
+            }
+            segmentsInfo.Add((crosses, dx, dy, firstInside));
+        }
+
+        List<(int x, int y)> resultCoordinatesList = MoveCoordinates(mapboxPixelCoordinates, watermarkStringFragment, segmentsInfo, (int)tgt.Extent);
+        var resultCoordinates = new Coordinate[resultCoordinatesList.Count];
+        for (var i = 0; i < resultCoordinatesList.Count; i++)
+        {
+            //resultCoordinateSequence[i].y = (int)tgt.Extent - resultCoordinateSequence[i].y;
+            //resultCoordinates[i] = (resultCoordinatesList[i].x, (int)tgt.Extent - resultCoordinatesList[i].y);
+
+            // y возвращаем обратно к системе координат mapbox
+            (var pixelX, var pixelY) = (resultCoordinatesList[i].x, (int)tgt.Extent - resultCoordinatesList[i].y);
+            (var lon, var lat) = tgt.TransformInverse(pixelX, pixelY);
+            resultCoordinates[i] = new Coordinate(lon, lat);
+
+            //resultCoordinates[i] = new Coordinate(resultCoordinatesList[i].x, (int)tgt.Extent - resultCoordinatesList[i].y);
+        }
+
+        var resultCoordinateSequence = new CoordinateArraySequence(resultCoordinates);
+        return resultCoordinateSequence;
+    }
+
+    private List<(int x, int y)> MoveCoordinates(List<(int x, int y)> mapboxPixelCoordinates, 
+        BitArray watermarkStringFragment, List<(bool crosses, int dx, int dy, bool firstInside)> segmentsInfo, int extent)
+    {
+        var newCoords = new List<(int x, int y)>(mapboxPixelCoordinates);
+        var difference = 0; // индексовая разница между mapboxPixelCoordinates и newCoords (т.к. мы добавляем в newCoords доп. точки)
+        for (var i = 0; i < segmentsInfo.Count; i++) // Count должен обновляться во время итераций, здесь не должно быть ошибки 
+        {
+            if (segmentsInfo[i].crosses)
+            {
+                //if (segmentsInfo[i].firstInside)
+                var atan = Math.Atan2((double)segmentsInfo[i].dy, (double)segmentsInfo[i].dx);
+                if (atan < 0) // atan2 возвращает значения, считая по часовой стрелке для нижнего полукруга, то есть например не 3Pi/2, а -Pi/2
+                    atan = 2 * Math.PI + atan;
+                for (var j = 0; j < _sectors.Count; j++)
+                {
+                    if (atan >= _sectors[j].LowerBorder && atan < _sectors[j].UpperBorder)
+                    {
+                        _embededBitsFromFragment[_keySequence[j]] = true;
+                        if (!(Convert.ToBoolean(watermarkStringFragment[_keySequence[j]]) ^ _sectors[j].EtaK)) // если 1/1 или 0/0 то двигаем
+                        {
+                            if (segmentsInfo[i].firstInside) {
+                                newCoords[i + 1] = MoveCoordinate(mapboxPixelCoordinates[i + 1 - difference].x,
+                                    mapboxPixelCoordinates[i + 1 - difference].y, segmentsInfo[i].dx, segmentsInfo[i].dy, extent);
+                                // производим добавление новой точки только для firstInside
+                                if (segmentsInfo.ElementAtOrDefault(i + 1).crosses)
+                                {
+                                    newCoords.Insert(i + 2, mapboxPixelCoordinates[i + 1 - difference]);
+                                    segmentsInfo.Insert(i + 1, (false, 0, 0, false));
+                                    difference++;
+                                }
+                            }
+                            else {
+                                newCoords[i] = MoveCoordinate(mapboxPixelCoordinates[i - difference].x,
+                                    mapboxPixelCoordinates[i - difference].y, segmentsInfo[i].dx, segmentsInfo[i].dy, extent);
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        return newCoords;
+    }
+
+    /// <summary>
+    /// Отвечает за сдвиг одной точки за границы буфера
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="dx"></param>
+    /// <param name="dy"></param>
+    /// <param name="extent"></param>
+    /// <returns></returns>
+    private (int newX, int newY) MoveCoordinate(int x, int y, int dx, int dy, int extent)
+    {
+        
+        int newX, newY;
+
+        if (dx == 0)
+        {
+            if (y < 0)
+            {
+                newY = -_buffer - 1;
+            }
+            //else if (y > extent)
+            else
+            {
+                newY = extent + _buffer + 1;
+            }
+            newX = x;
+
+            return (newX, newY);
+        }
+        else if (dy == 0)
+        {
+            if (x < 0)
+            {
+                newX = -_buffer - 1;
+            }
+            //else if (x > extent)
+            else
+            {
+                newX = extent + _buffer + 1;
+            }
+            newY = y;
+
+            return (newX, newY);
+        }
+
+        var x0 = x - dx;
+        var y0 = y - dy;
+        var gcd = FindGCD(dx, dy); // ищет для абсолютных значений чисел
+        var dxQuantum = dx / gcd; // не могут быть нулями, ведь мы уже рассмотрели эти случаи выше
+        var dyQuantum = dy / gcd;
+        //var xMultiplier = 0;
+        //var yMultiplier = 0;
+        var multiplier = 1;
+
+        var changeByX = false;
+
+        var x1 = dx > 0? extent + _buffer : -_buffer;
+        var y1 = (double)dy / dx * (x1 - x0) + y0;
+        if (y1 >= -_buffer && y1 <= extent + _buffer) // а что по знакам? Они правильные? (вроде должны быть правильными,
+                                                      // тк dxQuantum и x1 - x совпадают по знаку)
+        {
+            multiplier = (int)Math.Ceiling((double)(x1 - x) / dxQuantum); // если цейлируется целое число,
+                                                                          // multiplier по идее нужно еще увеличить на 1
+            changeByX = true;
+        }
+        else if (y1 < -_buffer)
+        {
+            // если y1 пересекает нижнюю границу буфера, то и dyQuantum < 0 (т. к. gcd > 0, а dy < 0)
+            multiplier = (int)Math.Ceiling((double)(-_buffer - y) / dyQuantum); // координата y тоже меньше нуля
+        }
+        else // if (y1 > extent + _buffer)
+        {
+            // если y1 пересекает ВЕРХНЮЮ границу буфера, то и dyQuantum > 0 (т. к. gcd > 0 и dy > 0)
+            multiplier = (int)Math.Ceiling((double)(extent + _buffer - y) / dyQuantum); // координата y больше нуля
+        }
+        // В обоих случаях результат операции [(граница буфера - текущая координата)/квантованная координата]
+        // неотрицательный. Поэтому Ceil в обоих случаях, а также в случае с X. И везде multiplier неотрицательный.
+
+        if (multiplier == 0) 
+            multiplier = 1; // если multiplier получился нулевым, значит внешняя точка отрезка лежит прямо на границе буфера.
+                            // Тогда просто сдвигаем на минимальные доступные значения, то есть dxQuantum и dyQuantum
+        newX = x + dxQuantum * multiplier;
+        newY = y + dyQuantum * multiplier;
+        // !!! надо бахнуть проверку: если точка находится НА буфере, то multiplier++
+
+        if ((changeByX && newX >= -_buffer && newX <= extent + _buffer) || (!changeByX && newY >= -_buffer && newY <= extent + _buffer))
+        {
+            newX += dxQuantum;
+            newY += dyQuantum;
+        }
+
+        return (newX, newY);
+
+        //if (x < 0)
+        //{
+        //    xMultiplier = (int)Math.Ceiling((double)((-_buffer - x) / dxQuantum)); // проверить знаки, они правильные?
+        //}
+        //else if (x > extent)
+        //{
+        //    xMultiplier = (int)Math.Ceiling((double)((_buffer + extent - x) / dxQuantum)); // проверить знаки, они правильные?
+        //}
+        //else // если x в пределах нуля и экстента, но набирает скорость быстрее, чем y
+        //{
+        //    // короче сложно всё это.
+        //}
+    }
+
+    private int FindGCD(int a, int b)
+    {
+        a = Math.Abs(a);
+        b = Math.Abs(b);
+        while (b != 0)
+        {
+            var temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+
+    // проверка координаты, находится ли она за пределами границ тайла
+    private bool CheckIfCoordinateIsOutside((int x, int y) coordinate, uint extent)
+    {
+        if (coordinate.x >= extent || coordinate.y >= extent || coordinate.x <= 0 || coordinate.y <= 0)
+            return true;
+
+        return false;
     }
 
     private static IEnumerable<uint> Encode(CoordinateSequence sequence, 
@@ -489,26 +870,6 @@ public class BwmMapboxTileWriterWm
 
         return encoded;
     }
-
-    /*
-    /// <summary>
-    /// Generates a move command. 
-    /// </summary>
-    private static void GenerateMoveTo(List<uint> geometry, int dx, int dy)
-    {
-        geometry.Add(GenerateCommandInteger(MapboxCommandType.MoveTo, 1));
-        geometry.Add(GenerateParameterInteger(dx));
-        geometry.Add(GenerateParameterInteger(dy));
-    }
-     
-    /// <summary>
-    /// Generates a close path command.
-    /// </summary>
-    private static void GenerateClosePath(List<uint> geometry)
-    {
-        geometry.Add(GenerateCommandInteger(MapboxCommandType.ClosePath, 1));
-    }
-     */
 
     /// <summary>
     /// Generates a command integer.

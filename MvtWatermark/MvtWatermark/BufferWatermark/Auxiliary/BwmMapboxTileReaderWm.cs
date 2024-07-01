@@ -1,7 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using MvtWatermark.NtsArtefacts;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles;
@@ -12,12 +13,13 @@ namespace MvtWatermark.BufferWatermark.Auxiliary;
 public class BwmMapboxTileReaderWm
 {
 
-
+    private readonly BufferWatermarkOptions _options;
     private readonly GeometryFactory _factory;
 
-    public BwmMapboxTileReaderWm()
+    public BwmMapboxTileReaderWm(BufferWatermarkOptions options)
         : this(new GeometryFactory(new PrecisionModel(), 4326))
     {
+        _options = options;
     }
 
     public BwmMapboxTileReaderWm(GeometryFactory factory)
@@ -26,36 +28,44 @@ public class BwmMapboxTileReaderWm
     }
 
     /// <summary>
-    /// Reads a Vector Tile stream.
+    /// Creates VectorTileTree from Dictionary(key = ulong tileId, value = Tile)
     /// </summary>
-    /// <param name="stream">Vector tile stream.</param>
-    /// <param name="tileDefinition">Tile information.</param>
+    /// <param name="tileDict">Dictionary (ulong, Mapbox.Tile) that contains tile id as key and Mapbox vector tile as value</param>
     /// <returns></returns>
-    public VectorTile Read(Stream stream, NetTopologySuite.IO.VectorTiles.Tiles.Tile tileDefinition)
+    public VectorTileTree Read(Dictionary<ulong, NetTopologySuite.IO.VectorTiles.Mapbox.Tile> tileDict)
     {
-        return Read(stream, tileDefinition, null);
+        var sortedTiles = new SortedDictionary<ulong, NetTopologySuite.IO.VectorTiles.Mapbox.Tile>(); // дефолтный компаратор работает по ключу (ulong tileId) в порядке возрастания
+        foreach (var (tileIndex, tile) in tileDict)
+        {
+            sortedTiles[tileIndex] = tileDict[tileIndex];
+        }
+
+        var resultTree = new VectorTileTree();
+        foreach (var tilePair in sortedTiles)
+        {
+            resultTree[tilePair.Key] = Read(tilePair.Value, tilePair.Key, null!);
+        }
+
+        return resultTree;
     }
 
     /// <summary>
-    /// Reads a Vector Tile stream.
+    /// Returns a Vector Tile from a Mapbox Tile.
     /// </summary>
-    /// <param name="stream">Vector tile stream.</param>
-    /// <param name="tileDefinition">Tile information.</param>
+    /// <param name="tile">Mapbox vector tile</param>
+    /// <param name="tileId">Tile id</param>
     /// <param name="idAttributeName">Optional. Specifies the name of the attribute that the vector tile feature's ID should be stored in the NetTopologySuite Features AttributeTable.</param>
     /// <returns></returns>
-    public VectorTile Read(Stream stream, NetTopologySuite.IO.VectorTiles.Tiles.Tile tileDefinition, 
-        string idAttributeName)
+    public VectorTile Read(NetTopologySuite.IO.VectorTiles.Mapbox.Tile tile, ulong tileId, string idAttributeName)
     {
-        // Deserialize the tile
-        var tile = ProtoBuf.Serializer.Deserialize<Tile>(stream);
-
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
         var vectorTile = new VectorTile { TileId = tileDefinition.Id };
         foreach (var mbTileLayer in tile.Layers)
         {
             Debug.Assert(mbTileLayer.Version == 2U);
 
-            var tgs = new MvtWatermark.NtsArtefacts.TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
-            var layer = new Layer {Name = mbTileLayer.Name};
+            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            var layer = new Layer { Name = mbTileLayer.Name };
             foreach (var mbTileFeature in mbTileLayer.Features)
             {
                 var feature = ReadFeature(tgs, mbTileLayer, mbTileFeature, idAttributeName);
@@ -63,11 +73,84 @@ public class BwmMapboxTileReaderWm
             }
             vectorTile.Layers.Add(layer);
         }
-
         return vectorTile;
     }
 
-    private IFeature ReadFeature(MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, Tile.Layer mbTileLayer, Tile.Feature mbTileFeature, string idAttributeName)
+    public (BitArray extractedFragment, int[] extractedFragmentInfo) ExtractWm(NetTopologySuite.IO.VectorTiles.Mapbox.Tile tile, 
+        ulong tileId, BufferWatermarkOptions options, int key1, int key2, BitArray embededFragmentInfo)
+    {
+        key1 = (key1 << 16) + (short)tileId; // !!! проверить что выражение может быть таким !!!
+        key2 = (key2 << 16) + (short)tileId;
+
+        // Генерация {Eta_k} происходит в классе DivideBySectors, Eta_k хаписываются в объекты структуры Sector.
+        // Какой здесь ключ использовать? Отдельный ещё какой-то?
+        List<Sector> sectors = SectorManager.DivideBySectors(Convert.ToUInt32(options.D), key2);
+
+        // метод GenerateSequenceS переделан для данной СВИ
+
+        var keySequence = SequenceGenerator.GenerateSequenceS(key1, options.Nb, options.D, options.M);
+
+        var extractedFragmentInfo = new int[options.Nb]; // -1 если бит был встроен, но не смогли извлечь;
+                                                         // 0, если не был встроен и не был извлечён;
+                                                         // 1, если был встроен и извлечён;
+                                                         // 2, если не был встроен, но был извлечён
+        var fragmentBitsDetections = new int[options.Nb][];
+        for (var i = 0; i < options.Nb; i++)
+        {
+            fragmentBitsDetections[i] = new int[2] { 0, 0};
+        }
+
+        var tileDefinition = new NetTopologySuite.IO.VectorTiles.Tiles.Tile(tileId); // TileId Хранит в себе всю нужную информацию о тайле
+        foreach (var mbTileLayer in tile.Layers)
+        {
+            Debug.Assert(mbTileLayer.Version == 2U);
+
+            var tgs = new TileGeometryTransform(tileDefinition, mbTileLayer.Extent);
+            foreach (var mbTileFeature in mbTileLayer.Features)
+            {
+                ReadGeometryWm(fragmentBitsDetections, tgs, sectors, keySequence, mbTileFeature.Type, mbTileFeature.Geometry);
+            }
+        }
+
+        var extractedFragment = new bool[options.Nb];
+
+        for (var i = 0; i < options.Nb; i++)
+        {
+            if (fragmentBitsDetections[i][0] == 0 && fragmentBitsDetections[i][1] == 0)
+            {
+                if (embededFragmentInfo[i])
+                {
+                    extractedFragmentInfo[i] = -1;
+                }
+                else
+                {
+                    extractedFragmentInfo[i] = 0;
+                }
+                extractedFragment[i] = false;
+                //continue;
+            }
+            else
+            {
+                extractedFragment[i] = fragmentBitsDetections[i][0] < fragmentBitsDetections[i][1] ? true : false;
+                if (embededFragmentInfo[i])
+                {
+                    extractedFragmentInfo[i] = 1;
+                }
+                else
+                {
+                    extractedFragmentInfo[i] = 2;
+                }
+            }
+        }
+
+        var extractedFragmentBitArr = new BitArray(extractedFragment);
+
+        return (extractedFragmentBitArr, extractedFragmentInfo);
+    }
+
+    private IFeature ReadFeature(MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Layer mbTileLayer,
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Feature mbTileFeature, string idAttributeName)
     {
         var geometry = ReadGeometry(tgs, mbTileFeature.Type, mbTileFeature.Geometry);
         var attributes = ReadAttributeTable(mbTileFeature, mbTileLayer.Keys, mbTileLayer.Values);
@@ -89,21 +172,34 @@ public class BwmMapboxTileReaderWm
     /// <param name="type"></param>
     /// <param name="geometry"></param>
     /// <returns></returns>
-    private Geometry ReadGeometry(MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, Tile.GeomType type, IList<uint> geometry)
+    private Geometry ReadGeometry(MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, 
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType type, IList<uint> geometry)
     {
         switch (type)
         {
-            case Tile.GeomType.Point:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.Point:
                 return ReadPoint(tgs, geometry);
 
-            case Tile.GeomType.LineString:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.LineString:
                 return ReadLineString(tgs, geometry);
 
-            case Tile.GeomType.Polygon:
+            case NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.Polygon:
                 return ReadPolygon(tgs, geometry);
         }
 
         return null;
+    }
+
+    private void ReadGeometryWm(int[][] fragmentBitsDetections, MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, List<Sector> sectors, int[] keySequence,
+        NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType type, IList<uint> geometry)
+    {
+        if (type is NetTopologySuite.IO.VectorTiles.Mapbox.Tile.GeomType.LineString)
+        {
+            var currentIndex = 0;
+            var currentX = 0;
+            var currentY = 0;
+            ReadCoordinateSequencesWm(fragmentBitsDetections, tgs, sectors, keySequence, geometry, ref currentIndex, ref currentX, ref currentY);
+        }
     }
 
     private Geometry ReadPoint(MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, IList<uint> geometry)
@@ -221,6 +317,152 @@ public class BwmMapboxTileReaderWm
             return polygons[0];
 
         return _factory.CreateMultiPolygon(polygons.ToArray());
+    }
+
+    /// <summary>
+    /// метод извлечения из линий
+    /// </summary>
+    /// <param name="tgs"></param>
+    /// <param name="geometry"></param>
+    /// <param name="currentIndex"></param>
+    /// <param name="currentX"></param>
+    /// <param name="currentY"></param>
+    /// <param name="buffer"></param>
+    /// <returns></returns>
+    private void ReadCoordinateSequencesWm(int[][] fragmentBitsDetections,
+        MvtWatermark.NtsArtefacts.TileGeometryTransform tgs, List<Sector> sectors, int[] keySequence, IList<uint> geometry,
+        ref int currentIndex, ref int currentX, ref int currentY)
+    {
+
+        //var pixelCoordinatesList = new List<List<int>>();
+        (var command, var count) = ParseCommandInteger(geometry[currentIndex]);
+        Debug.Assert(command == MapboxCommandType.MoveTo);
+
+        // (currentX, currentY) = (0, 0), currentIndex = 0
+        var currentPosition = (currentX, currentY);
+        while (currentIndex < geometry.Count)
+        {
+            var mapboxPixelCoordinates = new List<(long x, long y, bool outsideExtentFlag, bool outsideBufferEdgeFlag)>();
+            //pixelCoordinates.Add((currentPosition.currentX, tgs.Extent - currentPosition.currentY));
+
+            (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 1
+            Debug.Assert(command == MapboxCommandType.MoveTo);
+            Debug.Assert(count == 1);
+
+            // Read the current position
+            currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex); // после команды currentIndex = 3
+
+            var positionInSpace = CheckPositionInSpace(currentPosition, tgs.Extent);
+            //mapboxPixelCoordinates.Add((currentPosition.currentX, tgs.Extent - currentPosition.currentY, CheckIfCoordinateIsOutside(currentPosition, tgs.Extent), CheckIfCoordinateIsOnBufferEdge(currentPosition, tgs.Extent)));
+            mapboxPixelCoordinates.Add((currentPosition.currentX, tgs.Extent - currentPosition.currentY, positionInSpace.outside, positionInSpace.outsideBufferEdge));
+
+            // именно в этом методе мы получаем координаты точек в пикселях. Здесь нужно создавать сначала списки точек, из них -
+            // списки отрезков и передавать в отдельный метод, который проверяет их наклон и сопоставляет со списком секторов.
+            // Всё это скорее всего будет записываться в один большой список соответствия, сколько единичек и нулей записано для
+            // такого-то бита ЦВЗ. Но это, похоже, ведёт к тому, что экземпляры класса ридера будут создаваться отдельные для каждого тайла.
+
+            // Read the next command (should be LineTo)
+            (command, count) = ParseCommandInteger(geometry[currentIndex++]); // после команды currentIndex = 4
+            if (command != MapboxCommandType.LineTo)
+                count = 0;
+
+            // Read and add offsets
+            for (var i = 1; i <= count; i++)
+            {
+                currentPosition = ParseOffset(currentPosition, geometry, ref currentIndex);
+                positionInSpace = CheckPositionInSpace(currentPosition, tgs.Extent);
+                mapboxPixelCoordinates.Add((currentPosition.currentX, tgs.Extent - currentPosition.currentY, positionInSpace.outside, positionInSpace.outsideBufferEdge));
+            }
+
+            //Debug.Assert(sequenceIndex == sequence.Count);
+
+            ExtractFromCoordinates(mapboxPixelCoordinates, fragmentBitsDetections, sectors, keySequence);
+        }
+
+        // update current position values
+        currentX = currentPosition.currentX;
+        currentY = currentPosition.currentY;
+
+        // а лишнее в этом классе желательно посносить. Мы же в итоге не будем формировать векторные тайлы из мапбоксовских,
+        // нам нужна только извлечённая из ЦВЗ информация
+    }
+
+    private void ExtractFromCoordinates(List<(long x, long y, bool outsideExtentFlag, bool outsideBufferEdgeFlag)> mapboxPixelCoordinates, 
+        int[][] fragmentBitsDetections, List<Sector> sectors, int[] keySequence)
+    {
+        var segmentsInfo = new List<(bool crosses, bool outsideBufferEdge, long dx, long dy, bool firstInside)>(mapboxPixelCoordinates.Count - 1); // по умолчанию false ведь все?
+        for (var i = 0; i < mapboxPixelCoordinates.Count - 1; i++)
+        {
+            var crosses = false;
+            var outsideBufferEdge = false;
+            long dx = 0;
+            long dy = 0;
+            var firstInside = false;
+
+            //if (coordsOutsideFlags[i] ^ coordsOutsideFlags[i + 1])
+            //{
+            //    segmentsCrossing[i] = true;
+            //}
+
+            if (!mapboxPixelCoordinates[i].outsideExtentFlag && mapboxPixelCoordinates[i + 1].outsideExtentFlag)
+            {
+                crosses = true;
+                dx = mapboxPixelCoordinates[i + 1].x - mapboxPixelCoordinates[i].x;
+                dy = mapboxPixelCoordinates[i + 1].y - mapboxPixelCoordinates[i].y;
+                firstInside = true;
+                if (mapboxPixelCoordinates[i + 1].outsideBufferEdgeFlag)
+                    outsideBufferEdge = true;
+            }
+            else if (mapboxPixelCoordinates[i].outsideExtentFlag && !mapboxPixelCoordinates[i + 1].outsideExtentFlag)
+            {
+                crosses = true;
+                dx = mapboxPixelCoordinates[i].x - mapboxPixelCoordinates[i + 1].x;
+                dy = mapboxPixelCoordinates[i].y - mapboxPixelCoordinates[i + 1].y;
+                if (mapboxPixelCoordinates[i].outsideBufferEdgeFlag)
+                    outsideBufferEdge = true;
+            }
+            segmentsInfo.Add((crosses, outsideBufferEdge, dx, dy, firstInside));
+        }
+
+        for (var i = 0; i < segmentsInfo.Count; i++)
+        {
+            if (segmentsInfo[i].crosses)
+            {
+                var atan = Math.Atan2((double)segmentsInfo[i].dy, (double)segmentsInfo[i].dx);
+                if (atan < 0)
+                    atan = 2 * Math.PI + atan;
+                for (var j = 0; j < sectors.Count; j++)
+                {
+                    if (atan >= sectors[j].LowerBorder && atan < sectors[j].UpperBorder)
+                    {
+                        if (segmentsInfo[i].outsideBufferEdge) 
+                        {
+                            if (sectors[j].EtaK)
+                            {
+                                fragmentBitsDetections[keySequence[j]][1]++;
+                            }
+                            else
+                            {
+                                fragmentBitsDetections[keySequence[j]][0]++;
+                            }
+                        }
+                        else
+                        {
+                            if (!sectors[j].EtaK)
+                            {
+                                fragmentBitsDetections[keySequence[j]][1]++;
+                            }
+                            else
+                            {
+                                fragmentBitsDetections[keySequence[j]][0]++;
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -355,7 +597,8 @@ public class BwmMapboxTileReaderWm
 
 
 
-    private static IAttributesTable ReadAttributeTable(Tile.Feature mbTileFeature, List<string> keys, List<Tile.Value> values)
+    private static IAttributesTable ReadAttributeTable(NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Feature mbTileFeature,
+        List<string> keys, List<NetTopologySuite.IO.VectorTiles.Mapbox.Tile.Value> values)
     {
         var att = new AttributesTable();
 
@@ -382,5 +625,39 @@ public class BwmMapboxTileReaderWm
         }
 
         return att;
+    }
+
+    /*
+    private bool CheckIfCoordinateIsOnBufferEdge((long x, long y) coordinate, uint extent)
+    {
+        if (coordinate.x == extent + _options.Buffer || coordinate.y == extent + _options.Buffer 
+            || coordinate.x == -_options.Buffer || coordinate.y == -_options.Buffer)
+            return true;
+
+        return false;
+    }
+
+    private bool CheckIfCoordinateIsOutside((int x, int y) coordinate, uint extent)
+    {
+        if (coordinate.x > extent || coordinate.y > extent || coordinate.x < 0 || coordinate.y < 0)
+            return true;
+
+        return false;
+    }
+    */
+
+    private (bool outside, bool outsideBufferEdge) CheckPositionInSpace((int x, int y) coordinate, uint extent)
+    {
+        var outside = false;
+        var outsideBufferEdge = false;
+
+        if (coordinate.x >= extent || coordinate.y >= extent || coordinate.x <= 0 || coordinate.y <= 0)
+            outside = true;
+        else return (false, false);
+
+        if (coordinate.x > extent + _options.Buffer || coordinate.y > extent + _options.Buffer
+            || coordinate.x < -_options.Buffer || coordinate.y < -_options.Buffer)
+            outsideBufferEdge = true;
+        return (outside, outsideBufferEdge);
     }
 }

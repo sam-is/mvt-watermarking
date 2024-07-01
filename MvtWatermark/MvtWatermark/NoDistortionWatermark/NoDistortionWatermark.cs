@@ -56,15 +56,19 @@ public class NoDistortionWatermark: IMvtWatermark
     /// <returns></returns>
     public BitArray Extract(VectorTileTree tiles, int key)
     {
+        // tiles здесь не сортируются. Может, добавить сюда сортировку?
         var shortenedKey = (short)key;
 
         var readerWm = new MapboxTileReaderWm();
         var extractedWatermarkString = new BitArray(_options.Nb * tiles.Count());
         var correctWatermarkTilesCounter = 0;
         var index = 0;
+        var nonStaticMapboxTileWriterWm = new NonStaticMapboxTileWriterWm();
+
         foreach (var tileIndex in tiles) 
         {
-            var extractedInt = readerWm.ExtractWm(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, shortenedKey);
+            //var extractedInt = readerWm.ExtractWm(tiles[tileIndex].GetMapboxTileFromVectorTile(), tileIndex, _options, shortenedKey);
+            var extractedInt = readerWm.ExtractWm(nonStaticMapboxTileWriterWm.GetMapboxTileFromVectorTile(tiles[tileIndex]), tileIndex, _options, shortenedKey);
             if (extractedInt != null)
             {
                 var bitArr = new BitArray(new int[] { Convert.ToInt32(extractedInt) });

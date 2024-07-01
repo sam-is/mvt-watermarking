@@ -195,6 +195,7 @@ public static class MapboxTileWriterWm
         return mapboxTile;
     }
 
+    // !!! этот метод вроде можно просто перенести в NonStaticMapboxTileWriterWm. Или нет?
     /// <summary>
     /// Возвращает Mapbox Tile, полученный из VectorTile
     /// </summary>

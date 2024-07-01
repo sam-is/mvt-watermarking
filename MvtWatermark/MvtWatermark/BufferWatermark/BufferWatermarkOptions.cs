@@ -14,12 +14,21 @@ public class BufferWatermarkOptions
     /// </summary>
     public int M { get; init; }
 
+    /// <summary>
+    /// Количество секторов всего, считается в конструкторе (D = M * Nb)
+    /// </summary>
     public int D { get; init; }
 
-    public BufferWatermarkOptions(uint nb, int m=1)
+    /// <summary>
+    /// Буфер для данного набора тайлов
+    /// </summary>
+    public int Buffer {  get; init; }
+
+    public BufferWatermarkOptions(uint nb, uint buffer/*=дефолтное значение*/, int m=1) // дефолтное значение посчитать надо или чо
     {
         M = m;
-        Nb = Nb;
-        D = m * Convert.ToInt32(Math.Pow(2, Nb));
+        Nb = (int)nb;
+        Buffer = (int)buffer;
+        D = m * Nb;
     }
 }

@@ -29,13 +29,13 @@ var taskMNb = new Task(() => {
     Console.WriteLine("taskMNb completed");
 });
 
-taskLsLf.Start();
-//taskMNb.Start();
+//taskLsLf.Start();
+taskMNb.Start();
 
 Console.WriteLine("tasks started");
 
-taskLsLf.Wait();
-//taskMNb.Wait();
+//taskLsLf.Wait();
+taskMNb.Wait();
 
 Console.WriteLine("tasks completed");
 
@@ -87,14 +87,15 @@ ExtractionTester.DiffWatermarkParametersTest(parameterSetsStp, parameterSetsTego
 
 void TestLsLf(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola, BitArray message)
 {
-    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 1, Mmax = 1, Nbmin = 2, Nbmax = 2, Lfmin = 1, Lfmax = 15, Lsmin = 1, Lsmax = 1 };
+    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 1, Mmax = 1, Nbmin = 2, Nbmax = 2, Lfmin = 15, Lfmax = 15, Lsmin = 1, Lsmax = 1 };
     var distortionTester = new DistortionTester();
     distortionTester.DiffWatermarkParametersTest_Ls_Lf(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_Lf_Ls\\");
 }
 
 void TestsMNb(List<CoordinateSet> parameterSetsStp, List<CoordinateSet> parameterSetsTegola, BitArray message)
 {
-    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 1, Mmax = 10, Nbmin = 2, Nbmax = 10, Lfmin = 15, Lfmax = 15, Lsmin = 1, Lsmax = 1 };
+    //var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 1, Mmax = 10, Nbmin = 2, Nbmax = 10, Lfmin = 15, Lfmax = 15, Lsmin = 1, Lsmax = 1 };
+    var optionsParamRanges = new DistortionTester.OptionsParamRanges() { Mmin = 2, Mmax = 2, Nbmin = 3, Nbmax = 3, Lfmin = 15, Lfmax = 15, Lsmin = 1, Lsmax = 1 };
     var distortionTester = new DistortionTester();
     distortionTester.DiffWatermarkParametersTest_M_Nb(parameterSetsStp, parameterSetsTegola, optionsParamRanges, message, "testing_M_Nb\\");
 }

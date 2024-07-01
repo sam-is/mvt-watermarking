@@ -47,7 +47,7 @@ public class MapboxTileReaderWm
     }
 
     /// <summary>
-    /// Reads a Vector Tile stream.
+    /// Returns a Vector Tile from a Mapbox Tile.
     /// </summary>
     /// <param name="tile">Mapbox vector tile</param>
     /// <param name="tileId">Tile id</param>

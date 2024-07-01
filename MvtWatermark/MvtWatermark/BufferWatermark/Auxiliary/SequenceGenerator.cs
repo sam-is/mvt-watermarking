@@ -17,9 +17,7 @@ internal static class SequenceGenerator
     {
         var rand = new Random(key);
 
-        var maxBitArray = new BitArray(nb, true);
-        var maxInt = WatermarkTransform.GetIntFromBitArray(maxBitArray);
-        var howMuchEachValueInstancesAreInKeySequence = new int[maxInt + 1];
+        var howMuchEachValueInstancesAreInKeySequence = new int[nb];
 
         var keySequence = new int[d];
 
@@ -30,7 +28,7 @@ internal static class SequenceGenerator
             int value;
             do
             {
-                value = rand.Next(0, maxInt + 1);
+                value = rand.Next(0, nb);
             } while (howMuchEachValueInstancesAreInKeySequence[value] >= m);
             keySequence[i] = value;
             howMuchEachValueInstancesAreInKeySequence[value]++;

@@ -157,3 +157,4 @@ dotnet_naming_symbols.method_parameters.applicable_kinds = parameter
 dotnet_naming_rule.method_parameters_camelcase.severity = error
 dotnet_naming_rule.method_parameters_camelcase.symbols = method_parameters
 dotnet_naming_rule.method_parameters_camelcase.style = camel_case_style
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
