@@ -6,12 +6,12 @@ using System.IO.Compression;
 namespace MvtWatermarkConsole.Readers;
 public static class DataReader
 {
-    public static VectorTileTree Read(string path, int minZ = 0, int maxZ = 22)
+    public static VectorTileTree Read(string path, bool isNoCompression, int minZ = 0, int maxZ = 22)
     {
-        return IsMbtiles(path) ? ReadFromMbtiles(path, minZ, maxZ) : ReadFromFolder(path, minZ, maxZ);
+        return TypeChecker.IsMbtiles(path) ? ReadFromMbtiles(path, minZ, maxZ, isNoCompression) : ReadFromFolder(path, minZ, maxZ, isNoCompression);
     }
 
-    public static VectorTileTree ReadFromMbtiles(string path, int minZ, int maxZ)
+    public static VectorTileTree ReadFromMbtiles(string path, int minZ, int maxZ, bool isNoCompression)
     {
         using var sqliteConnection = new SqliteConnection($"Data Source = {path}");
         sqliteConnection.Open();
@@ -33,8 +33,18 @@ public static class DataReader
 
                 var stream = dbReader.GetStream(3);
 
-                using var decompressor = new GZipStream(stream, CompressionMode.Decompress, false);
-                var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+                VectorTile tile;
+
+                if (!isNoCompression)
+                {
+                    using var decompressor = new GZipStream(stream, CompressionMode.Decompress, false);
+                    tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+                }
+                else
+                {
+                    tile = reader.Read(stream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(x, y, z));
+                }
+
 
                 tileTree[tile.TileId] = tile;
             }
@@ -47,7 +57,7 @@ public static class DataReader
         return tileTree;
     }
 
-    public static VectorTileTree ReadFromFolder(string path, int minZ, int maxZ)
+    public static VectorTileTree ReadFromFolder(string path, int minZ, int maxZ, bool isNoCompression)
     {
         var reader = new MapboxTileReader();
         var tileTree = new VectorTileTree();
@@ -65,8 +75,18 @@ public static class DataReader
                     {
                         using var fileStream = y.Open(FileMode.Open);
                         fileStream.Seek(0, SeekOrigin.Begin);
-                        using var decompressor = new GZipStream(fileStream, CompressionMode.Decompress, false);
-                        var tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(Convert.ToInt32(x.Name), Convert.ToInt32(y.Name), Convert.ToInt32(z.Name)));
+
+                        VectorTile tile;
+
+                        if (!isNoCompression)
+                        {
+                            using var decompressor = new GZipStream(fileStream, CompressionMode.Decompress, false);
+                            tile = reader.Read(decompressor, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(Convert.ToInt32(x.Name), Convert.ToInt32(y.Name), Convert.ToInt32(z.Name)));
+                        }
+                        else
+                        {
+                            tile = reader.Read(fileStream, new NetTopologySuite.IO.VectorTiles.Tiles.Tile(Convert.ToInt32(x.Name), Convert.ToInt32(y.Name), Convert.ToInt32(z.Name)));
+                        }
 
                         if (!tile.IsEmpty)
                             tileTree[tile.TileId] = tile;
@@ -82,6 +102,4 @@ public static class DataReader
 
         return tileTree;
     }
-
-    public static bool IsMbtiles(string path) => Path.GetExtension(path) == ".mbtiles";
 }

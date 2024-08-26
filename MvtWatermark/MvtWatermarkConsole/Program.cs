@@ -4,6 +4,7 @@ using MvtWatermark.QimMvtWatermark;
 using MvtWatermarkConsole.Model;
 using MvtWatermarkConsole.Readers;
 using MvtWatermarkConsole.Writers;
+using Spectre.Console;
 using System.Reflection;
 using System.Text;
 
@@ -26,34 +27,58 @@ internal class Program
         {
             var builder = SentenceBuilder.Create();
             var errorMessages = HelpText.RenderParsingErrorsTextAsLines(res, builder.FormatError, builder.FormatMutuallyExclusiveSetErrors, 1);
-            Console.WriteLine(GenerateHelpText(res, headingInfo).AddPreOptionsLines(errorMessages));
+            AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsLines(errorMessages));
             return;
         }
 
         var options = res.Value;
 
-        if (options.Mode == Model.Mode.Embed && (options.Watermark == null || options.OutputPath == null))
+        if (options.Mode == Model.Mode.Embed)
+        {
+            if (options.OutputPath == null)
+            {
+                if (!TypeChecker.IsMbtiles(options.Source))
+                {
+                    AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText($"[red]Output parameter must be exist for embeding mode[/]"));
+                    return;
+                }
+
+                options.OutputPath = options.Source;
+            }
+            else
+            {
+                if (TypeChecker.IsMbtiles(options.OutputPath))
+                {
+                    if(TypeChecker.IsMbtiles(options.Source))
+                        File.Copy(options.Source, options.OutputPath, true);
+                    else
+                    {
+                        AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText($"[red]Source parameter must be mbtiles if output parameter is mbtiles[/]"));
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (options.Mode == Model.Mode.Embed && (options.Watermark == null))
         {
             var message = new StringBuilder();
             if (options.Watermark == null)
-                message.Append("Watermark parameter must be exist for embeding mode");
+                message.Append("[red]Watermark parameter must be exist for embeding mode[/]");
 
-            if (options.OutputPath == null)
-                message.Append($"{(message.Length == 0 ? "" : "\n")} Output parameter must be exist for embeding mode");
-
-            Console.WriteLine(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\n{message}"));
+            AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\n{message}"));
             return;
         }
 
         if (!File.Exists(options.Source) && !Directory.Exists(options.Source))
         {
-            Console.WriteLine(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\nNot exist source: {options.Source} "));
+            AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\n[red]Not exist source: {options.Source}[/]"));
             return;
         }
 
-        if (options.ConfigPath != null && !File.Exists(options.ConfigPath))
+        if (options.ConfigPath != null && !options.IsGenerateConfig && !File.Exists(options.ConfigPath))
         {
-            Console.WriteLine(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\nNot exist config file, but select: {options.Source} "));
+            AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText($"\n[red]Not exist config file, but select: {options.Source}[/]"));
             return;
         }
 
@@ -63,30 +88,46 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine(GenerateHelpText(res, headingInfo).AddPreOptionsText($"Exception: {ex.Message}"));
+            AnsiConsole.Markup(GenerateHelpText(res, headingInfo).AddPreOptionsText("\n[red]Exception[/]"));
+            AnsiConsole.WriteException(ex);
         }
     }
 
     private static void Run(Options options)
     {
-        var data = DataReader.Read(options.Source, options.MinZ ?? 0, options.MaxZ ?? 22);
+        var data = DataReader.Read(options.Source, options.IsNoCompression, options.MinZ ?? 0, options.MaxZ ?? 22);
 
-        var qimWatermarkOptions = options.ConfigPath == null ? new QimMvtWatermarkOptions() : MvtWatermarkOptionsReader.Read(options.ConfigPath);
+        var qimWatermarkOptions = options.IsGenerateConfig || options.ConfigPath == null ? new QimMvtWatermarkOptions() : MvtWatermarkOptionsReader.Read(options.ConfigPath);
+
         var watermark = new QimMvtWatermark(qimWatermarkOptions);
 
         switch (options.Mode)
         {
             case Model.Mode.Embed:
-                var watermarked = watermark.Embed(data, options.Key, MessageTransform.GetBitArray(options.Watermark!));
-                DataWriter.Write(watermarked, options.OutputPath!);
+
+                var bits = MessageTransformer.GetBitArray(options.Watermark!);
+
+                if (options.IsGenerateConfig || options.IsUpdateConfig)
+                {
+                    if (qimWatermarkOptions.Mode == MvtWatermark.QimMvtWatermark.Mode.WithTilesMajorityVote)
+                        qimWatermarkOptions.MessageLength = bits.Length;
+
+                    MvtWatermarkOptionsWriter.Write(qimWatermarkOptions, options.ConfigPath ?? "config.json");
+                }
+
+                var watermarked = watermark.Embed(data, options.Key, bits);
+
+                AnsiConsole.Markup("[green]Watermark is embeded[/]\n");
+                DataWriter.Write(watermarked, options.OutputPath!, options.IsNoCompression);
+                AnsiConsole.Markup("[green]Tiles are written[/]");
                 break;
 
             case Model.Mode.Extract:
                 var message = watermark.Extract(data, options.Key);
                 if (options.OutputPath != null)
-                    MessageWriters.Write(options.OutputPath, MessageTransform.GetMessage(message));
+                    MessageWriters.Write(options.OutputPath, MessageTransformer.GetMessage(message));
                 else
-                    Console.WriteLine(MessageTransform.GetMessage(message));
+                    AnsiConsole.Markup($"[green]Watermark: [/]{MessageTransformer.GetMessage(message)}");
                 break;
         }
     }
@@ -97,7 +138,7 @@ internal class Program
         {
             h.AdditionalNewLineAfterOption = true;
             h.Heading = headingInfo;
-            h.Copyright = "Copyright (c) Samara-Informsputnik";
+            h.Copyright = "Copyright (c) [blue]Samara-Informsputnik[/]";
             return h;
         }, e => e);
     }

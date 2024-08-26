@@ -21,6 +21,8 @@ public class GeneratorOfRequantizationMatrices
     /// </summary>
     private readonly int _count;
 
+    public int Count { get => _count; }
+
     /// <summary>
     /// Create a new instance of class.
     /// </summary>

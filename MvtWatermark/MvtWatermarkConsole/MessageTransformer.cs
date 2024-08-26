@@ -2,7 +2,7 @@
 using System.Text;
 
 namespace MvtWatermarkConsole;
-public static class MessageTransform
+public static class MessageTransformer
 {
     public static Encoding Encoding { get; set; } = Encoding.UTF8;
 
