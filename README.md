@@ -160,28 +160,68 @@ public static VectorTileTree GetVectorTileTreeFromDb(string path, int z)
 ## Usage
 Embed
 
-    MvtWatermarkConsole.exe -s (source) -k (key) -m embed -w (watermark) -o (output) [options]
+    MvtWatermarkConsole.exe -s (source) -k (key) -m Embed -w (watermark) -o (output) [options]
 Extract
 
-    MvtWatermarkConsole.exe -s (source) -k (key) -m extract [options]
+    MvtWatermarkConsole.exe -s (source) -k (key) -m Extract [options]
 ## Examples
-### Source - .mbtiles
 
 Embed
 
-     MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m embed -w test -o output_folder --minz 12 --maxz 12
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test -g -c config.json --minz 12 --maxz 12
+
 Extract
 
-    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m extract --minz 12 --maxz 12
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Extract -c config.json --minz 12 --maxz 12
+
+## Detailed examples
+### Source - .mbtiles
+
+Embed and write in tile tree directory
+
+     MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test -o output_folder
+
+Embed with rewriting tiles in source and generating config file
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test -g -c config.json
+
+Embed with updating message length in config file (for WithTilesMajorityVote mode)
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test -u -c config.json
+
+Embed with writing in copy mbtiles
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test -o copy.mbtiles
+
+Embed if tiles in source with no compression
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test --no-tile-compression
+
+Embed with zoom range
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Embed -w test --minz 12 --maxz 12
+
+Extract
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Extract
+
+Extract with config file
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Extract -c config.json
+
+Extract with zoom range
+
+    MvtWatermarkConsole.exe -s db.mbtiles -k 0 -m Extract --minz 12 --maxz 12
 
 ### Source - directory with tile tree
 tiles - directory with tile tree
 Embed
 
-     MvtWatermarkConsole.exe -s tiles -k 0 -m embed -w test -o output_folder --minz 12 --maxz 12
+     MvtWatermarkConsole.exe -s tiles -k 0 -m Embed -w test -o output_file --minz 12 --maxz 12
 Extract
 
-    MvtWatermarkConsole.exe -s tiles -k 0 -m extract --minz 12 --maxz 12
+    MvtWatermarkConsole.exe -s tiles -k 0 -m Extract --minz 12 --maxz 12
+    
 ## Parameters
 ### Source
 `-s`, `--source`.
@@ -196,12 +236,12 @@ Secret key. Integer value. Required parameter.
 ### Mode
 `-m`, `--mode`.
 
-Mode of algorthm. Valid values: embed, extract. Required value.
+Mode of algorthm. Valid values: Embed, Extract. Required value.
 
 ### Config
 `-c`, `--config`.
 
-Path to config file in json foramt. If not selected, default options of algorithm will be use. About options see [Options](README.md#options).
+Path to config file in json format. If not selected, default options of algorithm will be use. About options see [Options](README.md#options).
 
 Example config.json:
 ```json
@@ -213,7 +253,6 @@ Example config.json:
   "distance": 2,
   "nb": 1,
   "r": 4,
-  "m": null,
   "countMaps": 10,
   "isGeneralExtractionMethod": false,
   "mode": "WithTilesMajorityVote",
@@ -229,6 +268,7 @@ Embeded watermark string. Required for embed mode.
 `-o`, `--output`. 
 
 For embed mode output for watermarked tile tree. Required for embed mode. 
+If the source parameter is a mbtiles and the output parameter is not set, the tiles in the source will be overwritten.
 
 For extract mode output for embeded watermark. If not select with extract mode, embeded message displays in console.
 
@@ -240,8 +280,23 @@ The minimum zoom level that tiles will be selected from.
 ### MaxZ
 `--maxz`
 
-The maximum zoom level to which tiles will be selectedю
+The maximum zoom level to which tiles will be selected.
 
+### Generate config
+`-g`, `--generate-config`.
+
+If selected on Embed mode, config file will be generated on path from the config parameter.
+
+### Update config
+`-u`, `--update-config`.
+
+If selected on Embed mode, length of message will be written or rewritten in the config file on path from the config parameter.
+
+### No tile compression
+`--no-tile-compression`.
+
+Select if tiles in source without compression.
+Tiles with a built-in watermark will also not compress.
 
 # How algorithms work
 ## QimMvtWatermark
