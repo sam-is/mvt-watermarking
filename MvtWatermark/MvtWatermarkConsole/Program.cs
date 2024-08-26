@@ -49,7 +49,7 @@ internal class Program
             {
                 if (TypeChecker.IsMbtiles(options.OutputPath))
                 {
-                    if(TypeChecker.IsMbtiles(options.Source))
+                    if (TypeChecker.IsMbtiles(options.Source))
                         File.Copy(options.Source, options.OutputPath, true);
                     else
                     {

@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace MvtWatermarkConsole.Writers;
 public class MvtWatermarkOptionsWriter
 {
-    private static JsonSerializerOptions JsonSerializerOptions { get ; } = new JsonSerializerOptions { WriteIndented = true };
+    private static JsonSerializerOptions JsonSerializerOptions { get; } = new JsonSerializerOptions { WriteIndented = true };
     public static void Write(QimMvtWatermarkOptions options, string path)
     {
         var dict = new Dictionary<string, object?>

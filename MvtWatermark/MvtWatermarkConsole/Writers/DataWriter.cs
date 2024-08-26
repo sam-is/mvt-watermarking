@@ -51,7 +51,7 @@ public static class DataWriter
 
             using var memoryStream = new MemoryStream();
 
-            if (!isNoCompression) 
+            if (!isNoCompression)
             {
                 using var compressor = new GZipStream(memoryStream, CompressionMode.Compress, true);
                 tileTree[tileId].Write(compressor, extent);
@@ -61,7 +61,7 @@ public static class DataWriter
             {
                 tileTree[tileId].Write(memoryStream, extent);
             }
-            
+
 
             using var command = new SqliteCommand("UPDATE tiles SET tile_data = @Tile WHERE tile_column = @X AND tile_row = @Y AND zoom_level = @Z", sqliteConnection);
             command.Parameters.AddWithValue("X", tileInfo.X);
