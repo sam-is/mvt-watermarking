@@ -95,41 +95,47 @@ internal class Program
 
     private static void Run(Options options)
     {
-        var data = DataReader.Read(options.Source, options.IsNoCompression, options.MinZ ?? 0, options.MaxZ ?? 22);
-
-        var qimWatermarkOptions = options.IsGenerateConfig || options.ConfigPath == null ? new QimMvtWatermarkOptions() : MvtWatermarkOptionsReader.Read(options.ConfigPath);
-
-        var watermark = new QimMvtWatermark(qimWatermarkOptions);
-
-        switch (options.Mode)
+        AnsiConsole.Status().Spinner(Spinner.Known.Default).Start("[green]Start[/]", ctx =>
         {
-            case Model.Mode.Embed:
+            ctx.Status("[green]Reading tiles[/]");
+            var data = DataReader.Read(options.Source, options.IsNoCompression, options.MinZ ?? 0, options.MaxZ ?? 22);
+            AnsiConsole.MarkupLine($"[green]Read {data.Count()} tiles[/]");
 
-                var bits = MessageTransformer.GetBitArray(options.Watermark!);
+            var qimWatermarkOptions = options.IsGenerateConfig || options.ConfigPath == null ? new QimMvtWatermarkOptions() : MvtWatermarkOptionsReader.Read(options.ConfigPath);
+            var watermark = new QimMvtWatermark(qimWatermarkOptions);
 
-                if (options.IsGenerateConfig || options.IsUpdateConfig)
-                {
-                    if (qimWatermarkOptions.Mode == MvtWatermark.QimMvtWatermark.Mode.WithTilesMajorityVote)
-                        qimWatermarkOptions.MessageLength = bits.Length;
+            switch (options.Mode)
+            {
+                case Model.Mode.Embed:
 
-                    MvtWatermarkOptionsWriter.Write(qimWatermarkOptions, options.ConfigPath ?? "config.json");
-                }
+                    var bits = MessageTransformer.GetBitArray(options.Watermark!);
 
-                var watermarked = watermark.Embed(data, options.Key, bits);
+                    if (options.IsGenerateConfig || options.IsUpdateConfig)
+                    {
+                        if (qimWatermarkOptions.Mode == MvtWatermark.QimMvtWatermark.Mode.WithTilesMajorityVote)
+                            qimWatermarkOptions.MessageLength = bits.Length;
 
-                AnsiConsole.Markup("[green]Watermark is embeded[/]\n");
-                DataWriter.Write(watermarked, options.OutputPath!, options.IsNoCompression);
-                AnsiConsole.Markup("[green]Tiles are written[/]");
-                break;
+                        MvtWatermarkOptionsWriter.Write(qimWatermarkOptions, options.ConfigPath ?? "config.json");
+                    }
 
-            case Model.Mode.Extract:
-                var message = watermark.Extract(data, options.Key);
-                if (options.OutputPath != null)
-                    MessageWriters.Write(options.OutputPath, MessageTransformer.GetMessage(message));
-                else
-                    AnsiConsole.Markup($"[green]Watermark: [/]{MessageTransformer.GetMessage(message)}");
-                break;
-        }
+                    ctx.Status("[green]Embed watermark[/]");
+                    var watermarked = watermark.Embed(data, options.Key, bits);
+
+                    ctx.Status("[green]Write tiles[/]");
+                    DataWriter.Write(watermarked, options.OutputPath!, options.IsNoCompression);
+                    AnsiConsole.MarkupLine("[green]Tiles are written[/]");
+                    break;
+
+                case Model.Mode.Extract:
+                    ctx.Status("[green]Extract watermark[/]");
+                    var message = watermark.Extract(data, options.Key);
+                    if (options.OutputPath != null)
+                        MessageWriters.Write(options.OutputPath, MessageTransformer.GetMessage(message));
+                    else
+                        AnsiConsole.MarkupLine($"[green]Watermark: [/]{MessageTransformer.GetMessage(message)}");
+                    break;
+            }
+        });
     }
 
     private static HelpText GenerateHelpText(ParserResult<Options> result, HeadingInfo headingInfo)
